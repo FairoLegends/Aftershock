@@ -39,6 +39,7 @@ export class SafeZone extends BaseScriptComponent {
   private blinkOn = true
   private _blinking = false
   private restCenter: vec3 | null = null
+  private restAim: vec3 | null = null
 
   onAwake(): void {
     this.blinkEvent = this.createEvent("UpdateEvent")
@@ -53,6 +54,8 @@ export class SafeZone extends BaseScriptComponent {
    */
   captureRest(): void {
     this.restCenter = this.table.getTransform().getWorldPosition()
+    const label = this.findLabel()
+    this.restAim = label ? label.getTransform().getWorldPosition() : null
   }
 
   /** True when the position's XZ is inside the table's rest footprint grown by safeZoneMargin. */
@@ -71,6 +74,15 @@ export class SafeZone extends BaseScriptComponent {
    */
   get center(): vec3 {
     return this.restCenter ? this.restCenter : this.table.getTransform().getWorldPosition()
+  }
+
+  /**
+   * Where the off-screen arrow aims (ENGINEERING_PLAN 5a item 6): the marker
+   * label's rest position, captured with the rest center; the center if
+   * there is no label. Shared object: do not modify it.
+   */
+  get aimPoint(): vec3 {
+    return this.restAim ? this.restAim : this.center
   }
 
   showMarker(): void {
@@ -121,6 +133,18 @@ export class SafeZone extends BaseScriptComponent {
     for (const part of this.blinkParts) {
       part.enabled = on
     }
+  }
+
+  /** The marker child with a HazardLabel (the "safe zone" label), or null. */
+  private findLabel(): SceneObject | null {
+    const count = this.marker.getChildrenCount()
+    for (let i = 0; i < count; i++) {
+      const child = this.marker.getChild(i)
+      if (child.getComponent(HazardLabel.getTypeName())) {
+        return child
+      }
+    }
+    return null
   }
 
   private collectBlinkParts(): void {

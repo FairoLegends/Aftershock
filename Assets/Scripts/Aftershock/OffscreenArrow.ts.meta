@@ -24,11 +24,13 @@
   VersionPatch: 0
   VersionPrerelease: ""
   UpdateOrder: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: abf4d279-dd58-4d58-9526-46e04782712f
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    color: false
+    config: false
+    headPose: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +40,17 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      color: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 1.000000}
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @ui {"widget":"label", "label":"Off-screen arrow toward the safe zone (TDD §3.1)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (fovHalfAngleHorizontal, fovHalfAngleVertical, hudDistance)"}'
+    - '// @input AssignableType_2 headPose {"hint":"HeadPose component (view cone origin and direction)"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input vec4 color = {0.239,0.863,0.518,1} {"hint":"Safe green #3DDC84 (DESIGN_BRIEF §5.1). Light colors only: the display is additive.", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

@@ -35,6 +35,9 @@ const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 const FILL_Z = 0.05 // health fill just in front of its track
 const MIN_FILL_W = 0.001
 
+/** Height of the HUD panel backing (cm): two instruction lines and the health/timer row (buildPanel). */
+export const HUD_PANEL_HEIGHT = PAD * 2 + INSTR_ID_H + INSTR_EN_H + ROW_H + ROW_GAP * 2
+
 /**
  * The quake HUD (TDD §3.1, DESIGN_BRIEF §6.1): a lazy-follow panel below eye
  * level with one instruction, health and the elapsed timer, plus a warning

@@ -1,5 +1,6 @@
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
+import {HUD_PANEL_HEIGHT} from "./Hud"
 import {createLightBacking} from "./UiBacking"
 
 // Arrow shape and placement (cm). Not drill tunables: they only shape the arrow.
@@ -8,6 +9,7 @@ const BAR_T = 0.7 // bar thickness
 const HEAD_BAR = 2 // length of each arrowhead bar
 const EDGE_INSET = 3 // keeps the whole arrow inside the view edge
 const NEARER_THAN_HUD = 2 // a little in front of the HUD plane so it draws over it
+const HUD_CLEARANCE = ARROW_LENGTH / 2 + 1 // arrow center stays this far above the HUD panel's top edge
 const DEG_TO_RAD = Math.PI / 180 // config FOV is in degrees; runtime math is radians
 const HEAD_ANGLE = 135 * DEG_TO_RAD // arrowhead bars sweep back from the tip
 
@@ -51,9 +53,9 @@ export class OffscreenArrow extends BaseScriptComponent {
   }
 
   /**
-   * Shows the arrow at the view edge nearest `target` (world, cm), pointing
-   * toward it, when it is outside the view cone; hides it when inside.
-   * Returns whether the arrow shows.
+   * Shows the arrow at the view edge nearest `target` (world, cm), never over
+   * the HUD panel, pointing toward it, when it is outside the view cone; hides
+   * it when inside. Returns whether the arrow shows.
    */
   track(target: vec3): boolean {
     if (!this.config || !this.headPose) {
@@ -102,17 +104,32 @@ export class OffscreenArrow extends BaseScriptComponent {
     // Spot on the inset view rectangle, just in front of the HUD plane.
     const d = this.config.hudDistance - NEARER_THAN_HUD
     const ex = (d * tanH - EDGE_INSET) * dx // cm right of the view center
-    const ey = (d * tanV - EDGE_INSET) * dy // cm above the view center
+    let ey = (d * tanV - EDGE_INSET) * dy // cm above the view center
+
+    // Local +X (the arrow) points outward from the view center, toward the target.
+    const len = Math.sqrt(ex * ex + ey * ey)
+    const c = len > 1e-6 ? ex / len : 1
+    const s = len > 1e-6 ? ey / len : 0
+
+    // Never over the HUD panel (ENGINEERING_PLAN 5a item 7): stay above its top
+    // edge, projected onto this plane. The HUD sits hudDistance ahead on the level
+    // and hudBelowEye below the eye, whatever the head pitch.
+    const hudTop = HUD_PANEL_HEIGHT / 2 - this.config.hudBelowEye // cm above eye level
+    const hudF = this.config.hudDistance * flat + hudTop * f.y
+    if (hudF > 1e-4) {
+      const minEy = (d * (hudTop * flat - this.config.hudDistance * f.y)) / hudF + HUD_CLEARANCE
+      if (ey < minEy) {
+        ey = minEy
+      }
+    }
+
     const p = this.pos
     p.x = head.x + f.x * d + rx * ex + ux * ey
     p.y = head.y + f.y * d + uy * ey
     p.z = head.z + f.z * d + rz * ex + uz * ey
     this.transform.setWorldPosition(p)
 
-    // Local +X (the arrow) points outward from the view center, local +Z faces the head.
-    const len = Math.sqrt(ex * ex + ey * ey)
-    const c = len > 1e-6 ? ex / len : 1
-    const s = len > 1e-6 ? ey / len : 0
+    // Local +Z faces the head.
     setFromBasis(
       this.rot,
       rx * c + ux * s, uy * s, rz * c + uz * s,

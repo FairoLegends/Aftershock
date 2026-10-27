@@ -343,7 +343,11 @@ export class DrillController extends BaseScriptComponent {
     this.updateDucked(head.y)
     this.updateSafeHold(now)
     this.showInstruction(!this._inZone ? "instr.goUnder" : this._ducked ? "instr.hold" : "instr.duck")
-    this._arrowVisible = this.offscreenArrow.track(this.safeZone.center)
+    if (this._inZone) {
+      this.hideArrow() // inside the zone the user is on their own spot (ENGINEERING_PLAN 5a item 8)
+    } else {
+      this._arrowVisible = this.offscreenArrow.track(this.safeZone.aimPoint)
+    }
   }
 
   /** Ducked at or below baseline − duckDrop; standing again only above that line + duckHysteresis. */
