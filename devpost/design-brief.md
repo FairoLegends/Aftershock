@@ -108,3 +108,5 @@ This part is for you, after CLAD finishes.
 
 ## Revisions
 - 27 Oct 2026, learner: in-Lens text gets a language picker (Bahasa Indonesia, English, Deutsch, 日本語, 简体中文) on the first screen; the chosen language shows on top with English below so judges can read it. Replaces the fixed Indonesian / English pair once built (Slice 5L). Strings: docs/STRINGS_I18N.md.
+- 27 Oct 2026, learner: every drill and every Restart places the table (safe zone) and the cabinet, shelf and glass window at new positions; the table stays within about 2 m of the start position (ShakeOut: don't run far). Each hazard gets a red danger zone on the floor; standing in it during the quake drains health. (Slice 5P)
+- 27 Oct 2026, learner: ducking means the head is under the table top (90 cm drop); the arrow shows only when the safe zone is to the side or behind; the HUD backing is more opaque.

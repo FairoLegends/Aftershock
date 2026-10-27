@@ -34,6 +34,7 @@ A slice that fails its gate twice goes back to the learner with options, rather 
 | Thu 29 – Fri 30 Oct | Slice 3: quake (shake, rumble, banner, HUD, blink) ✋ | DC2 |
 | Sat 31 Oct – Sun 1 Nov | Slice 4: safe zone + duck detection, staged instructions, arrow ✋ | DC3 |
 | Mon 2 – Tue 3 Nov | Slice 5: health drain, game over, end of quake, score, Restart ✋ | DC4, DC5 |
+| Tue 3 Nov | Slice 5P: procedural layout and danger zones ✋ | New layout on every start; danger zones drain health |
 | Wed 4 Nov | Slice 5L: language picker and five languages ✋ | Picker works; all five languages render |
 | Thu 5 Nov (morning) | Slice 6: full LEAF run, comfort pass, learner's "judge it" review ✋ | All DC pass |
 | **Thu 5 Nov** | **Feature freeze: whole drill works end to end** | Full run, no errors |
@@ -85,6 +86,14 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - LEAF: `DC4_StandUpDrainsAndGameOver`, `DC5_QuakeEndsScore`.
 - Learner checkpoint: one successful drill and one game over; is the result screen clear?
 
+### Slice 5P: Procedural layout and danger zones ✋ (learner request, 27 Oct)
+- `LayoutGenerator.ts`: on every BRIEFING entry (first start and each Restart) place the table and the three hazards at new positions inside the virtual room: the table center 100–200 cm from the start position, nothing overlapping, nothing on the user's start spot, every hazard facing the room center with its label readable from the start position.
+- Danger zones: a red `#FF5A4F` floor area around each hazard (default: the object's footprint grown by 60 cm toward the room, faint fill plus outline). `inDanger` = head XZ inside any of them.
+- Health: while `QUAKE` and `inDanger`, health drains at `healthDrainPerSecond` (default) even before the user first took cover; this adds to the Slice 5 drain after first cover. Game over reason `over.why.danger` (new string, default "You stayed next to something that can fall").
+- SafeZone, arrow, labels and LEAF scenarios read positions from the generated layout, never from hard-coded numbers.
+- Requirements: R17.
+- Check: three starts in a row give three different layouts; the table is always within 200 cm; standing next to the cabinet during the quake drains health.
+
 ### Slice 5L: Language selection ✋ (learner request, 27 Oct)
 - A `LANGUAGE` state before `SAFETY` with a picker panel: five big UI Kit buttons (Bahasa Indonesia, English, Deutsch, 日本語, 简体中文).
 - `Strings.ts` becomes five languages from `docs/STRINGS_I18N.md`; every panel shows the selected language on top and English below at 80% (English only when English is picked). Restart keeps the language.
@@ -125,6 +134,20 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 3. Shake strength stays as built (learner: enough for now).
 4. The rumble is audible (learner checked).
 5. The banner hides after 2.5 s; it does not shrink into the HUD.
+
+## 5d. Learner decisions after Slice 4 (27 Oct)
+
+1. `duckDrop` 90 cm: the head must be under the table top to count as ducked.
+2. The off-screen arrow ignores height: it shows only when the safe zone is outside the horizontal half-angle (to the side or behind).
+3. The HUD backing becomes more opaque so room labels behind it no longer show through the text.
+4. Hazard label color stays as built (reads salmon in the preview, readable).
+
+## 5e. Learner request: procedural layout and danger zones (27 Oct)
+
+- Every drill start and every Restart builds a new layout: the table (safe zone) and the cabinet, shelf and glass window get new positions.
+- The table is always a few steps from the start position, at most 200 cm away (ShakeOut: do not run far).
+- Each hazard gets a red floor area around it (danger zone). Standing in a danger zone during the quake drains health.
+- Built as Slice 5P, after Slice 5 and before the language slice 5L.
 
 ## 5a. Decisions taken by the orchestrator (open to the learner's veto)
 

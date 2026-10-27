@@ -45,6 +45,8 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `result.score` | Skor: {score} | Score: {score} | Punkte: {score} | スコア：{score} | 得分：{score} |
 | `over.title` | Nyawa habis | Out of health | Keine Leben mehr | 体力がなくなりました | 生命值耗尽 |
 | `over.why.stood` | Kamu berdiri sebelum guncangan berhenti | You stood up before the shaking stopped | Du bist aufgestanden, bevor das Beben aufgehört hat | 揺れが収まる前に立ち上がりました | 你在摇晃停止前站了起来 |
+| `over.why.danger` | Kamu berdiri di dekat benda yang bisa jatuh | You stayed next to something that can fall | Du bist neben etwas geblieben, das umfallen kann | 倒れてくる物のそばにいました | 你待在可能倒下的物品旁边 |
+| `label.danger` | Zona bahaya | Danger zone | Gefahrenzone | 危険区域 | 危险区 |
 | `result.never` | Kamu tidak berlindung di bawah meja | You never took cover under the table | Du hast keinen Schutz unter dem Tisch gesucht | 机の下に避難しませんでした | 你没有躲到桌子下面 |
 | `btn.restart` | Ulangi | Restart | Neu starten | もう一度 | 重新开始 |
 

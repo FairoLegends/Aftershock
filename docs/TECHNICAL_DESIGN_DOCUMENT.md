@@ -103,7 +103,7 @@ Stages follow the user's current state, so standing up again shows `instr.duck` 
 | `quakeDurationMin` / `Max` | 45 / 60 s | Brief |
 | `quakeWaitMin` / `Max` | 8 / 15 s | (default) |
 | `warningShowSeconds` | 2.5 s | (default) |
-| `duckDrop` | 40 cm below baseline | (default) |
+| `duckDrop` | 90 cm below baseline, so the head is under the 75 cm table top (baseline 150 → ducked at ≤ 60 cm) | Learner (27 Oct; was 40) |
 | `duckHysteresis` | 10 cm | (default) |
 | `safeZoneMargin` | 15 cm around the table footprint | (default) |
 | `healthStart` | 100 | (default) |
