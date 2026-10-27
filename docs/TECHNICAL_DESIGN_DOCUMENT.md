@@ -121,6 +121,8 @@ Stages follow the user's current state, so standing up again shows `instr.duck` 
 
 ## 6. Strings (`Strings.ts`)
 
+> From Slice 5L the strings come in five languages (id, en, de, ja, zh) from `docs/STRINGS_I18N.md`, and a `LANGUAGE` state with a five-button picker comes before `SAFETY`. Restart keeps the chosen language and goes to `BRIEFING`. Japanese and Chinese need subset Noto Sans JP / SC fonts (OFL), because the bundled fonts have no CJK glyphs. Until Slice 5L, the table below is the source.
+
 Format: `"Indonesian / English"`, Indonesian first, as in the brief. Strings quoted from the brief are fixed; others are (default) until the learner rewords them (PRD Q4).
 
 | Key | Text | Source |

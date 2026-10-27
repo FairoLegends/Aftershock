@@ -9,6 +9,8 @@ Built the way Adobe's guide describes (https://business.adobe.com/blog/basics/ho
 
 Legend: rounded box = what the user sees, diamond = a check the Lens makes, parallelogram = what the user does.
 
+> From Slice 5L a language picker (five buttons) comes first: `Lens opens → Pick language → Safety reminder`. Restart keeps the language.
+
 ## 1. Main flow
 
 ```mermaid

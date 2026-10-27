@@ -76,6 +76,7 @@ Floor and wall sections are faint outlines only (not solid), so the room reads a
 
 | Element | Placement |
 |---|---|
+| Language picker (Slice 5L) | First screen, before the safety panel: 110 cm in front, 22 cm below eye level, five big buttons (at least 12 × 5 cm each) labeled in their own language, placed once at start |
 | Safety panel | 110 cm in front of the head, 22 cm below eye level, placed once at start |
 | HUD (instruction, health, timer) | Lazy-follows the head at 110 cm, 22 cm below eye level (learner: 20–25 cm, so the table stays in view). Health and timer in one row under the instruction. |
 | Warning banner | Center of view for 2.5 s at quake start, then shrinks into the HUD row |

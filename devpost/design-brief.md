@@ -105,3 +105,6 @@ This part is for you, after CLAD finishes.
 5. **Label what you know.** Write "logic proven" next to anything the tests and preview show working, and "feel unproven" next to anything only real glasses could tell you (comfort over time, real hand tracking, real recognition).
 6. **Fix with design notes, not code.** Tell your agent what to change in design terms, for example: "Move the step card 15 cm lower and next to the pan. Make the Next button twice as big. Re-run the tests." If a fix takes under a minute, like nudging a panel, do it yourself in the scene.
 7. **Submit.** Record a video under 3 minutes of your Lens in the preview, public on YouTube. Make your repo public with your Lens Studio project and this `devpost/` folder. Details are on the hackathon site: https://learn-specs.devpost.com/resources
+
+## Revisions
+- 27 Oct 2026, learner: in-Lens text gets a language picker (Bahasa Indonesia, English, Deutsch, 日本語, 简体中文) on the first screen; the chosen language shows on top with English below so judges can read it. Replaces the fixed Indonesian / English pair once built (Slice 5L). Strings: docs/STRINGS_I18N.md.

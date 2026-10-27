@@ -34,7 +34,8 @@ A slice that fails its gate twice goes back to the learner with options, rather 
 | Thu 29 – Fri 30 Oct | Slice 3: quake (shake, rumble, banner, HUD, blink) ✋ | DC2 |
 | Sat 31 Oct – Sun 1 Nov | Slice 4: safe zone + duck detection, staged instructions, arrow ✋ | DC3 |
 | Mon 2 – Tue 3 Nov | Slice 5: health drain, game over, end of quake, score, Restart ✋ | DC4, DC5 |
-| Wed 4 Nov | Slice 6: full LEAF run, comfort pass, learner's "judge it" review ✋ | All DC pass |
+| Wed 4 Nov | Slice 5L: language picker and five languages ✋ | Picker works; all five languages render |
+| Thu 5 Nov (morning) | Slice 6: full LEAF run, comfort pass, learner's "judge it" review ✋ | All DC pass |
 | **Thu 5 Nov** | **Feature freeze: whole drill works end to end** | Full run, no errors |
 | Fri 6 Nov, 00:00 | **Live Project Review** (Snap) | — |
 | Fri 6 – Sat 7 Nov | Review fixes; stretch S1 (falling objects) only if every DC passes | No regressions |
@@ -83,6 +84,14 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - Requirements: R11, R12, R13.
 - LEAF: `DC4_StandUpDrainsAndGameOver`, `DC5_QuakeEndsScore`.
 - Learner checkpoint: one successful drill and one game over; is the result screen clear?
+
+### Slice 5L: Language selection ✋ (learner request, 27 Oct)
+- A `LANGUAGE` state before `SAFETY` with a picker panel: five big UI Kit buttons (Bahasa Indonesia, English, Deutsch, 日本語, 简体中文).
+- `Strings.ts` becomes five languages from `docs/STRINGS_I18N.md`; every panel shows the selected language on top and English below at 80% (English only when English is picked). Restart keeps the language.
+- Fonts: subset Noto Sans JP and Noto Sans SC (OFL 1.1) to the characters in use; license files next to them; credit in README and `THIRD_PARTY_NOTICES.md`.
+- Requirements: R16.
+- Check: pick each language once and screenshot the safety panel and the HUD; no missing-glyph boxes; German lines fit their panels.
+- Learner checkpoint: the picker is clear; the five languages read well.
 
 ### Slice 6: Prove and polish ✋
 - Run all five scenarios together, report pass/fail per criterion. Fix only failures and the comfort checklist in `DESIGN_BRIEF.md` §7.
