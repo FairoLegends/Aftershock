@@ -107,7 +107,7 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 | Slice | Status | Commit | LEAF | Learner checkpoint |
 |---|---|---|---|---|
 | 0 | done | 716d6e7 + Q1–Q5 update | — | Q1–Q5 answered 27 Oct (Q4 later) |
-| 1 | not started | — | — | — |
+| 1 | built, awaiting learner check | d9f1b04 | DC1a registered; LEAF runner tools missing, checked by hand | pending |
 | 2 | not started | — | — | — |
 | 3 | not started | — | — | — |
 | 4 | not started | — | — | — |
