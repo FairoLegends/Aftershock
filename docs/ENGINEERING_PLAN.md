@@ -102,6 +102,13 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - The demo video is public on YouTube and under 3 minutes.
 - Every submission text is written by the learner.
 
+## 5b. Learner decisions after Slice 2 (27 Oct)
+
+1. Panels and the HUD sit 22 cm below eye level (`hudBelowEye`; the learner chose 20–25 cm) so the table stays in view while reading.
+2. Label backings become light and semi-transparent, as DESIGN_BRIEF §5.1 asks (Slice 2 built them dark grey).
+3. `eyeHeight` stays 160 cm; the safe-zone marker stays a rectangle.
+4. Label offsets from Slice 2 (cabinet x −121, shelf x 127) accepted.
+
 ## 5a. Decisions taken by the orchestrator (open to the learner's veto)
 
 Slice 1 questions the learner had not answered when Slice 2 started (27 Oct). The orchestrator kept the documented design:

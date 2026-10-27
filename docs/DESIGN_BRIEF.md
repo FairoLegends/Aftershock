@@ -67,8 +67,8 @@ Coordinates in cm, relative to the user's start position on the floor, +Y up, �
 | Cabinet | 90 × 45 × 190 | (−150, 0, −40) | Left; label at 140 cm height on its front |
 | Shelf with items | 80 × 30 × 180 | (150, 0, −60) | Right; small boxes and books on it (fall candidates for stretch S1) |
 | Glass window | 120 wide × 120 tall, bottom edge 90 cm | (0, 0, +170) | Behind, on a virtual wall section |
-| Safe-zone marker | Floor ring 130 × 80, plus label | Under the table | Steady before the quake, blinks 2 Hz during it |
-| Hazard labels | Fit text, 2.5 cm type | On each hazard, facing the room center | Visible from the start position |
+| Safe-zone marker | Rectangular floor outline 130 × 80 (learner kept the rectangle), plus label | Under the table | Steady before the quake, blinks 2 Hz during it |
+| Hazard labels | Fit text, 2.5 cm type, on a light semi-transparent backing (never dark grey: the display is additive and dark fades) | On each hazard, facing the room center | Visible from the start position |
 
 Floor and wall sections are faint outlines only (not solid), so the room reads as an overlay.
 
@@ -76,8 +76,8 @@ Floor and wall sections are faint outlines only (not solid), so the room reads a
 
 | Element | Placement |
 |---|---|
-| Safety panel | 110 cm in front of the head, 10 cm below eye level, placed once at start |
-| HUD (instruction, health, timer) | Lazy-follows the head at 110 cm, 10 cm below eye level. Health and timer in one row under the instruction. |
+| Safety panel | 110 cm in front of the head, 22 cm below eye level, placed once at start |
+| HUD (instruction, health, timer) | Lazy-follows the head at 110 cm, 22 cm below eye level (learner: 20–25 cm, so the table stays in view). Health and timer in one row under the instruction. |
 | Warning banner | Center of view for 2.5 s at quake start, then shrinks into the HUD row |
 | Arrow | At the edge of the view nearest the safe zone, 4 cm, green, pointing toward it |
 | Result panel | 110 cm in front of the head when shown |
