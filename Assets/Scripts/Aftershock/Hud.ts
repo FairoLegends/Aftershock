@@ -63,14 +63,24 @@ export class Hud extends BaseScriptComponent {
   followSpeed: number = 3
 
   @input
-  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
+  @hint("Backing color: light, opaque enough that room labels behind it do not show through (ENGINEERING_PLAN 5d item 3). Never dark: the display is additive.")
   @widget(new ColorWidget())
-  backingColor: vec4 = new vec4(1, 1, 1, 0.25)
+  backingColor: vec4 = new vec4(1, 1, 1, 0.6)
 
   @input
   @hint("Instruction, label and timer text color (white)")
   @widget(new ColorWidget())
   textColor: vec4 = new vec4(1, 1, 1, 1)
+
+  @input
+  @hint("Thin outline around every HUD text, so white text reads on the light backing")
+  @widget(new ColorWidget())
+  textOutlineColor: vec4 = new vec4(0.2, 0.2, 0.2, 1)
+
+  @input
+  @hint("Outline strength, 0 (none) to 1 (very strong)")
+  @widget(new SliderWidget(0, 1, 0.05))
+  textOutlineSize: number = 0.2
 
   @input
   @hint("Alarm red #FF5A4F: warning banner, and the health bar below healthAlarmBelow")
@@ -335,6 +345,11 @@ export class Hud extends BaseScriptComponent {
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
     t.textFill.color = color
+    if (this.textOutlineSize > 0) {
+      t.outlineSettings.enabled = true
+      t.outlineSettings.size = this.textOutlineSize
+      t.outlineSettings.fill.color = this.textOutlineColor
+    }
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = wrap ? HorizontalOverflow.Wrap : HorizontalOverflow.Overflow

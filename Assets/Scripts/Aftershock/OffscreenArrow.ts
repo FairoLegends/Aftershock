@@ -24,7 +24,7 @@ export class OffscreenArrow extends BaseScriptComponent {
   @ui.label("Off-screen arrow toward the safe zone (TDD §3.1)")
   @ui.separator
   @input
-  @hint("DrillConfig component (fovHalfAngleHorizontal, fovHalfAngleVertical, hudDistance)")
+  @hint("DrillConfig component (fovHalfAngleHorizontal for the in-view test; fovHalfAngleVertical, hudDistance for the edge spot)")
   config: DrillConfig
 
   @input
@@ -84,13 +84,17 @@ export class OffscreenArrow extends BaseScriptComponent {
     const halfV = this.config.fovHalfAngleVertical * DEG_TO_RAD
     const tanH = Math.tan(halfH)
     const tanV = Math.tan(halfV)
-    if (vf > 0 && Math.abs(vr) <= vf * tanH && Math.abs(vu) <= vf * tanV) {
+    // In view by yaw alone: height is ignored (ENGINEERING_PLAN 5d item 2), so the
+    // arrow shows only when the zone is to the side or behind.
+    const hf = (vx * f.x + vz * f.z) / flat // level distance ahead
+    if (hf > 0 && Math.abs(vr) <= hf * tanH) {
       this.setShown(false)
       return false
     }
 
     // Which way to turn, in view half-angles (yaw right, pitch up); the larger picks the edge.
-    let dx = Math.atan2(vr, vf) / halfH
+    // Out of view by yaw means |dx| > 1, so the arrow always sits on a side edge.
+    let dx = Math.atan2(vr, hf) / halfH
     let dy = Math.atan2(vu, Math.sqrt(vf * vf + vr * vr)) / halfV
     const m = Math.max(Math.abs(dx), Math.abs(dy))
     if (m < 1e-6) {

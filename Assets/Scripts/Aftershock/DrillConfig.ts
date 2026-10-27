@@ -29,8 +29,8 @@ export class DrillConfig extends BaseScriptComponent {
 
   @ui.group_start("Take cover")
   @input
-  @hint("Ducked when head Y is this far below the baseline (cm)")
-  duckDrop: number = 40
+  @hint("Ducked when head Y is this far below the baseline (cm). 90 puts the head under the 75 cm table top (learner, 27 Oct).")
+  duckDrop: number = 90
 
   @input
   @hint("Standing again only above baseline - duckDrop + this (cm)")

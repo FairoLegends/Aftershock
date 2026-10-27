@@ -5,8 +5,10 @@ import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
 import {OffscreenArrow} from "./OffscreenArrow"
 import {QuakeShaker} from "./QuakeShaker"
+import {ResultPanel} from "./ResultPanel"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
+import {computeScore, ScoreBreakdown} from "./ScoreCalculator"
 import {StringKey} from "./Strings"
 
 export type DrillState = "SAFETY" | "BRIEFING" | "QUAKE" | "POST_QUAKE" | "RESULT" | "GAME_OVER"
@@ -27,8 +29,9 @@ const LOG = "[Aftershock]"
  * The only owner of drill state (TDD §4). SAFETY → BRIEFING → QUAKE →
  * POST_QUAKE work. BRIEFING captures the duck baseline and the safe zone's
  * rest footprint. Each QUAKE frame checks cover (inZone, ducked), stages the
- * instruction and drives the off-screen arrow (Slice 4). RESULT and
- * GAME_OVER are stubs.
+ * instruction and drives the off-screen arrow (Slice 4). Once safe, exposure
+ * drains health (0 → GAME_OVER); leaving the zone after the quake → RESULT
+ * with the TDD §7 score; Restart → BRIEFING with a full reset (Slice 5).
  */
 @component
 export class DrillController extends BaseScriptComponent {
@@ -86,7 +89,12 @@ export class DrillController extends BaseScriptComponent {
   @hint("AudioComponent with the looping rumble track")
   rumbleAudio: AudioComponent
 
+  @input
+  @hint("ResultPanel component (result / game-over + Restart, under AftershockRoot)")
+  resultPanel: ResultPanel
+
   private hazardLabels: HazardLabel[] = []
+  private postQuakeUpdate: UpdateEvent | null = null
   private quakeStartTimer: DelayedCallbackEvent | null = null
   private quakeEndTimer: DelayedCallbackEvent | null = null
   private quakeUpdate: UpdateEvent | null = null
@@ -97,7 +105,8 @@ export class DrillController extends BaseScriptComponent {
   private _health: number = 0
   private _instructionKey: StringKey | null = null
   private _arrowVisible: boolean = false
-  private _lastScore: number | null = null
+  private _lastScore: ScoreBreakdown | null = null
+  private _secondsStanding = 0 // s exposed after first safe (TDD §7 penalty)
   private baselineHeadY: number | null = null
   private _inZone = false
   private _ducked = false
@@ -118,8 +127,13 @@ export class DrillController extends BaseScriptComponent {
   get arrowVisible(): boolean {
     return this._arrowVisible
   }
-  get lastScore(): number | null {
+  /** Score breakdown of the last RESULT (TDD §7), or null (never scored, or GAME_OVER). */
+  get lastScore(): ScoreBreakdown | null {
     return this._lastScore
+  }
+  /** Seconds exposed (not inZone && ducked) after first being safe, this drill. */
+  get secondsStanding(): number {
+    return this._secondsStanding
   }
   /** Head height captured when BRIEFING starts (cm), or null before that. */
   get duckBaseline(): number | null {
@@ -157,6 +171,9 @@ export class DrillController extends BaseScriptComponent {
     this.quakeUpdate = this.createEvent("UpdateEvent")
     this.quakeUpdate.bind(() => this.onQuakeUpdate())
     this.quakeUpdate.enabled = false
+    this.postQuakeUpdate = this.createEvent("UpdateEvent")
+    this.postQuakeUpdate.bind(() => this.onPostQuakeUpdate())
+    this.postQuakeUpdate.enabled = false
     this.createEvent("OnStartEvent").bind(() => this.onStart())
   }
 
@@ -174,7 +191,8 @@ export class DrillController extends BaseScriptComponent {
       ["quakeShaker", this.quakeShaker],
       ["hud", this.hud],
       ["offscreenArrow", this.offscreenArrow],
-      ["rumbleAudio", this.rumbleAudio]
+      ["rumbleAudio", this.rumbleAudio],
+      ["resultPanel", this.resultPanel]
     ]
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
     if (missing.length > 0) {
@@ -200,6 +218,7 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} room floor at Y = ${fmt(floorY)} cm (eyeHeight ${fmt(this.config.eyeHeight)} cm)`)
 
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
+    this.resultPanel.onRestart.add(() => this.onRestartPressed())
     this.transitionTo("SAFETY")
   }
 
@@ -221,15 +240,28 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
-  // Stub triggers for later slices. They only log for now.
   onHealthDepleted(): void {
-    console.log(`${LOG} stub: health reached 0 (GAME_OVER comes in Slice 5)`)
+    if (this._state === "QUAKE") {
+      this.transitionTo("GAME_OVER")
+    }
   }
   onHeadLeftSafeZone(): void {
-    console.log(`${LOG} stub: head left the safe zone (RESULT comes in Slice 5)`)
+    if (this._state === "POST_QUAKE") {
+      this.transitionTo("RESULT")
+    }
   }
+  /** Restart → BRIEFING with a full reset (enterBriefing resets health, cover, standing time, arrow). */
   onRestartPressed(): void {
-    console.log(`${LOG} stub: Restart pressed (comes in Slice 5)`)
+    if (this._state !== "RESULT" && this._state !== "GAME_OVER") {
+      return
+    }
+    this.stopQuakeEffects()
+    this.postQuakeUpdate.enabled = false
+    this.quakeStartTimer.cancel()
+    this._lastScore = null
+    this._quakeDuration = 0
+    this.resultPanel.hide()
+    this.transitionTo("BRIEFING")
   }
 
   private transitionTo(next: DrillState): void {
@@ -254,8 +286,10 @@ export class DrillController extends BaseScriptComponent {
         this.enterPostQuake()
         break
       case "RESULT":
+        this.enterResult()
+        break
       case "GAME_OVER":
-        console.log(`${LOG} stub: enter ${next}`)
+        this.enterGameOver()
         break
     }
   }
@@ -266,6 +300,7 @@ export class DrillController extends BaseScriptComponent {
     this.setRoomLabelsShown(false)
     this.briefingPanel.hide()
     this.hud.hide()
+    this.resultPanel.hide()
     this.safetyPanel.placeInFront(
       this.headPose.position,
       this.headPose.forward,
@@ -277,7 +312,9 @@ export class DrillController extends BaseScriptComponent {
 
   private enterBriefing(): void {
     this.safetyPanel.hide()
+    this.resultPanel.hide()
     this._health = this.config.healthStart
+    this._secondsStanding = 0
     this.resetCover()
     this._instructionKey = "instr.brief"
     this.baselineHeadY = this.headPose.position.y
@@ -330,6 +367,25 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setElapsed(now - this.quakeStartTime)
     this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
     this.updateCover(now)
+
+    // Exposed once safe: hasBeenSafe && !(inZone && ducked) (TDD §4.1, §7).
+    if (this._state === "QUAKE" && this._hasBeenSafe && !this.isSafe) {
+      const dt = getDeltaTime()
+      this._secondsStanding += dt
+      this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * dt)
+      this.hud.setHealth(this._health)
+      if (this._health <= 0) {
+        console.log(`${LOG} QUAKE: health reached 0 after ${fmt(this._secondsStanding)} s exposed`)
+        this.onHealthDepleted()
+      }
+    }
+  }
+
+  /** POST_QUAKE: wait for the head to leave the safe zone (USER_FLOW_DIAGRAM §2). */
+  private onPostQuakeUpdate(): void {
+    if (!this.safeZone.contains(this.headPose.position)) {
+      this.onHeadLeftSafeZone()
+    }
   }
 
   /** One QUAKE frame of take-cover logic (TDD §3.1, §4.1): zone, duck, safe hold, instruction, arrow. */
@@ -403,8 +459,10 @@ export class DrillController extends BaseScriptComponent {
     this._arrowVisible = false
   }
 
-  private enterPostQuake(): void {
+  /** Stops the quake: update, end timer, shake, rumble, blink, arrow. Safe to call twice. */
+  private stopQuakeEffects(): void {
     this.quakeUpdate.enabled = false
+    this.quakeEndTimer.cancel()
     this.quakeShaker.stopShake()
     if (this.rumbleAudio.isPlaying()) {
       this.rumbleAudio.stop(false)
@@ -412,8 +470,48 @@ export class DrillController extends BaseScriptComponent {
     this.rumbleAudio.volume = this.rumbleBaseVolume
     this.safeZone.stopBlink()
     this.hideArrow()
+  }
+
+  private enterPostQuake(): void {
+    this.stopQuakeEffects()
     this._instructionKey = "instr.comeOut"
     this.hud.setInstruction(this._instructionKey)
+    if (!this.safeZone.contains(this.headPose.position)) {
+      this.onHeadLeftSafeZone() // already outside: straight to RESULT
+      return
+    }
+    this.postQuakeUpdate.enabled = true
+  }
+
+  private enterResult(): void {
+    this.postQuakeUpdate.enabled = false
+    this._lastScore = computeScore(this._tSafe, this._health, this._secondsStanding)
+    const b = this._lastScore
+    console.log(
+      `${LOG} RESULT: tSafe ${b.tSafe === null ? "never" : fmt(b.tSafe) + " s"}, speed ${b.speedPoints}, health ${fmt(b.healthLeft)} (${b.healthPoints}), standing ${fmt(b.secondsStanding)} s (-${b.penalty}), score ${b.score}`
+    )
+    this.showResultPanel()
+    this.resultPanel.showResult(b)
+  }
+
+  private enterGameOver(): void {
+    this.stopQuakeEffects()
+    this._lastScore = null
+    this.showResultPanel()
+    this.resultPanel.showGameOver()
+  }
+
+  /** Hides the HUD and arrow, then places the result panel in front of the head. */
+  private showResultPanel(): void {
+    this.hud.hide()
+    this.hideArrow()
+    this._instructionKey = null
+    this.resultPanel.placeInFront(
+      this.headPose.position,
+      this.headPose.forward,
+      this.config.hudDistance,
+      this.config.hudBelowEye
+    )
   }
 
   /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. */

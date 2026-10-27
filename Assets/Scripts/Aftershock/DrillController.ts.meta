@@ -36,6 +36,7 @@
     hud: false
     offscreenArrow: false
     quakeShaker: false
+    resultPanel: false
     room: false
     rumbleAudio: false
     safeZone: false
@@ -63,6 +64,7 @@
       hud: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
       offscreenArrow: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
       rumbleAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
+      resultPanel: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -82,3 +84,4 @@
     - '// @input AssignableType_10 hud {"hint":"Hud component (under AftershockRoot, not the Room, so it never shakes)"}'
     - '// @input AssignableType_11 offscreenArrow {"hint":"OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)"}'
     - '// @input Component.AudioComponent rumbleAudio {"hint":"AudioComponent with the looping rumble track"}'
+    - '// @input AssignableType_12 resultPanel {"hint":"ResultPanel component (result / game-over + Restart, under AftershockRoot)"}'
