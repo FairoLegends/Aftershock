@@ -49,7 +49,7 @@
   InputLines:
     - '// @ui {"widget":"label", "label":"Off-screen arrow toward the safe zone (TDD §3.1)"}'
     - '// @ui {"widget":"separator"}'
-    - '// @input AssignableType_1 config {"hint":"DrillConfig component (fovHalfAngleHorizontal, fovHalfAngleVertical, hudDistance)"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (fovHalfAngleHorizontal for the in-view test; fovHalfAngleVertical, hudDistance for the edge spot)"}'
     - '// @input AssignableType_2 headPose {"hint":"HeadPose component (view cone origin and direction)"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input vec4 color = {0.239,0.863,0.518,1} {"hint":"Safe green #3DDC84 (DESIGN_BRIEF §5.1). Light colors only: the display is additive.", "widget":"color"}'

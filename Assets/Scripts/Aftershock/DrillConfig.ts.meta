@@ -105,7 +105,7 @@
     - '// @input float warningShowSeconds = 2.5 {"hint":"How long the warning banner shows, in seconds"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Take cover"}'
-    - '// @input float duckDrop = 40 {"hint":"Ducked when head Y is this far below the baseline (cm)"}'
+    - '// @input float duckDrop = 90 {"hint":"Ducked when head Y is this far below the baseline (cm). 90 puts the head under the 75 cm table top (learner, 27 Oct)."}'
     - '// @input float duckHysteresis = 10 {"hint":"Standing again only above baseline - duckDrop + this (cm)"}'
     - '// @input float safeZoneMargin = 15 {"hint":"Safe zone = table footprint grown by this margin (cm)"}'
     - '// @input float safeHoldSeconds = 1 {"hint":"inZone and ducked must hold this long to count as safe, in seconds"}'

@@ -35,6 +35,8 @@
     followSpeed: false
     headPose: false
     textColor: false
+    textOutlineColor: false
+    textOutlineSize: false
     trackColor: false
   ScriptTypesHidden:
     {}
@@ -50,6 +52,8 @@
       followSpeed: !<float> 3.000000
       backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
       textColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
+      textOutlineSize: 0.200000
       alarmColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
       barColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
       trackColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.200000}
@@ -63,8 +67,10 @@
     - '// @input AssignableType_2 headPose {"hint":"HeadPose component the HUD follows"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float followSpeed = 3 {"hint":"How fast the HUD catches up with the head (per second). Higher = stiffer.", "widget":"slider", "min":0.5, "max":10, "step":0.5}'
-    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @input vec4 backingColor = {1,1,1,0.6} {"hint":"Backing color: light, opaque enough that room labels behind it do not show through (ENGINEERING_PLAN 5d item 3). Never dark: the display is additive.", "widget":"color"}'
     - '// @input vec4 textColor = {1,1,1,1} {"hint":"Instruction, label and timer text color (white)", "widget":"color"}'
+    - '// @input vec4 textOutlineColor = {0.2,0.2,0.2,1} {"hint":"Thin outline around every HUD text, so white text reads on the light backing", "widget":"color"}'
+    - '// @input float textOutlineSize = 0.2 {"hint":"Outline strength, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @input vec4 alarmColor = {1,0.353,0.31,1} {"hint":"Alarm red #FF5A4F: warning banner, and the health bar below healthAlarmBelow", "widget":"color"}'
     - '// @input vec4 barColor = {1,1,1,1} {"hint":"Health bar fill color at or above healthAlarmBelow", "widget":"color"}'
     - '// @input vec4 trackColor = {1,1,1,0.2} {"hint":"Health bar track (empty part) color", "widget":"color"}'

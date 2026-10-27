@@ -1098,8 +1098,9 @@
   ScriptAsset: !<reference> bfe061eb-93d7-4c48-b8b6-ac061c3a85ba
   ScriptInputsDefault:
     followSpeed: true
-    backingColor: true
     textColor: true
+    textOutlineColor: true
+    textOutlineSize: true
     alarmColor: true
     barColor: true
     trackColor: true
@@ -1110,8 +1111,10 @@
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       headPose: !<MappingBased.AssignableType_2> fa96ddb3-29c7-4a6c-a42c-6ed441585277
       followSpeed: !<float> 3.000000
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.600000}
       textColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
+      textOutlineSize: 0.200000
       alarmColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
       barColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
       trackColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.200000}
@@ -1199,6 +1202,21 @@
     []
   Components:
     - !<own> 869c776b-2fba-48bb-9e43-4c083cd1108c
+- !<SceneObject/392fc1e9-36b5-4b4c-8dbb-7d7bb0469a05>
+  PrefabRemaps:
+    []
+  Name: ResultPanel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: -10.000000, z: -110.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> ee29e4a0-2b17-446e-b061-0293c4c30acb
 - !<SceneObject/3a794764-c758-4d72-9d89-bf3ed978113f>
   PrefabRemaps:
     []
@@ -1276,7 +1294,6 @@
     quakeWaitMin: true
     quakeWaitMax: true
     warningShowSeconds: true
-    duckDrop: true
     duckHysteresis: true
     safeZoneMargin: true
     safeHoldSeconds: true
@@ -1306,7 +1323,7 @@
       quakeWaitMin: !<float> 8.000000
       quakeWaitMax: !<float> 15.000000
       warningShowSeconds: 2.500000
-      duckDrop: !<float> 40.000000
+      duckDrop: !<float> 90.000000
       duckHysteresis: !<float> 10.000000
       safeZoneMargin: !<float> 15.000000
       safeHoldSeconds: !<float> 1.000000
@@ -2889,6 +2906,7 @@
     - !<own> 0fd3fb29-be60-4c85-84d5-a2a43b0fc4f8
     - !<own> 8a025c21-2752-4be4-9004-c8a2cfdf3936
     - !<own> 2e0d1fe3-9eee-4484-bdec-82eaaca8977e
+    - !<own> 392fc1e9-36b5-4b4c-8dbb-7d7bb0469a05
   Components:
     []
 - !<SceneObject/abfa4c71-3560-46f0-9471-90e212f21185>
@@ -4033,6 +4051,22 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<ScriptComponent/ee29e4a0-2b17-446e-b061-0293c4c30acb>
+  PrefabRemaps:
+    []
+  Name: ResultPanel
+  Enabled: true
+  ScriptAsset: !<reference> 634121c6-c913-47fc-9203-1368fce577a5
+  ScriptInputsDefault:
+    backingColor: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/eebe3f41-6f83-4c23-bdad-cde956cb36fb>
   PrefabRemaps:
     []
@@ -4420,6 +4454,7 @@
       hud: !<MappingBased.AssignableType_10> 33b6a306-db2b-4c96-884a-801d79061b45
       offscreenArrow: !<MappingBased.AssignableType_11> ffca1e4f-b3c0-4179-b09f-25268688f6c7
       rumbleAudio: !<reference.AudioComponent> 142be6a5-ecbe-4d9d-a930-dd55eb623006
+      resultPanel: !<MappingBased.AssignableType_12> ee29e4a0-2b17-446e-b061-0293c4c30acb
   ScriptTypes:
     "":
       {}
