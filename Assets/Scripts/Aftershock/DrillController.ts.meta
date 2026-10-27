@@ -34,6 +34,7 @@
     glassLabel: false
     headPose: false
     hud: false
+    offscreenArrow: false
     quakeShaker: false
     room: false
     rumbleAudio: false
@@ -60,6 +61,7 @@
       briefingPanel: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
       quakeShaker: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
       hud: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
+      offscreenArrow: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
       rumbleAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
@@ -78,4 +80,5 @@
     - '// @input AssignableType_8 briefingPanel {"hint":"BriefingPanel component (instr.brief)"}'
     - '// @input AssignableType_9 quakeShaker {"hint":"QuakeShaker component on the Room"}'
     - '// @input AssignableType_10 hud {"hint":"Hud component (under AftershockRoot, not the Room, so it never shakes)"}'
+    - '// @input AssignableType_11 offscreenArrow {"hint":"OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)"}'
     - '// @input Component.AudioComponent rumbleAudio {"hint":"AudioComponent with the looping rumble track"}'

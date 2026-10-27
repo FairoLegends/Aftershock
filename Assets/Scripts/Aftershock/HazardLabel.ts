@@ -40,9 +40,9 @@ export class HazardLabel extends BaseScriptComponent {
   key: string = "label.cabinet"
 
   @input
-  @hint("Text color: amber #FFB020 for hazards, green #3DDC84 for the safe zone")
+  @hint("Text color: dark orange #D9480F for hazards (learner, 27 Oct), green #3DDC84 for the safe zone")
   @widget(new ColorWidget())
-  textColor: vec4 = new vec4(1, 0.69, 0.125, 1)
+  textColor: vec4 = new vec4(0.851, 0.282, 0.059, 1)
 
   @input
   @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")

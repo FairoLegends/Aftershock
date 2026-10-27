@@ -3,6 +3,7 @@ import {DrillConfig} from "./DrillConfig"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
+import {OffscreenArrow} from "./OffscreenArrow"
 import {QuakeShaker} from "./QuakeShaker"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
@@ -23,8 +24,11 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
 const LOG = "[Aftershock]"
 
 /**
- * The only owner of drill state (TDD §4). Slice 1: SAFETY → BRIEFING works;
- * BRIEFING captures the duck baseline and logs; the other states are stubs.
+ * The only owner of drill state (TDD §4). SAFETY → BRIEFING → QUAKE →
+ * POST_QUAKE work. BRIEFING captures the duck baseline and the safe zone's
+ * rest footprint. Each QUAKE frame checks cover (inZone, ducked), stages the
+ * instruction and drives the off-screen arrow (Slice 4). RESULT and
+ * GAME_OVER are stubs.
  */
 @component
 export class DrillController extends BaseScriptComponent {
@@ -75,6 +79,10 @@ export class DrillController extends BaseScriptComponent {
   hud: Hud
 
   @input
+  @hint("OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)")
+  offscreenArrow: OffscreenArrow
+
+  @input
   @hint("AudioComponent with the looping rumble track")
   rumbleAudio: AudioComponent
 
@@ -91,6 +99,11 @@ export class DrillController extends BaseScriptComponent {
   private _arrowVisible: boolean = false
   private _lastScore: number | null = null
   private baselineHeadY: number | null = null
+  private _inZone = false
+  private _ducked = false
+  private _hasBeenSafe = false
+  private _tSafe: number | null = null // s from quake start
+  private safeSince = -1 // s; when inZone && ducked last began, -1 when not safe
 
   // Read-only getters for LEAF assertions (TDD §8).
   get state(): DrillState | null {
@@ -115,6 +128,25 @@ export class DrillController extends BaseScriptComponent {
   /** This drill's quake length (s), picked when QUAKE starts. */
   get quakeDuration(): number {
     return this._quakeDuration
+  }
+  /** Head inside the safe zone's rest footprint (QUAKE). */
+  get inZone(): boolean {
+    return this._inZone
+  }
+  /** Head at or below the duck line, with hysteresis (QUAKE). */
+  get ducked(): boolean {
+    return this._ducked
+  }
+  get isSafe(): boolean {
+    return this._inZone && this._ducked
+  }
+  /** True once inZone and ducked have held for safeHoldSeconds this drill. */
+  get hasBeenSafe(): boolean {
+    return this._hasBeenSafe
+  }
+  /** Seconds from quake start until the user was first safe, or null. */
+  get tSafe(): number | null {
+    return this._tSafe
   }
 
   onAwake(): void {
@@ -141,6 +173,7 @@ export class DrillController extends BaseScriptComponent {
       ["briefingPanel", this.briefingPanel],
       ["quakeShaker", this.quakeShaker],
       ["hud", this.hud],
+      ["offscreenArrow", this.offscreenArrow],
       ["rumbleAudio", this.rumbleAudio]
     ]
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
@@ -229,7 +262,7 @@ export class DrillController extends BaseScriptComponent {
 
   private enterSafety(): void {
     this._instructionKey = null
-    this._arrowVisible = false
+    this.hideArrow()
     this.setRoomLabelsShown(false)
     this.briefingPanel.hide()
     this.hud.hide()
@@ -245,10 +278,11 @@ export class DrillController extends BaseScriptComponent {
   private enterBriefing(): void {
     this.safetyPanel.hide()
     this._health = this.config.healthStart
-    this._arrowVisible = false
+    this.resetCover()
     this._instructionKey = "instr.brief"
     this.baselineHeadY = this.headPose.position.y
     console.log(`${LOG} BRIEFING: duck baseline head Y = ${fmt(this.baselineHeadY)} cm (ducked at <= ${fmt(this.baselineHeadY - this.config.duckDrop)} cm)`)
+    this.safeZone.captureRest() // Room is at rest here, so the zone never shakes
     this.setRoomLabelsShown(true)
     this.briefingPanel.placeInFront(
       this.headPose.position,
@@ -279,22 +313,90 @@ export class DrillController extends BaseScriptComponent {
       this.rumbleAudio.play(-1)
     }
 
-    this._instructionKey = "instr.goUnder"
     this.hud.show()
     this.hud.setHealth(this._health)
     this.hud.setElapsed(0)
-    this.hud.setInstruction(this._instructionKey)
     this.hud.showWarning()
     this.safeZone.startBlink()
 
     this.quakeStartTime = getTime()
+    this.updateCover(this.quakeStartTime) // first instruction (goUnder unless already under cover)
     this.quakeEndTimer.reset(this._quakeDuration)
     this.quakeUpdate.enabled = true
   }
 
   private onQuakeUpdate(): void {
-    this.hud.setElapsed(getTime() - this.quakeStartTime)
+    const now = getTime()
+    this.hud.setElapsed(now - this.quakeStartTime)
     this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
+    this.updateCover(now)
+  }
+
+  /** One QUAKE frame of take-cover logic (TDD §3.1, §4.1): zone, duck, safe hold, instruction, arrow. */
+  private updateCover(now: number): void {
+    const head = this.headPose.position
+    const inZone = this.safeZone.contains(head)
+    if (inZone !== this._inZone) {
+      this._inZone = inZone
+      console.log(`${LOG} QUAKE: ${inZone ? "entered" : "left"} the safe zone`)
+    }
+    this.updateDucked(head.y)
+    this.updateSafeHold(now)
+    this.showInstruction(!this._inZone ? "instr.goUnder" : this._ducked ? "instr.hold" : "instr.duck")
+    this._arrowVisible = this.offscreenArrow.track(this.safeZone.center)
+  }
+
+  /** Ducked at or below baseline − duckDrop; standing again only above that line + duckHysteresis. */
+  private updateDucked(headY: number): void {
+    if (this.baselineHeadY === null) {
+      return
+    }
+    const duckY = this.baselineHeadY - this.config.duckDrop
+    const ducked = this._ducked ? headY <= duckY + this.config.duckHysteresis : headY <= duckY
+    if (ducked !== this._ducked) {
+      this._ducked = ducked
+      console.log(`${LOG} QUAKE: ${ducked ? "ducked" : "stood up"} (head Y ${fmt(headY)} cm)`)
+    }
+  }
+
+  /** hasBeenSafe and tSafe are set the first time inZone && ducked hold for safeHoldSeconds. */
+  private updateSafeHold(now: number): void {
+    if (!this.isSafe) {
+      this.safeSince = -1
+      return
+    }
+    if (this.safeSince < 0) {
+      this.safeSince = now
+    }
+    if (!this._hasBeenSafe && now - this.safeSince >= this.config.safeHoldSeconds) {
+      this._hasBeenSafe = true
+      this._tSafe = now - this.quakeStartTime
+      console.log(`${LOG} QUAKE: safe after ${fmt(this._tSafe)} s`)
+    }
+  }
+
+  /** Sets the HUD instruction only when the key changes. */
+  private showInstruction(key: StringKey): void {
+    if (key === this._instructionKey) {
+      return
+    }
+    this._instructionKey = key
+    this.hud.setInstruction(key)
+  }
+
+  /** Back to "not under cover" for a new drill (BRIEFING). */
+  private resetCover(): void {
+    this._inZone = false
+    this._ducked = false
+    this._hasBeenSafe = false
+    this._tSafe = null
+    this.safeSince = -1
+    this.hideArrow()
+  }
+
+  private hideArrow(): void {
+    this.offscreenArrow.hide()
+    this._arrowVisible = false
   }
 
   private enterPostQuake(): void {
@@ -305,6 +407,7 @@ export class DrillController extends BaseScriptComponent {
     }
     this.rumbleAudio.volume = this.rumbleBaseVolume
     this.safeZone.stopBlink()
+    this.hideArrow()
     this._instructionKey = "instr.comeOut"
     this.hud.setInstruction(this._instructionKey)
   }

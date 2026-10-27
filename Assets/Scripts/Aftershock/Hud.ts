@@ -30,6 +30,7 @@ const TIMER_W = 9
 const WARN_W = 40
 const WARN_ID_H = 9
 const WARN_EN_H = 7.2
+const WARN_RAISE = 2 // banner sits this far above eye level so it clears the HUD panel (learner, 27 Oct)
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 const FILL_Z = 0.05 // health fill just in front of its track
 const MIN_FILL_W = 0.001
@@ -268,10 +269,10 @@ export class Hud extends BaseScriptComponent {
     this.timerLabel = this.addText(row, "TimerText", "00:00", INSTRUCTION_EM_CM, TIMER_W, ROW_H, this.textColor, false)
   }
 
-  /** Created after Panel so it draws on top; at eye level (center of view). */
+  /** Created after Panel so it draws on top; WARN_RAISE above eye level (center of view). */
   private buildBanner(): void {
     const banner = this.child(this.sceneObject, "WarningBanner")
-    banner.getTransform().setLocalPosition(new vec3(0, this.config ? this.config.hudBelowEye : 0, 0))
+    banner.getTransform().setLocalPosition(new vec3(0, (this.config ? this.config.hudBelowEye : 0) + WARN_RAISE, 0))
     const backing = createLightBacking(banner, this.backingColor)
     const content = this.child(banner, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))

@@ -38,6 +38,7 @@ export class SafeZone extends BaseScriptComponent {
   private blinkStart = 0 // s
   private blinkOn = true
   private _blinking = false
+  private restCenter: vec3 | null = null
 
   onAwake(): void {
     this.blinkEvent = this.createEvent("UpdateEvent")
@@ -45,9 +46,18 @@ export class SafeZone extends BaseScriptComponent {
     this.blinkEvent.enabled = false
   }
 
-  /** True when the position's XZ is inside the table footprint grown by safeZoneMargin. */
+  /**
+   * Stores the table's rest position. DrillController calls this on entering
+   * BRIEFING, when the Room is at rest. The table and marker shake with the
+   * Room; the zone does not, so shaking never flips contains().
+   */
+  captureRest(): void {
+    this.restCenter = this.table.getTransform().getWorldPosition()
+  }
+
+  /** True when the position's XZ is inside the table's rest footprint grown by safeZoneMargin. */
   contains(position: vec3): boolean {
-    const c = this.table.getTransform().getWorldPosition()
+    const c = this.center
     const m = this.config.safeZoneMargin
     return (
       Math.abs(position.x - c.x) <= this.footprintWidth / 2 + m &&
@@ -55,9 +65,12 @@ export class SafeZone extends BaseScriptComponent {
     )
   }
 
-  /** World position of the table center (floor level of the table object). */
+  /**
+   * Table center at floor level (cm), at rest once captureRest() has run
+   * (the live position before that). Shared object: do not modify it.
+   */
   get center(): vec3 {
-    return this.table.getTransform().getWorldPosition()
+    return this.restCenter ? this.restCenter : this.table.getTransform().getWorldPosition()
   }
 
   showMarker(): void {
