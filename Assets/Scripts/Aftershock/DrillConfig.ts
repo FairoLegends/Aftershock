@@ -96,6 +96,12 @@ export class DrillConfig extends BaseScriptComponent {
   timerMode: string = "elapsed"
   @ui.group_end
 
+  @ui.group_start("Room")
+  @input
+  @hint("Floor sits this far below the head's start height (cm). The preview starts the head at Y = 0.")
+  eyeHeight: number = 160
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")

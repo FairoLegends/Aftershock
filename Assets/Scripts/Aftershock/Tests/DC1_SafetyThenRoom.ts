@@ -4,11 +4,16 @@ import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {DrillController} from "../DrillController"
+import {SafeZone} from "../SafeZone"
 import {splitBilingual, STRINGS, StringKey} from "../Strings"
 
-// DC1 first half (Slice 1): the Lens opens in SAFETY with both reminder lines
-// visible, and pinching Continue moves the drill to BRIEFING.
-// The room half of DC1 is added in Slice 2.
+const FURNITURE = ["Table", "Cabinet", "Shelf", "GlassWindow"]
+const HAZARD_LABELS = ["CabinetLabel", "ShelfLabel", "GlassLabel"]
+const LABEL_KEYS: StringKey[] = ["label.cabinet", "label.shelf", "label.glass", "label.safe"]
+
+// DC1: the Lens opens in SAFETY with both reminder lines visible and the room
+// labels hidden. Pinching Continue moves the drill to BRIEFING, which shows the
+// hazard labels, the safe-zone marker and instr.brief over the furniture.
 @component
 export class DC1_SafetyThenRoom extends Scenario {
   async run(): Promise<void> {
@@ -24,6 +29,12 @@ export class DC1_SafetyThenRoom extends Scenario {
     this.expectBilingualVisible("safety.drill")
     this.expectBilingualVisible("safety.room")
 
+    const marker = findSceneObjectByName("SafeZoneMarker")
+    expect(marker.isEnabledInHierarchy).toBe(false)
+    for (const name of HAZARD_LABELS) {
+      expect(findSceneObjectByName(name).isEnabledInHierarchy).toBe(false)
+    }
+
     const interactor = new DefaultLeafInteractor()
     await interactor.trigger(findInteractableByName("ContinueButton"))
     await sleep(500)
@@ -31,6 +42,23 @@ export class DC1_SafetyThenRoom extends Scenario {
     expect(controller.state).toBe("BRIEFING")
     expect(controller.instructionKey).toBe("instr.brief")
     expect(panel.isEnabledInHierarchy).toBe(false)
+
+    for (const name of FURNITURE) {
+      expect(findSceneObjectByName(name).isEnabledInHierarchy).toBe(true)
+    }
+    for (const name of HAZARD_LABELS) {
+      expect(findSceneObjectByName(name).isEnabledInHierarchy).toBe(true)
+    }
+    expect(marker.isEnabledInHierarchy).toBe(true)
+    for (const key of LABEL_KEYS) {
+      this.expectBilingualVisible(key)
+    }
+    this.expectBilingualVisible("instr.brief")
+
+    // Containment only (Slice 2): the table center is inside, the start spot is not.
+    const zone = marker.getComponent(SafeZone.getTypeName()) as SafeZone
+    expect(zone.contains(zone.center)).toBe(true)
+    expect(zone.contains(controller.headPose.position)).toBe(false)
   }
 
   private expectBilingualVisible(key: StringKey): void {

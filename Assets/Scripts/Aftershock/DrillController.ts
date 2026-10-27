@@ -1,6 +1,9 @@
+import {BriefingPanel} from "./BriefingPanel"
 import {DrillConfig} from "./DrillConfig"
+import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {SafetyPanel} from "./SafetyPanel"
+import {SafeZone} from "./SafeZone"
 import {StringKey} from "./Strings"
 
 export type DrillState = "SAFETY" | "BRIEFING" | "QUAKE" | "POST_QUAKE" | "RESULT" | "GAME_OVER"
@@ -37,6 +40,31 @@ export class DrillController extends BaseScriptComponent {
   @hint("SafetyPanel component (reminder + Continue)")
   safetyPanel: SafetyPanel
 
+  @input
+  @hint("Room root. At start its floor is placed eyeHeight below the head.")
+  room: SceneObject
+
+  @input
+  @hint("SafeZone component on the table's marker")
+  safeZone: SafeZone
+
+  @input
+  @hint("Hazard label on the cabinet")
+  cabinetLabel: HazardLabel
+
+  @input
+  @hint("Hazard label on the shelf")
+  shelfLabel: HazardLabel
+
+  @input
+  @hint("Hazard label on the glass window")
+  glassLabel: HazardLabel
+
+  @input
+  @hint("BriefingPanel component (instr.brief)")
+  briefingPanel: BriefingPanel
+
+  private hazardLabels: HazardLabel[] = []
   private _state: DrillState | null = null
   private _health: number = 0
   private _instructionKey: StringKey | null = null
@@ -70,15 +98,22 @@ export class DrillController extends BaseScriptComponent {
   }
 
   private onStart(): void {
-    if (!this.config || !this.headPose || !this.safetyPanel) {
-      console.error(`${LOG} DrillController: config, headPose and safetyPanel must all be assigned`)
+    if (!this.config || !this.headPose || !this.safetyPanel || !this.room || !this.safeZone ||
+      !this.cabinetLabel || !this.shelfLabel || !this.glassLabel || !this.briefingPanel) {
+      console.error(`${LOG} DrillController: every input must be assigned`)
       return
     }
     this._health = this.config.healthStart
+    this.hazardLabels = [this.cabinetLabel, this.shelfLabel, this.glassLabel]
 
     const p = this.headPose.position
     const f = this.headPose.forward
     console.log(`${LOG} head at start: position (${fmt(p.x)}, ${fmt(p.y)}, ${fmt(p.z)}) cm, forward (${fmt(f.x)}, ${fmt(f.y)}, ${fmt(f.z)})`)
+
+    // Furniture positions are relative to the user's start spot on the floor.
+    const floorY = p.y - this.config.eyeHeight
+    this.room.getTransform().setWorldPosition(new vec3(p.x, floorY, p.z))
+    console.log(`${LOG} room floor at Y = ${fmt(floorY)} cm (eyeHeight ${fmt(this.config.eyeHeight)} cm)`)
 
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.transitionTo("SAFETY")
@@ -135,6 +170,8 @@ export class DrillController extends BaseScriptComponent {
   private enterSafety(): void {
     this._instructionKey = null
     this._arrowVisible = false
+    this.setRoomLabelsShown(false)
+    this.briefingPanel.hide()
     this.safetyPanel.placeInFront(
       this.headPose.position,
       this.headPose.forward,
@@ -151,6 +188,30 @@ export class DrillController extends BaseScriptComponent {
     this._instructionKey = "instr.brief"
     this.baselineHeadY = this.headPose.position.y
     console.log(`${LOG} BRIEFING: duck baseline head Y = ${fmt(this.baselineHeadY)} cm (ducked at <= ${fmt(this.baselineHeadY - this.config.duckDrop)} cm)`)
+    this.setRoomLabelsShown(true)
+    this.briefingPanel.placeInFront(
+      this.headPose.position,
+      this.headPose.forward,
+      this.config.hudDistance,
+      this.config.hudBelowEye
+    )
+    this.briefingPanel.show()
+  }
+
+  /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. */
+  private setRoomLabelsShown(shown: boolean): void {
+    for (const label of this.hazardLabels) {
+      if (shown) {
+        label.show()
+      } else {
+        label.hide()
+      }
+    }
+    if (shown) {
+      this.safeZone.showMarker()
+    } else {
+      this.safeZone.hideMarker()
+    }
   }
 }
 

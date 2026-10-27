@@ -28,9 +28,15 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    briefingPanel: false
+    cabinetLabel: false
     config: false
+    glassLabel: false
     headPose: false
+    room: false
+    safeZone: false
     safetyPanel: false
+    shelfLabel: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -43,6 +49,12 @@
     - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
       headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
       safetyPanel: !<MappingBased.AssignableType_3> 00000000-0000-0000-0000-000000000000
+      room: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      safeZone: !<MappingBased.AssignableType_4> 00000000-0000-0000-0000-000000000000
+      cabinetLabel: !<MappingBased.AssignableType_5> 00000000-0000-0000-0000-000000000000
+      shelfLabel: !<MappingBased.AssignableType_6> 00000000-0000-0000-0000-000000000000
+      glassLabel: !<MappingBased.AssignableType_7> 00000000-0000-0000-0000-000000000000
+      briefingPanel: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -52,3 +64,9 @@
     - '// @input AssignableType_1 config {"hint":"DrillConfig component with every tunable"}'
     - '// @input AssignableType_2 headPose {"hint":"HeadPose component (camera position and look direction)"}'
     - '// @input AssignableType_3 safetyPanel {"hint":"SafetyPanel component (reminder + Continue)"}'
+    - '// @input SceneObject room {"hint":"Room root. At start its floor is placed eyeHeight below the head."}'
+    - "// @input AssignableType_4 safeZone {\"hint\":\"SafeZone component on the table's marker\"}"
+    - '// @input AssignableType_5 cabinetLabel {"hint":"Hazard label on the cabinet"}'
+    - '// @input AssignableType_6 shelfLabel {"hint":"Hazard label on the shelf"}'
+    - '// @input AssignableType_7 glassLabel {"hint":"Hazard label on the glass window"}'
+    - '// @input AssignableType_8 briefingPanel {"hint":"BriefingPanel component (instr.brief)"}'
