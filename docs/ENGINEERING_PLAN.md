@@ -118,6 +118,14 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 3. `eyeHeight` stays 160 cm; the safe-zone marker stays a rectangle.
 4. Label offsets from Slice 2 (cabinet x −121, shelf x 127) accepted.
 
+## 5c. Learner decisions after Slice 3 (27 Oct)
+
+1. Hazard label text becomes dark orange `#D9480F` and bold, for contrast on the light backing.
+2. The warning banner moves up 2 cm so it no longer overlaps the HUD panel.
+3. Shake strength stays as built (learner: enough for now).
+4. The rumble is audible (learner checked).
+5. The banner hides after 2.5 s; it does not shrink into the HUD.
+
 ## 5a. Decisions taken by the orchestrator (open to the learner's veto)
 
 Slice 1 questions the learner had not answered when Slice 2 started (27 Oct). The orchestrator kept the documented design:

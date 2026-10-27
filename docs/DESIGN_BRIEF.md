@@ -39,7 +39,7 @@ Anyone in Indonesia: families at home, school students, office workers (learner'
 
 | Role | Color (default) | Used on |
 |---|---|---|
-| Hazard | Amber `#FFB020` | Hazard labels and their outline glow on the cabinet, shelf, glass |
+| Hazard | Dark orange `#D9480F`, bold (learner, 27 Oct: amber `#FFB020` was too faint on the light backing) | Hazard labels and their outline glow on the cabinet, shelf, glass |
 | Safe | Green `#3DDC84` | Safe-zone floor ring, its label, the arrow, the "hold" instruction |
 | Alarm | Red `#FF5A4F` | "GEMPA! / EARTHQUAKE!" banner, health bar when below 30 |
 | Text | White `#FFFFFF` at full opacity | All text |
@@ -79,7 +79,7 @@ Floor and wall sections are faint outlines only (not solid), so the room reads a
 | Language picker (Slice 5L) | First screen, before the safety panel: 110 cm in front, 22 cm below eye level, five big buttons (at least 12 × 5 cm each) labeled in their own language, placed once at start |
 | Safety panel | 110 cm in front of the head, 22 cm below eye level, placed once at start |
 | HUD (instruction, health, timer) | Lazy-follows the head at 110 cm, 22 cm below eye level (learner: 20–25 cm, so the table stays in view). Health and timer in one row under the instruction. |
-| Warning banner | Center of view for 2.5 s at quake start, then shrinks into the HUD row |
+| Warning banner | Center of view for 2.5 s at quake start, then hides (learner, 27 Oct: no shrink into the HUD). Sits 2 cm higher than in Slice 3 so it clears the HUD panel. |
 | Arrow | At the edge of the view nearest the safe zone, 4 cm, green, pointing toward it |
 | Result panel | 110 cm in front of the head when shown |
 | Buttons | UI Kit Button, at least 12 × 5 cm, within easy reach below eye level |
