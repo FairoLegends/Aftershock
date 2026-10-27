@@ -135,7 +135,7 @@ Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner p
 | 0 | done | 716d6e7 + Q1–Q5 update | — | Q1–Q5 answered 27 Oct (Q4 later) |
 | 1 | built, awaiting learner check | d9f1b04 | DC1a registered; LEAF runner tools missing, checked by hand | pending |
 | 2 | built, awaiting learner check | see log | DC1 checked by hand (pass) | pending |
-| 3 | not started | — | — | — |
+| 3 | built, awaiting learner check | see log | DC2 checked by hand (pass; rumble audibility unconfirmed) | pending |
 | 4 | not started | — | — | — |
 | 5 | not started | — | — | — |
 | 6 | not started | — | — | — |
