@@ -24,11 +24,15 @@
   VersionPatch: 0
   VersionPrerelease: ""
   UpdateOrder: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 40bcc0a6-73ee-49aa-ad08-7d6fae51f65c
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    config: false
+    footprintDepth: false
+    footprintWidth: false
+    marker: false
+    table: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +42,21 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      table: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      footprintWidth: !<float> 120.000000
+      footprintDepth: !<float> 70.000000
+      marker: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @ui {"widget":"label", "label":"Safe zone under the table (R4)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (safeZoneMargin)"}'
+    - '// @input SceneObject table {"hint":"Table whose footprint is the safe zone. Keep it unrotated around Y."}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float footprintWidth = 120 {"hint":"Table footprint along X (cm)"}'
+    - '// @input float footprintDepth = 70 {"hint":"Table footprint along Z (cm)"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @input SceneObject marker {"hint":"Floor ring and its label. Shown in BRIEFING, hidden in SAFETY."}'

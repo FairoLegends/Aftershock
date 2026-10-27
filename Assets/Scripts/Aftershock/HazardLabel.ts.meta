@@ -24,11 +24,12 @@
   VersionPatch: 0
   VersionPrerelease: ""
   UpdateOrder: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: b6940100-c4ff-442e-8aab-f61a3c717129
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    key: false
+    textColor: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +39,15 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - key: label.cabinet
+      textColor: !<Vec4> {x: 1.000000, y: 0.690000, z: 0.125000, w: 1.000000}
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @ui {"widget":"label", "label":"World label on a hazard or the safe zone (R3, R4)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input string key = "label.cabinet" {"hint":"Strings.ts key this label shows", "widget":"combobox", "values":[{"label":"Cabinet", "value":"label.cabinet"}, {"label":"Shelf", "value":"label.shelf"}, {"label":"Glass", "value":"label.glass"}, {"label":"Safe zone", "value":"label.safe"}]}'
+    - '// @input vec4 textColor = {1,0.69,0.125,1} {"hint":"Text color: amber #FFB020 for hazards, green #3DDC84 for the safe zone", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'
