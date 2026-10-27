@@ -1,8 +1,8 @@
-import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {splitBilingual, STRINGS, StringKey} from "./Strings"
+import {createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6: labels use 2.5 cm type. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -43,6 +43,11 @@ export class HazardLabel extends BaseScriptComponent {
   @hint("Text color: amber #FFB020 for hazards, green #3DDC84 for the safe zone")
   @widget(new ColorWidget())
   textColor: vec4 = new vec4(1, 0.69, 0.125, 1)
+
+  @input
+  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
+  @widget(new ColorWidget())
+  backingColor: vec4 = new vec4(1, 1, 1, 0.25)
   @ui.group_end
 
   private readonly shownTexts: Text[] = []
@@ -50,8 +55,7 @@ export class HazardLabel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backPlate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
-    backPlate.style = "default"
+    const backing = createLightBacking(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -69,7 +73,7 @@ export class HazardLabel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backPlate.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.size = new vec2(r.containerWidth, r.containerHeight)
     })
 
     const key = this.key as StringKey

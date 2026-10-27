@@ -2,6 +2,8 @@ import {BriefingPanel} from "./BriefingPanel"
 import {DrillConfig} from "./DrillConfig"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
+import {Hud} from "./Hud"
+import {QuakeShaker} from "./QuakeShaker"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
 import {StringKey} from "./Strings"
@@ -64,7 +66,25 @@ export class DrillController extends BaseScriptComponent {
   @hint("BriefingPanel component (instr.brief)")
   briefingPanel: BriefingPanel
 
+  @input
+  @hint("QuakeShaker component on the Room")
+  quakeShaker: QuakeShaker
+
+  @input
+  @hint("Hud component (under AftershockRoot, not the Room, so it never shakes)")
+  hud: Hud
+
+  @input
+  @hint("AudioComponent with the looping rumble track")
+  rumbleAudio: AudioComponent
+
   private hazardLabels: HazardLabel[] = []
+  private quakeStartTimer: DelayedCallbackEvent | null = null
+  private quakeEndTimer: DelayedCallbackEvent | null = null
+  private quakeUpdate: UpdateEvent | null = null
+  private quakeStartTime = 0 // s
+  private _quakeDuration = 0 // s
+  private rumbleBaseVolume = 1
   private _state: DrillState | null = null
   private _health: number = 0
   private _instructionKey: StringKey | null = null
@@ -92,16 +112,47 @@ export class DrillController extends BaseScriptComponent {
   get duckBaseline(): number | null {
     return this.baselineHeadY
   }
+  /** This drill's quake length (s), picked when QUAKE starts. */
+  get quakeDuration(): number {
+    return this._quakeDuration
+  }
 
   onAwake(): void {
+    this.quakeStartTimer = this.createEvent("DelayedCallbackEvent")
+    this.quakeStartTimer.bind(() => this.onRandomWaitEnded())
+    this.quakeEndTimer = this.createEvent("DelayedCallbackEvent")
+    this.quakeEndTimer.bind(() => this.onQuakeTimeOver())
+    this.quakeUpdate = this.createEvent("UpdateEvent")
+    this.quakeUpdate.bind(() => this.onQuakeUpdate())
+    this.quakeUpdate.enabled = false
     this.createEvent("OnStartEvent").bind(() => this.onStart())
   }
 
   private onStart(): void {
-    if (!this.config || !this.headPose || !this.safetyPanel || !this.room || !this.safeZone ||
-      !this.cabinetLabel || !this.shelfLabel || !this.glassLabel || !this.briefingPanel) {
-      console.error(`${LOG} DrillController: every input must be assigned`)
+    const inputs: [string, unknown][] = [
+      ["config", this.config],
+      ["headPose", this.headPose],
+      ["safetyPanel", this.safetyPanel],
+      ["room", this.room],
+      ["safeZone", this.safeZone],
+      ["cabinetLabel", this.cabinetLabel],
+      ["shelfLabel", this.shelfLabel],
+      ["glassLabel", this.glassLabel],
+      ["briefingPanel", this.briefingPanel],
+      ["quakeShaker", this.quakeShaker],
+      ["hud", this.hud],
+      ["rumbleAudio", this.rumbleAudio]
+    ]
+    const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
+    if (missing.length > 0) {
+      console.error(`${LOG} DrillController: missing input(s): ${missing.join(", ")}`)
       return
+    }
+    // Ambient loop: latency is fine (specs-audio).
+    this.rumbleAudio.playbackMode = Audio.PlaybackMode.LowPower
+    this.rumbleBaseVolume = this.rumbleAudio.volume
+    if (!this.rumbleAudio.audioTrack) {
+      console.warn(`${LOG} DrillController: rumbleAudio has no audio track; the quake will be silent`)
     }
     this._health = this.config.healthStart
     this.hazardLabels = [this.cabinetLabel, this.shelfLabel, this.glassLabel]
@@ -126,13 +177,18 @@ export class DrillController extends BaseScriptComponent {
     this.transitionTo("BRIEFING")
   }
 
-  // Stub triggers for later slices. They only log for now.
   onRandomWaitEnded(): void {
-    console.log(`${LOG} stub: random wait ended (QUAKE comes in Slice 3)`)
+    if (this._state === "BRIEFING") {
+      this.transitionTo("QUAKE")
+    }
   }
   onQuakeTimeOver(): void {
-    console.log(`${LOG} stub: quake time over (POST_QUAKE comes in Slice 3)`)
+    if (this._state === "QUAKE") {
+      this.transitionTo("POST_QUAKE")
+    }
   }
+
+  // Stub triggers for later slices. They only log for now.
   onHealthDepleted(): void {
     console.log(`${LOG} stub: health reached 0 (GAME_OVER comes in Slice 5)`)
   }
@@ -159,7 +215,11 @@ export class DrillController extends BaseScriptComponent {
         this.enterBriefing()
         break
       case "QUAKE":
+        this.enterQuake()
+        break
       case "POST_QUAKE":
+        this.enterPostQuake()
+        break
       case "RESULT":
       case "GAME_OVER":
         console.log(`${LOG} stub: enter ${next}`)
@@ -172,6 +232,7 @@ export class DrillController extends BaseScriptComponent {
     this._arrowVisible = false
     this.setRoomLabelsShown(false)
     this.briefingPanel.hide()
+    this.hud.hide()
     this.safetyPanel.placeInFront(
       this.headPose.position,
       this.headPose.forward,
@@ -196,6 +257,56 @@ export class DrillController extends BaseScriptComponent {
       this.config.hudBelowEye
     )
     this.briefingPanel.show()
+    this.hud.hide()
+
+    const wait = this.config.testMode
+      ? this.config.testWaitSeconds
+      : randomBetween(this.config.quakeWaitMin, this.config.quakeWaitMax)
+    console.log(`${LOG} BRIEFING: quake in ${fmt(wait)} s`)
+    this.quakeStartTimer.reset(wait)
+  }
+
+  private enterQuake(): void {
+    this.briefingPanel.hide()
+    this._quakeDuration = this.config.testMode
+      ? this.config.testDurationSeconds
+      : randomBetween(this.config.quakeDurationMin, this.config.quakeDurationMax)
+    console.log(`${LOG} QUAKE: lasts ${fmt(this._quakeDuration)} s`)
+
+    this.quakeShaker.startShake(this._quakeDuration)
+    if (this.rumbleAudio.audioTrack) {
+      this.rumbleAudio.volume = 0 // ramps with the shake (DESIGN_BRIEF §6.2)
+      this.rumbleAudio.play(-1)
+    }
+
+    this._instructionKey = "instr.goUnder"
+    this.hud.show()
+    this.hud.setHealth(this._health)
+    this.hud.setElapsed(0)
+    this.hud.setInstruction(this._instructionKey)
+    this.hud.showWarning()
+    this.safeZone.startBlink()
+
+    this.quakeStartTime = getTime()
+    this.quakeEndTimer.reset(this._quakeDuration)
+    this.quakeUpdate.enabled = true
+  }
+
+  private onQuakeUpdate(): void {
+    this.hud.setElapsed(getTime() - this.quakeStartTime)
+    this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
+  }
+
+  private enterPostQuake(): void {
+    this.quakeUpdate.enabled = false
+    this.quakeShaker.stopShake()
+    if (this.rumbleAudio.isPlaying()) {
+      this.rumbleAudio.stop(false)
+    }
+    this.rumbleAudio.volume = this.rumbleBaseVolume
+    this.safeZone.stopBlink()
+    this._instructionKey = "instr.comeOut"
+    this.hud.setInstruction(this._instructionKey)
   }
 
   /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. */
@@ -217,4 +328,8 @@ export class DrillController extends BaseScriptComponent {
 
 function fmt(n: number): string {
   return n.toFixed(2)
+}
+
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * Math.max(0, max - min)
 }

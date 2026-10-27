@@ -1,8 +1,11 @@
 import {DrillConfig} from "./DrillConfig"
+import {HazardLabel} from "./HazardLabel"
 
 /**
- * The safe zone under the table (TDD §3.1). Slice 2: containment test and a
- * steady marker only; the controller does not use it for gameplay yet.
+ * The safe zone under the table (TDD §3.1): containment test and the marker
+ * look, steady before the quake and blinking (markerBlinkHz) during it.
+ * Blinking toggles the marker's children except its label, which stays
+ * steady and readable (color is never the only signal, DESIGN_BRIEF §5.1).
  */
 @component
 export class SafeZone extends BaseScriptComponent {
@@ -30,6 +33,18 @@ export class SafeZone extends BaseScriptComponent {
   @hint("Floor ring and its label. Shown in BRIEFING, hidden in SAFETY.")
   marker: SceneObject
 
+  private readonly blinkParts: SceneObject[] = []
+  private blinkEvent: UpdateEvent | null = null
+  private blinkStart = 0 // s
+  private blinkOn = true
+  private _blinking = false
+
+  onAwake(): void {
+    this.blinkEvent = this.createEvent("UpdateEvent")
+    this.blinkEvent.bind(() => this.onBlinkUpdate())
+    this.blinkEvent.enabled = false
+  }
+
   /** True when the position's XZ is inside the table footprint grown by safeZoneMargin. */
   contains(position: vec3): boolean {
     const c = this.table.getTransform().getWorldPosition()
@@ -55,5 +70,53 @@ export class SafeZone extends BaseScriptComponent {
 
   get markerVisible(): boolean {
     return this.marker.isEnabledInHierarchy
+  }
+
+  get isBlinking(): boolean {
+    return this._blinking
+  }
+
+  /** Blinks the marker outline at markerBlinkHz (QUAKE). */
+  startBlink(): void {
+    if (this.blinkParts.length === 0) {
+      this.collectBlinkParts()
+    }
+    this.blinkStart = getTime()
+    this.setBlinkOn(true)
+    this._blinking = true
+    this.blinkEvent.enabled = true
+  }
+
+  /** Back to a steady marker (POST_QUAKE). */
+  stopBlink(): void {
+    this.blinkEvent.enabled = false
+    this._blinking = false
+    this.setBlinkOn(true)
+  }
+
+  private onBlinkUpdate(): void {
+    // One on/off cycle per 1 / markerBlinkHz seconds: two half-cycles.
+    const halfCycle = Math.floor((getTime() - this.blinkStart) * 2 * this.config.markerBlinkHz)
+    this.setBlinkOn(halfCycle % 2 === 0)
+  }
+
+  private setBlinkOn(on: boolean): void {
+    if (on === this.blinkOn) {
+      return
+    }
+    this.blinkOn = on
+    for (const part of this.blinkParts) {
+      part.enabled = on
+    }
+  }
+
+  private collectBlinkParts(): void {
+    const count = this.marker.getChildrenCount()
+    for (let i = 0; i < count; i++) {
+      const child = this.marker.getChild(i)
+      if (!child.getComponent(HazardLabel.getTypeName())) {
+        this.blinkParts.push(child)
+      }
+    }
   }
 }

@@ -37,6 +37,7 @@
     healthStart: false
     hudBelowEye: false
     hudDistance: false
+    markerBlinkHz: false
     quakeDurationMax: false
     quakeDurationMin: false
     quakeWaitMax: false
@@ -46,6 +47,7 @@
     shakeAmplitudeCm: false
     shakeFrequencyMaxHz: false
     shakeFrequencyMinHz: false
+    shakeRampSeconds: false
     shakeTiltDeg: false
     testDurationSeconds: false
     testMode: false
@@ -70,12 +72,14 @@
       duckHysteresis: !<float> 10.000000
       safeZoneMargin: !<float> 15.000000
       safeHoldSeconds: !<float> 1.000000
+      markerBlinkHz: !<float> 2.000000
       healthStart: !<float> 100.000000
       healthDrainPerSecond: !<float> 4.000000
       shakeAmplitudeCm: 2.500000
       shakeTiltDeg: 1.200000
       shakeFrequencyMinHz: !<float> 2.000000
       shakeFrequencyMaxHz: !<float> 6.000000
+      shakeRampSeconds: !<float> 3.000000
       fovHalfAngleHorizontal: !<float> 16.000000
       fovHalfAngleVertical: 18.500000
       hudDistance: !<float> 110.000000
@@ -103,6 +107,7 @@
     - '// @input float duckHysteresis = 10 {"hint":"Standing again only above baseline - duckDrop + this (cm)"}'
     - '// @input float safeZoneMargin = 15 {"hint":"Safe zone = table footprint grown by this margin (cm)"}'
     - '// @input float safeHoldSeconds = 1 {"hint":"inZone and ducked must hold this long to count as safe, in seconds"}'
+    - '// @input float markerBlinkHz = 2 {"hint":"Safe-zone marker blink rate during the quake, in Hz (DESIGN_BRIEF §6)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Health"}'
     - '// @input float healthStart = 100 {"hint":"Health at the start of each drill (points)"}'
@@ -113,12 +118,13 @@
     - '// @input float shakeTiltDeg = 1.2 {"hint":"Room tilt shake amplitude, in degrees"}'
     - '// @input float shakeFrequencyMinHz = 2 {"hint":"Lowest layered shake frequency, in Hz"}'
     - '// @input float shakeFrequencyMaxHz = 6 {"hint":"Highest layered shake frequency, in Hz"}'
+    - '// @input float shakeRampSeconds = 3 {"hint":"Shake ramps up over the first and down over the last this many seconds (DESIGN_BRIEF §6.2)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"View and HUD"}'
     - '// @input float fovHalfAngleHorizontal = 16 {"hint":"Half the horizontal view angle, in degrees (Specs view about 32°)"}'
     - '// @input float fovHalfAngleVertical = 18.5 {"hint":"Half the vertical view angle, in degrees (Specs view about 37°)"}'
     - '// @input float hudDistance = 110 {"hint":"Distance of panels and HUD in front of the head (cm)"}'
-    - '// @input float hudBelowEye = 10 {"hint":"Panels and HUD sit this far below eye level (cm)"}'
+    - '// @input float hudBelowEye = 22 {"hint":"Panels and HUD sit this far below eye level (cm)"}'
     - '// @input string timerMode = "elapsed" {"hint":"Timer shows elapsed time since the quake started (learner, Q3)", "widget":"combobox", "values":[{"label":"Elapsed", "value":"elapsed"}]}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'

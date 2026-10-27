@@ -43,6 +43,10 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("inZone and ducked must hold this long to count as safe, in seconds")
   safeHoldSeconds: number = 1
+
+  @input
+  @hint("Safe-zone marker blink rate during the quake, in Hz (DESIGN_BRIEF §6)")
+  markerBlinkHz: number = 2
   @ui.group_end
 
   @ui.group_start("Health")
@@ -53,6 +57,10 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Health lost per second while exposed (points per second)")
   healthDrainPerSecond: number = 4
+
+  @input
+  @hint("Health bar turns alarm red below this (points, DESIGN_BRIEF §5.1)")
+  healthAlarmBelow: number = 30
   @ui.group_end
 
   @ui.group_start("Shake")
@@ -71,6 +79,10 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Highest layered shake frequency, in Hz")
   shakeFrequencyMaxHz: number = 6
+
+  @input
+  @hint("Shake ramps up over the first and down over the last this many seconds (DESIGN_BRIEF §6.2)")
+  shakeRampSeconds: number = 3
   @ui.group_end
 
   @ui.group_start("View and HUD")
@@ -88,7 +100,7 @@ export class DrillConfig extends BaseScriptComponent {
 
   @input
   @hint("Panels and HUD sit this far below eye level (cm)")
-  hudBelowEye: number = 10
+  hudBelowEye: number = 22
 
   @input
   @hint("Timer shows elapsed time since the quake started (learner, Q3)")
