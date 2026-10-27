@@ -171,5 +171,5 @@ Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner p
 | 2 | built, awaiting learner check | see log | DC1 checked by hand (pass) | pending |
 | 3 | built, awaiting learner check | see log | DC2 checked by hand (pass; rumble audibility unconfirmed) | pending |
 | 4 | built, 2 checks open | see log | DC3 checked by hand (arrow, duck, hold) | pending |
-| 5 | not started | — | — | — |
+| 5 | built, awaiting learner check | see log | DC4, DC5 checked by hand (pass) | pending |
 | 6 | not started | — | — | — |
