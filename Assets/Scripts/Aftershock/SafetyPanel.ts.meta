@@ -28,7 +28,7 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    backPlateStyle: false
+    backingColor: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,7 +38,7 @@
   Attachments:
     []
   DefaultScriptInputs:
-    - backPlateStyle: default
+    - backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     -
       {}
@@ -46,4 +46,5 @@
     - '// @ui {"widget":"label", "label":"Safety reminder panel (R1, R2)"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Look"}'
-    - '// @input string backPlateStyle = "default" {"hint":"UI Kit BackPlate style. Keep it light: the display is additive, so black is see-through.", "widget":"combobox", "values":[{"label":"Default (light gradient)", "value":"default"}, {"label":"Simple", "value":"simple"}]}'
+    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

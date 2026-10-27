@@ -24,11 +24,12 @@
   VersionPatch: 0
   VersionPrerelease: ""
   UpdateOrder: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: 9fd6524b-edc9-4746-8af7-fa83bc86f459
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    config: false
+    target: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +39,13 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      target: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @ui {"widget":"label", "label":"Room shake (R6)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (shake amplitude, tilt, frequencies, ramp)"}'
+    - '// @input SceneObject target {"hint":"Object to shake (the Room). Empty = the object this script is on."}'

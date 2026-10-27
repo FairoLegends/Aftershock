@@ -33,6 +33,7 @@
     eyeHeight: false
     fovHalfAngleHorizontal: false
     fovHalfAngleVertical: false
+    healthAlarmBelow: false
     healthDrainPerSecond: false
     healthStart: false
     hudBelowEye: false
@@ -75,6 +76,7 @@
       markerBlinkHz: !<float> 2.000000
       healthStart: !<float> 100.000000
       healthDrainPerSecond: !<float> 4.000000
+      healthAlarmBelow: !<float> 30.000000
       shakeAmplitudeCm: 2.500000
       shakeTiltDeg: 1.200000
       shakeFrequencyMinHz: !<float> 2.000000
@@ -112,6 +114,7 @@
     - '// @ui {"widget":"group_start", "label":"Health"}'
     - '// @input float healthStart = 100 {"hint":"Health at the start of each drill (points)"}'
     - '// @input float healthDrainPerSecond = 4 {"hint":"Health lost per second while exposed (points per second)"}'
+    - '// @input float healthAlarmBelow = 30 {"hint":"Health bar turns alarm red below this (points, DESIGN_BRIEF §5.1)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Shake"}'
     - '// @input float shakeAmplitudeCm = 2.5 {"hint":"Room position shake amplitude (cm)"}'

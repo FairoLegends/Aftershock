@@ -1,10 +1,10 @@
-import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {splitBilingual, STRINGS, StringKey} from "./Strings"
+import {createLightBacking} from "./UiBacking"
 
 // Snap Specs type scale (em-square size at 110 cm). size / 43.886 = em-square in cm.
 type TextRole = "Headline2" | "Caption"
@@ -30,7 +30,7 @@ const LINE_EN_H = 1.5
 const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
 const BUTTON_H = 5
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
-const CONTENT_Z = 0.6 // keeps content off the back plate (z-fighting)
+const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
 const WHITE = new vec4(1, 1, 1, 1)
 
@@ -44,14 +44,10 @@ export class SafetyPanel extends BaseScriptComponent {
   @ui.separator
   @ui.group_start("Look")
   @input
-  @hint("UI Kit BackPlate style. Keep it light: the display is additive, so black is see-through.")
-  @widget(
-    new ComboBoxWidget([
-      new ComboBoxItem("Default (light gradient)", "default"),
-      new ComboBoxItem("Simple", "simple")
-    ])
-  )
-  backPlateStyle: string = "default"
+  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
+  @widget(new ColorWidget())
+  backingColor: vec4 = new vec4(1, 1, 1, 0.25)
+  @ui.group_end
 
   private readonly continueEvent = new Event()
   readonly onContinue: PublicApi<void> = this.continueEvent.publicApi()
@@ -61,8 +57,7 @@ export class SafetyPanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backPlate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
-    backPlate.style = this.backPlateStyle as "default" | "simple"
+    const backing = createLightBacking(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -80,7 +75,7 @@ export class SafetyPanel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backPlate.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.size = new vec2(r.containerWidth, r.containerHeight)
     })
 
     this.addBilingual(content, "safety.drill")

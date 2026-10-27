@@ -24,11 +24,18 @@
   VersionPatch: 0
   VersionPrerelease: ""
   UpdateOrder: 0
-  ComponentUid: 00000000-0000-0000-0000-000000000000
+  ComponentUid: cf9fdfbf-c610-430f-8cfc-b01334ae934b
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    alarmColor: false
+    backingColor: false
+    barColor: false
+    config: false
+    followSpeed: false
+    headPose: false
+    textColor: false
+    trackColor: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +45,27 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      followSpeed: !<float> 3.000000
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+      textColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      alarmColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
+      barColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      trackColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.200000}
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @ui {"widget":"label", "label":"Quake HUD (R5, R7, R8)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (hudDistance, hudBelowEye, warningShowSeconds, healthStart, healthAlarmBelow)"}'
+    - '// @input AssignableType_2 headPose {"hint":"HeadPose component the HUD follows"}'
+    - '// @ui {"widget":"group_start", "label":"Settings"}'
+    - '// @input float followSpeed = 3 {"hint":"How fast the HUD catches up with the head (per second). Higher = stiffer.", "widget":"slider", "min":0.5, "max":10, "step":0.5}'
+    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @input vec4 textColor = {1,1,1,1} {"hint":"Instruction, label and timer text color (white)", "widget":"color"}'
+    - '// @input vec4 alarmColor = {1,0.353,0.31,1} {"hint":"Alarm red #FF5A4F: warning banner, and the health bar below healthAlarmBelow", "widget":"color"}'
+    - '// @input vec4 barColor = {1,1,1,1} {"hint":"Health bar fill color at or above healthAlarmBelow", "widget":"color"}'
+    - '// @input vec4 trackColor = {1,1,1,0.2} {"hint":"Health bar track (empty part) color", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

@@ -1,8 +1,8 @@
-import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {splitBilingual, STRINGS} from "./Strings"
+import {createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5: instruction type is 3.5 cm at 110 cm. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -15,7 +15,7 @@ const PAD = 2.5
 const ROW_GAP = 1.0
 const LINE_ID_H = 8.4 // two wrapped lines
 const LINE_EN_H = 6.8
-const CONTENT_Z = 0.6 // keeps content off the back plate (z-fighting)
+const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
 const WHITE = new vec4(1, 1, 1, 1)
 
@@ -27,13 +27,19 @@ const WHITE = new vec4(1, 1, 1, 1)
 export class BriefingPanel extends BaseScriptComponent {
   @ui.label("Briefing instruction panel (R5)")
   @ui.separator
+  @ui.group_start("Look")
+  @input
+  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
+  @widget(new ColorWidget())
+  backingColor: vec4 = new vec4(1, 1, 1, 0.25)
+  @ui.group_end
+
   private readonly shownTexts: Text[] = []
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backPlate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
-    backPlate.style = "default"
+    const backing = createLightBacking(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -51,7 +57,7 @@ export class BriefingPanel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backPlate.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.size = new vec2(r.containerWidth, r.containerHeight)
     })
 
     const parts = splitBilingual(STRINGS["instr.brief"])
