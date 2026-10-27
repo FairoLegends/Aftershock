@@ -5,7 +5,7 @@ These rules bind the build agent (`aftershock-builder`, Claude Code with CLAD). 
 ## 1. Order of authority
 
 1. `devpost/design-brief.md`: the learner's approved decisions.
-2. `docs/PRODUCT_REQUIREMENT_DOCUMENT.md`: requirements R1–R15, stretch S1–S2, questions Q1–Q5.
+2. `docs/PRODUCT_REQUIREMENT_DOCUMENT.md`: requirements R1–R15, stretch S1–S2, questions Q1–Q6.
 3. `docs/TECHNICAL_DESIGN_DOCUMENT.md` and `docs/DESIGN_BRIEF.md`: how to build it and how it looks.
 4. `docs/USER_FLOW_DIAGRAM.md`: the states and transitions.
 5. `docs/ENGINEERING_PLAN.md`: which slice you are in.

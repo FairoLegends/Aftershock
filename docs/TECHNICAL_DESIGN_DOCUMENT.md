@@ -9,7 +9,7 @@ Structure follows Microsoft's functional and technical design document pattern (
 | Document | Role |
 |---|---|
 | `devpost/design-brief.md` | Approved learner decisions. Highest authority. |
-| `docs/PRODUCT_REQUIREMENT_DOCUMENT.md` | Requirements R1–R15, stretch S1–S2, open questions Q1–Q5 |
+| `docs/PRODUCT_REQUIREMENT_DOCUMENT.md` | Requirements R1–R15, stretch S1–S2, questions Q1–Q6 |
 | `docs/USER_FLOW_DIAGRAM.md` | States and transitions |
 | `docs/DESIGN_BRIEF.md` | Look, placement, sizes, colors, type |
 | `docs/ENGINEERING_PLAN.md` | Slices, gates, dates |
@@ -81,10 +81,10 @@ Buttons use UI Kit `Button` and subscribe via the element-level `onTriggerUp`, a
 | `BRIEFING` | Capture head **baseline** height; show Room labels, safe-zone marker (steady), instruction R5; schedule quake after a random wait | — | `QUAKE` when the wait ends |
 | `QUAKE` | Start shake, loop rumble, show warning banner (2.5 s (default)), blink marker, show health bar + timer (health 100), instruction "Go under the table"; pick duration 45–60 s | Each frame: update `inZone`, `ducked`, instruction stage (§4.1), health drain (§5), arrow | `GAME_OVER` if health ≤ 0; `POST_QUAKE` when duration ends |
 | `POST_QUAKE` | Stop shake and rumble (Room back to rest), marker steady, show "shaking stopped, come out" (Q2) | Each frame: check `inZone` | `RESULT` when the head leaves the zone (immediately if already outside) |
-| `RESULT` | Show score breakdown and Restart | Wait for Restart | `SAFETY` on Restart (Q1 default) |
-| `GAME_OVER` | Stop shake and rumble, show what went wrong and Restart | Wait for Restart | `SAFETY` on Restart (Q1 default) |
+| `RESULT` | Show score breakdown and Restart | Wait for Restart | `BRIEFING` on Restart (Q1) |
+| `GAME_OVER` | Stop shake and rumble, show what went wrong and Restart | Wait for Restart | `BRIEFING` on Restart (Q1) |
 
-Restart resets everything: health, timers, score, penalties, shaker phase, panels, arrow.
+Restart resets everything (health, timers, `tSafe`, `hasBeenSafe`, score, penalties, shaker phase, panels, arrow) and enters `BRIEFING`, which captures a fresh duck baseline. The safety reminder shows only when the Lens opens (Q1).
 
 ### 4.1 Instruction stages during `QUAKE`
 
@@ -108,14 +108,14 @@ Stages follow the user's current state, so standing up again shows `instr.duck` 
 | `safeZoneMargin` | 15 cm around the table footprint | (default) |
 | `healthStart` | 100 | (default) |
 | `healthDrainPerSecond` | 4 per second while exposed | (default) |
-| `exposureGraceSeconds` | 3 s from quake start (Q5) | (default) |
 | `shakeAmplitudeCm` | 2.5 cm position, 1.2° tilt | (default) |
 | `shakeFrequencyHz` | 2–6 Hz, layered | (default) |
 | `fovHalfAngleHorizontal` / `Vertical` | 16° / 18.5° (SPECS view about 32° × 37°) | Pack rules |
 | `hudDistance` | 110 cm, 10 cm below eye level | Pack rules + UI Kit default |
+| `timerMode` | Elapsed time since the quake started | Learner (Q3) |
 | `testMode` | false; when true: wait 1 s, duration 8 s | Test hook (§8) |
 
-"Exposed" = during `QUAKE`, after the grace period, and not (`inZone` and `ducked`). This is the default reading of the brief's "health drops while the user stands before the shaking ends" and is open as **Q5** in the PRD.
+"Exposed" = during `QUAKE`, `hasBeenSafe` is true, and not (`inZone` and `ducked`). `hasBeenSafe` turns true the first time `inZone` and `ducked` hold for 1 s, the same moment that sets `tSafe`. Learner decision Q5: walking to the table the first time never drains health; only standing up or leaving after taking cover does.
 
 ## 6. Strings (`Strings.ts`)
 
@@ -131,7 +131,7 @@ Format: `"Indonesian / English"`, Indonesian first, as in the brief. Strings quo
 | `instr.goUnder` | Pergi ke bawah meja / Go under the table | Brief |
 | `instr.duck` | Merunduk / Duck down | Brief |
 | `instr.hold` | Tahan sampai guncangan berhenti / Hold until the shaking stops | Brief |
-| `instr.comeOut` | Guncangan berhenti. Keluar dari bawah meja / The shaking stopped. Come out from under the table | (default), Q2 |
+| `instr.comeOut` | Guncangan berhenti. Keluar dari bawah meja / The shaking stopped. Come out from under the table | Learner (Q2); wording (default) |
 | `label.cabinet` | Lemari bisa roboh / Cabinet can fall | (default) |
 | `label.shelf` | Barang di rak bisa jatuh / Shelf items can fall | (default) |
 | `label.glass` | Kaca bisa pecah / Glass can shatter | (default) |
@@ -143,7 +143,7 @@ Format: `"Indonesian / English"`, Indonesian first, as in the brief. Strings quo
 | `result.health` | Sisa nyawa / Health left: {h} | (default) |
 | `result.score` | Skor / Score: {score} | (default) |
 | `over.title` | Nyawa habis / Out of health | (default) |
-| `over.why.never` | Kamu tidak sampai ke bawah meja / You never reached the table | (default) |
+| `result.never` | Kamu tidak berlindung di bawah meja / You never took cover under the table | (default), Q6 |
 | `over.why.stood` | Kamu berdiri sebelum guncangan berhenti / You stood up before the shaking stopped | (default) |
 | `btn.restart` | Ulangi / Restart | (default) |
 
@@ -154,12 +154,12 @@ Brief: score combines speed of reaching the safe zone and ducking with the healt
 ```
 tSafe       = seconds from quake start until inZone && ducked first held for 1 s (null if never)
 speedPoints = tSafe == null ? 0 : round(600 * clamp((30 - tSafe) / 25, 0, 1))   // ≤5 s → 600, ≥30 s → 0
-healthPts   = round(4 * healthLeft)                                              // 0–400
+healthPts   = tSafe == null ? 0 : round(4 * healthLeft)                          // 0–400; none without taking cover (Q6 default)
 penalty     = round(10 * secondsStandingAfterFirstSafe)                          // "skor berkurang"
 score       = clamp(speedPoints + healthPts - penalty, 0, 1000)
 ```
 
-The result panel shows each part, so the user sees why. Game over shows no score, only what went wrong (`over.why.*`: `never` if `tSafe` is null, otherwise `stood`).
+The result panel shows each part, so the user sees why. Game over shows no score, only what went wrong (`over.why.stood`). Because of Q5, game over can only happen after the user took cover once. A user who never takes cover reaches the result screen with score 0 and `result.never` (Q6 default).
 
 ## 8. Test hooks
 
@@ -180,7 +180,7 @@ One scenario per done criterion, named `DC1_…` to `DC5_…`, registered in `Le
 | `DC1_SafetyThenRoom` | Read state; pinch Continue | State `SAFETY` with both reminder strings; after Continue: `BRIEFING`, four furniture objects enabled, three hazard labels and the safe marker visible, instruction `instr.brief` |
 | `DC2_QuakeStarts` | testMode; Continue; wait | State `QUAKE`; Room transform differs from rest; rumble playing; banner text `warn.quake`; marker blinking; health 100 and timer visible |
 | `DC3_ArrowAndTakeCover` | Override head facing away, then into zone standing, then ducked | Arrow visible when facing away, hidden when facing the zone; instruction goes `goUnder` → `duck` → `hold`; controller reports safe |
-| `DC4_StandUpDrainsAndGameOver` | Safe, then override standing; wait | Health decreases relative to the value before standing; penalty grows; at health 0 state `GAME_OVER` with `over.why.stood`; pinch Restart → `SAFETY` |
+| `DC4_StandUpDrainsAndGameOver` | Safe, then override standing; wait | Health decreases relative to the value before standing; penalty grows; at health 0 state `GAME_OVER` with `over.why.stood`; pinch Restart → `BRIEFING` |
 | `DC5_QuakeEndsScore` | Safe until the quake ends; then override outside the zone | `POST_QUAKE` with `instr.comeOut`; after leaving: `RESULT` with a score equal to `ScoreCalculator` for the recorded inputs; Restart visible |
 
 Use relative assertions for numbers (value before vs after), as the LEAF skill requires. Every scene-object name used in a test must exist in the scene (checked by the agent before writing the test).

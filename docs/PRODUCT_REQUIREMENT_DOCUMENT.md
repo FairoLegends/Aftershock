@@ -70,9 +70,9 @@ Importance: **Must** = in a done criterion; **Should** = in the brief but outsid
 | R8 | As a user, the shaking lasts 45–60 seconds. | Must | 5 | Picked at random in that range for each drill (default). |
 | R9 | As a user, if I turn so the safe zone is out of view, a small arrow points to it, and it hides when the safe zone is back in view. | Must | 3 | Replaces the earlier default rumble cue. |
 | R10 | As a user, I walk under the table and duck; the instructions change by themselves, following my progress: "Pergi ke bawah meja / Go under the table", then "Merunduk / Duck down", then "Tahan sampai guncangan berhenti / Hold until the shaking stops". | Must | 3 | The Lens checks both position (in the safe zone) and ducking (head height). |
-| R11 | As a user, if I stand up before the shaking ends, my health drops little by little and my score goes down; it stops dropping when I duck again in the safe zone. | Must | 4 | Drain rate (default) in the TDD. |
-| R12 | As a user, if my health runs out, a game-over result screen explains what went wrong, and pinching Restart starts the drill from the beginning. | Must | 4 | |
-| R13 | As a user, after the shaking stops and I leave the safe zone, a score screen shows my score from speed and remaining health, with a Restart button. | Must | 5 | Formula (default) in the TDD. |
+| R11 | As a user, if I stand up before the shaking ends after I have taken cover once, my health drops little by little and my score goes down; it stops dropping when I duck again in the safe zone. | Must | 4 | Drain starts only after the first safe moment (Q5). Drain rate (default) in the TDD. |
+| R12 | As a user, if my health runs out, a game-over result screen explains what went wrong, and pinching Restart starts the drill again from the room. | Must | 4 | Restart goes to the room briefing (Q1). |
+| R13 | As a user, after the shaking stops and I leave the safe zone, a score screen shows my score from speed and remaining health, with a Restart button. | Must | 5 | Formula (default) in the TDD; never taking cover scores 0 (Q6 default). |
 | R14 | All in-Lens text is bilingual Indonesian / English. | Must | 1–5 | Strings live in one file (TDD §6). |
 | R15 | Text is light and readable from where the user stands; no dark UI (the display is additive, black is transparent). | Should | — | Checked in the learner's comfort review. |
 | S1 | As a user, objects fall from the shelf or cabinet during the quake. | Stretch | — | Only after R1–R15 pass. |
@@ -84,15 +84,18 @@ Importance: **Must** = in a done criterion; **Should** = in the brief but outsid
 - Look, placement, colors, type and comfort numbers: `DESIGN_BRIEF.md`.
 - Inputs: pinch (mouse click in the preview) for the Continue and Restart buttons only. Walking (WASD) and ducking (Q/E) are body movement, not buttons. No voice.
 
-## 7. Questions (open; the learner decides)
+## 7. Questions
 
-| # | Question | Default used until answered |
+Answered by the learner on 27 Oct 2026 unless marked open.
+
+| # | Question | Answer |
 |---|---|---|
-| Q1 | Does Restart go back to the safety reminder, or straight to the room? The brief says "memulai latihan dari awal" (starts the drill from the beginning). | Back to the safety reminder (literal reading). |
-| Q2 | After the quake ends, should the Lens tell the user to come out from under the table? Otherwise they may not know that leaving the zone shows the score. | Show "Guncangan berhenti. Keluar dari bawah meja / The shaking stopped. Come out from under the table". |
-| Q3 | Should the timer show elapsed time or remaining time? Remaining time reveals when the quake ends. | Elapsed time. |
-| Q4 | Wording of the hazard labels, button labels and result explanations. | Draft strings in the TDD §6, marked (default). |
-| Q5 | Does health also drain while the user is still walking to the table, or only after standing up again once safe? The brief says "berdiri sebelum guncangan selesai" (standing before the shaking ends). | Drains whenever the user is not ducked in the safe zone, after a 3 s grace period from the quake start. |
+| Q1 | Does Restart go back to the safety reminder, or straight to the room? | **Learner:** straight to the room (the briefing step). The safety reminder shows only when the Lens opens. |
+| Q2 | After the quake ends, should the Lens tell the user to come out from under the table? | **Learner:** yes. Wording (default): "Guncangan berhenti. Keluar dari bawah meja / The shaking stopped. Come out from under the table". |
+| Q3 | Should the timer show elapsed time or remaining time? | **Learner:** elapsed time. |
+| Q4 | Wording of the hazard labels, button labels and result explanations. | **Open, learner will decide later.** Draft strings in the TDD §6, marked (default), are used until then. |
+| Q5 | Does health drain while the user is still walking to the table, or only after standing up again once safe? | **Learner:** only after the user has been safe once (in the safe zone and ducked). Walking to the table the first time never drains health. |
+| Q6 | Follows from Q5: a user who never takes cover loses no health and never hits game over. What should their result be? | **Open.** Default: no health points without taking cover, so the score is 0 and the result screen says "you never took cover". |
 
 ## 8. Not doing (out of scope)
 

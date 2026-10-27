@@ -5,7 +5,7 @@ Built the way Adobe's guide describes (https://business.adobe.com/blog/basics/ho
 - **User:** anyone (family at home, a school student, an office worker) practicing an earthquake drill.
 - **Goal:** take cover under the table, duck, and hold on until the shaking stops.
 - **Entry point:** the Lens opens.
-- **Success:** the score screen after leaving the safe zone. **Failure:** the game-over screen. Both lead back to the start through Restart.
+- **Success:** the score screen after leaving the safe zone. **Failure:** the game-over screen. Both lead back to the room through Restart (Q1). The safety reminder shows only when the Lens opens.
 
 Legend: rounded box = what the user sees, diamond = a check the Lens makes, parallelogram = what the user does.
 
@@ -26,7 +26,7 @@ flowchart TD
     I -- yes --> M{{Ducked? head height}}
     M -- no --> N[Instruction: Duck down] --> O[/Duck: Q/E in preview/] --> L
     M -- yes --> P[Instruction: Hold until the shaking stops] --> L
-    L{{Exposed? not in zone and ducked, after grace}}
+    L{{Exposed? took cover once, now not in zone and ducked}}
     L -- yes --> Q[Health drops little by little<br/>score penalty grows]
     L -- no --> R[Health holds]
     Q --> S{{Health = 0?}}
@@ -40,7 +40,7 @@ flowchart TD
     W -- yes --> X[Score screen<br/>time to cover · health left · score + Restart]
     T --> Y[/Pinch Restart/]
     X --> Y
-    Y --> B
+    Y --> D
 ```
 
 ## 2. States (for the build)
@@ -53,8 +53,8 @@ stateDiagram-v2
     QUAKE --> GAME_OVER: health reaches 0
     QUAKE --> POST_QUAKE: quake time over
     POST_QUAKE --> RESULT: head leaves safe zone
-    RESULT --> SAFETY: Restart pinched
-    GAME_OVER --> SAFETY: Restart pinched
+    RESULT --> BRIEFING: Restart pinched
+    GAME_OVER --> BRIEFING: Restart pinched
 ```
 
 ## 3. What is visible in each step
@@ -72,4 +72,5 @@ stateDiagram-v2
 1. **The safe zone behind the user.** The arrow is the only cue. Check that it appears and reads in under a second.
 2. **Knowing that leaving the zone shows the score.** The "come out" instruction covers it (PRD Q2).
 3. **Standing up by accident.** Hysteresis on the duck check (TDD §5) stops flicker between "duck" and "hold".
-4. **Restart target.** Back to the safety reminder by default (PRD Q1).
+4. **Restart target.** Straight back to the room (PRD Q1, learner).
+5. **Doing nothing.** Because health drains only after taking cover once (PRD Q5), a user who never takes cover loses no health. The result screen says so and the score is 0 (PRD Q6, default).

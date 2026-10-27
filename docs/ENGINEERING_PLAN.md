@@ -67,7 +67,7 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - Learner checkpoint: walk around; does it feel like standing in the middle of a room? Are the labels readable and on the right objects?
 
 ### Slice 3: The quake ✋
-- Random wait, `QuakeShaker.ts`, looping rumble (generated through `/build-sfx`), warning banner, HUD with health bar and timer, marker blink, quake duration 45–60 s, end of quake back to rest.
+- Random wait, `QuakeShaker.ts`, looping rumble (generated through `/build-sfx`), warning banner, HUD with health bar and timer (elapsed time, Q3), marker blink, quake duration 45–60 s, end of quake back to rest.
 - Requirements: R6, R7, R8.
 - LEAF: `DC2_QuakeStarts` (with `testMode`).
 - Learner checkpoint: does the quake feel sudden? Is the shake strong enough without making text unreadable?
@@ -79,7 +79,7 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - Learner checkpoint: walk under the table with WASD, duck with Q; turn away and find the arrow.
 
 ### Slice 5: Health, result, restart ✋
-- Health drain while exposed (grace period), penalty, game over with the reason, post-quake "come out" instruction, `ScoreCalculator.ts`, result panel with the breakdown, Restart back to the safety reminder with a full reset.
+- Health drain once the user stands up after taking cover (Q5), penalty, game over with the reason, post-quake "come out" instruction, `ScoreCalculator.ts`, result panel with the breakdown, Restart back to the room (briefing) with a full reset (Q1); never taking cover scores 0 (Q6 default).
 - Requirements: R11, R12, R13.
 - LEAF: `DC4_StandUpDrainsAndGameOver`, `DC5_QuakeEndsScore`.
 - Learner checkpoint: one successful drill and one game over; is the result screen clear?
@@ -106,7 +106,7 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 
 | Slice | Status | Commit | LEAF | Learner checkpoint |
 |---|---|---|---|---|
-| 0 | in progress | — | — | — |
+| 0 | done | 716d6e7 + Q1–Q5 update | — | Q1–Q5 answered 27 Oct (Q4 later) |
 | 1 | not started | — | — | — |
 | 2 | not started | — | — | — |
 | 3 | not started | — | — | — |
