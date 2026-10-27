@@ -1,0 +1,49 @@
+- !<AssetImportMetadata/2d323e18-36d7-4927-912a-e2a55f2f0bb3>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> c265c16b-7629-4d49-8d84-4ba9690a7ab8
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> c265c16b-7629-4d49-8d84-4ba9690a7ab8
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 7c9630b5-d617-4ce7-8fac-b29cb670466a
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/7c9630b5-d617-4ce7-8fac-b29cb670466a>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: cc98f3c7-c2fb-4d5e-8766-f9d51ab466b2
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    backPlateStyle: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - backPlateStyle: default
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Safety reminder panel (R1, R2)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Look"}'
+    - '// @input string backPlateStyle = "default" {"hint":"UI Kit BackPlate style. Keep it light: the display is additive, so black is see-through.", "widget":"combobox", "values":[{"label":"Default (light gradient)", "value":"default"}, {"label":"Simple", "value":"simple"}]}'

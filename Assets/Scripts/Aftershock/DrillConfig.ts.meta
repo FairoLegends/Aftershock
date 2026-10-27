@@ -1,0 +1,125 @@
+- !<AssetImportMetadata/d8f08010-3607-4f94-b788-51f9fa11c8f5>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 541363e0-6f53-4b14-af81-2c3267aca86e
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 541363e0-6f53-4b14-af81-2c3267aca86e
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 25c9756b-9af7-43cd-9714-9995609ab0bd
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/25c9756b-9af7-43cd-9714-9995609ab0bd>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 73e48be1-e62f-473c-9e0a-9db6f92bc3ca
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    duckDrop: false
+    duckHysteresis: false
+    fovHalfAngleHorizontal: false
+    fovHalfAngleVertical: false
+    healthDrainPerSecond: false
+    healthStart: false
+    hudBelowEye: false
+    hudDistance: false
+    quakeDurationMax: false
+    quakeDurationMin: false
+    quakeWaitMax: false
+    quakeWaitMin: false
+    safeHoldSeconds: false
+    safeZoneMargin: false
+    shakeAmplitudeCm: false
+    shakeFrequencyMaxHz: false
+    shakeFrequencyMinHz: false
+    shakeTiltDeg: false
+    testDurationSeconds: false
+    testMode: false
+    testWaitSeconds: false
+    timerMode: false
+    warningShowSeconds: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - quakeDurationMin: !<float> 45.000000
+      quakeDurationMax: !<float> 60.000000
+      quakeWaitMin: !<float> 8.000000
+      quakeWaitMax: !<float> 15.000000
+      warningShowSeconds: 2.500000
+      duckDrop: !<float> 40.000000
+      duckHysteresis: !<float> 10.000000
+      safeZoneMargin: !<float> 15.000000
+      safeHoldSeconds: !<float> 1.000000
+      healthStart: !<float> 100.000000
+      healthDrainPerSecond: !<float> 4.000000
+      shakeAmplitudeCm: 2.500000
+      shakeTiltDeg: 1.200000
+      shakeFrequencyMinHz: !<float> 2.000000
+      shakeFrequencyMaxHz: !<float> 6.000000
+      fovHalfAngleHorizontal: !<float> 16.000000
+      fovHalfAngleVertical: 18.500000
+      hudDistance: !<float> 110.000000
+      hudBelowEye: !<float> 10.000000
+      timerMode: elapsed
+      testMode: false
+      testWaitSeconds: !<float> 1.000000
+      testDurationSeconds: !<float> 8.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Aftershock drill tunables (TDD §5)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Quake timing"}'
+    - '// @input float quakeDurationMin = 45 {"hint":"Shortest quake, in seconds"}'
+    - '// @input float quakeDurationMax = 60 {"hint":"Longest quake, in seconds"}'
+    - '// @input float quakeWaitMin = 8 {"hint":"Shortest random wait before the quake, in seconds"}'
+    - '// @input float quakeWaitMax = 15 {"hint":"Longest random wait before the quake, in seconds"}'
+    - '// @input float warningShowSeconds = 2.5 {"hint":"How long the warning banner shows, in seconds"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Take cover"}'
+    - '// @input float duckDrop = 40 {"hint":"Ducked when head Y is this far below the baseline (cm)"}'
+    - '// @input float duckHysteresis = 10 {"hint":"Standing again only above baseline - duckDrop + this (cm)"}'
+    - '// @input float safeZoneMargin = 15 {"hint":"Safe zone = table footprint grown by this margin (cm)"}'
+    - '// @input float safeHoldSeconds = 1 {"hint":"inZone and ducked must hold this long to count as safe, in seconds"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Health"}'
+    - '// @input float healthStart = 100 {"hint":"Health at the start of each drill (points)"}'
+    - '// @input float healthDrainPerSecond = 4 {"hint":"Health lost per second while exposed (points per second)"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Shake"}'
+    - '// @input float shakeAmplitudeCm = 2.5 {"hint":"Room position shake amplitude (cm)"}'
+    - '// @input float shakeTiltDeg = 1.2 {"hint":"Room tilt shake amplitude, in degrees"}'
+    - '// @input float shakeFrequencyMinHz = 2 {"hint":"Lowest layered shake frequency, in Hz"}'
+    - '// @input float shakeFrequencyMaxHz = 6 {"hint":"Highest layered shake frequency, in Hz"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"View and HUD"}'
+    - '// @input float fovHalfAngleHorizontal = 16 {"hint":"Half the horizontal view angle, in degrees (Specs view about 32°)"}'
+    - '// @input float fovHalfAngleVertical = 18.5 {"hint":"Half the vertical view angle, in degrees (Specs view about 37°)"}'
+    - '// @input float hudDistance = 110 {"hint":"Distance of panels and HUD in front of the head (cm)"}'
+    - '// @input float hudBelowEye = 10 {"hint":"Panels and HUD sit this far below eye level (cm)"}'
+    - '// @input string timerMode = "elapsed" {"hint":"Timer shows elapsed time since the quake started (learner, Q3)", "widget":"combobox", "values":[{"label":"Elapsed", "value":"elapsed"}]}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Test hooks"}'
+    - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'
+    - '// @input float testWaitSeconds = 1 {"hint":"Wait before the quake when testMode is on, in seconds"}'
+    - '// @input float testDurationSeconds = 8 {"hint":"Quake duration when testMode is on, in seconds"}'

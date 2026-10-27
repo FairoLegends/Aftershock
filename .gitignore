@@ -13,3 +13,6 @@ PluginsUserPreferences/
 *.lock
 spk_debug_key.pem
 .claude/settings.local.json
+
+# Lens Studio MCP scratch
+.virtual-scene.json

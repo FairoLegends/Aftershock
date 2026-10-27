@@ -1,0 +1,190 @@
+import {BackPlate} from "SpectaclesUIKit.lspkg/Scripts/BackPlate"
+import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
+import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
+import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
+import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
+import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
+import {splitBilingual, STRINGS, StringKey} from "./Strings"
+
+// Snap Specs type scale (em-square size at 110 cm). size / 43.886 = em-square in cm.
+type TextRole = "Headline2" | "Caption"
+const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
+  Headline2: {size: 48, weight: 700},
+  Caption: {size: 38, weight: 500} // floor at 110 cm
+}
+
+function applyTextRole(t: Text, role: TextRole): void {
+  t.size = TYPE_SCALE[role].size
+  ;(t as Text & {weight?: number}).weight = TYPE_SCALE[role].weight
+}
+
+// DESIGN_BRIEF §5: English sits below Indonesian in the same color at 80% size.
+const ENGLISH_SCALE = 0.8
+
+// Panel layout (cm). Not drill tunables: they only shape this panel.
+const INNER_W = 32
+const PAD = 2.5
+const ROW_GAP = 1.6
+const LINE_ID_H = 1.8
+const LINE_EN_H = 1.5
+const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
+const BUTTON_H = 5
+const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
+const CONTENT_Z = 0.6 // keeps content off the back plate (z-fighting)
+
+const WHITE = new vec4(1, 1, 1, 1)
+
+/**
+ * Safety reminder (R1) with the Continue button (R2). Placed once at start by
+ * DrillController; it never follows the head. Raises onContinue on pinch.
+ */
+@component
+export class SafetyPanel extends BaseScriptComponent {
+  @ui.label("Safety reminder panel (R1, R2)")
+  @ui.separator
+  @ui.group_start("Look")
+  @input
+  @hint("UI Kit BackPlate style. Keep it light: the display is additive, so black is see-through.")
+  @widget(
+    new ComboBoxWidget([
+      new ComboBoxItem("Default (light gradient)", "default"),
+      new ComboBoxItem("Simple", "simple")
+    ])
+  )
+  backPlateStyle: string = "default"
+
+  private readonly continueEvent = new Event()
+  readonly onContinue: PublicApi<void> = this.continueEvent.publicApi()
+
+  private readonly shownTexts: Text[] = []
+
+  onAwake(): void {
+    this.sceneObject.createComponent("Component.Canvas")
+
+    const backPlate = this.sceneObject.createComponent(BackPlate.getTypeName()) as BackPlate
+    backPlate.style = this.backPlateStyle as "default" | "simple"
+
+    const content = global.scene.createSceneObject("Content")
+    content.setParent(this.sceneObject)
+    content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
+
+    const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
+    flex.width = INNER_W + PAD * 2
+    flex.height = -1
+    flex.direction = FlexDirection.Column
+    flex.alignItems = FlexAlign.Center
+    flex.justifyContent = FlexJustify.Center
+    flex.rowGap = ROW_GAP
+    flex.paddingTop = PAD
+    flex.paddingBottom = PAD
+    flex.paddingLeft = PAD
+    flex.paddingRight = PAD
+    flex.onLayoutComplete.add((r) => {
+      backPlate.size = new vec2(r.containerWidth, r.containerHeight)
+    })
+
+    this.addBilingual(content, "safety.drill")
+    this.addBilingual(content, "safety.room")
+    this.addContinueButton(content)
+  }
+
+  /**
+   * Places the panel `distance` cm in front of the head along its level look
+   * direction and `below` cm under eye level, facing the head.
+   */
+  placeInFront(headPosition: vec3, headForward: vec3, distance: number, below: number): void {
+    let flat = new vec3(headForward.x, 0, headForward.z)
+    flat = flat.length > 0.0001 ? flat.normalize() : new vec3(0, 0, -1)
+    const position = headPosition.add(flat.uniformScale(distance)).add(new vec3(0, -below, 0))
+    const t = this.sceneObject.getTransform()
+    t.setWorldPosition(position)
+    t.setWorldRotation(quat.lookAt(flat.uniformScale(-1), vec3.up()))
+  }
+
+  show(): void {
+    this.sceneObject.enabled = true
+  }
+
+  hide(): void {
+    this.sceneObject.enabled = false
+  }
+
+  get isShown(): boolean {
+    return this.sceneObject.isEnabledInHierarchy
+  }
+
+  /** Read-only: every text line the panel shows, in order. */
+  get texts(): string[] {
+    return this.shownTexts.map((t) => t.text)
+  }
+
+  private addBilingual(parent: SceneObject, key: StringKey): void {
+    const parts = splitBilingual(STRINGS[key])
+    this.addLine(parent, key + ".id", parts.id, LINE_ID_H, 1)
+    this.addLine(parent, key + ".en", parts.en, LINE_EN_H, ENGLISH_SCALE)
+  }
+
+  private addLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    const t = so.createComponent("Component.Text") as Text
+    t.text = text
+    this.styleText(t, "Headline2", scale)
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -height / 2, height / 2)
+    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+    item.alignSelf = FlexAlignSelf.Stretch
+    this.shownTexts.push(t)
+  }
+
+  private addContinueButton(parent: SceneObject): void {
+    const so = global.scene.createSceneObject("ContinueButton")
+    so.setParent(parent)
+    const btn = so.createComponent(Button.getTypeName()) as Button
+    btn.size = new vec3(BUTTON_W, BUTTON_H, 1)
+    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+    item.alignSelf = FlexAlignSelf.Center
+    item.marginTop = ROW_GAP
+
+    // Bilingual label: Indonesian on top, English below at 80%.
+    const label = global.scene.createSceneObject("ContinueLabel")
+    label.setParent(so)
+    label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
+    const labelFlex = label.createComponent(FlexLayout.getTypeName()) as FlexLayout
+    labelFlex.width = BUTTON_W - 0.5
+    labelFlex.height = BUTTON_H - 0.5
+    labelFlex.direction = FlexDirection.Column
+    labelFlex.alignItems = FlexAlign.Stretch
+    labelFlex.justifyContent = FlexJustify.Center
+    labelFlex.rowGap = 0.2
+
+    const parts = splitBilingual(STRINGS["btn.continue"])
+    this.addButtonLine(label, "btn.continue.id", parts.id, LINE_ID_H, 1)
+    this.addButtonLine(label, "btn.continue.en", parts.en, LINE_EN_H, ENGLISH_SCALE)
+
+    btn.onTriggerUp.add(() => this.continueEvent.invoke())
+  }
+
+  private addButtonLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    const t = so.createComponent("Component.Text") as Text
+    t.text = text
+    this.styleText(t, "Headline2", scale)
+    const w = BUTTON_W - 0.5
+    t.layoutRect = Rect.create(-w / 2, w / 2, -height / 2, height / 2)
+    so.createComponent(FlexItem.getTypeName())
+    this.shownTexts.push(t)
+  }
+
+  private styleText(t: Text, role: TextRole, scale: number): void {
+    applyTextRole(t, role)
+    // English line: 80% of the Indonesian size, never under the Caption floor.
+    t.size = Math.max(TYPE_SCALE[role].size * scale, TYPE_SCALE.Caption.size)
+    t.depthTest = true
+    t.textFill.color = WHITE
+    t.horizontalAlignment = HorizontalAlignment.Center
+    t.verticalAlignment = VerticalAlignment.Center
+    t.horizontalOverflow = HorizontalOverflow.Overflow
+    t.verticalOverflow = VerticalOverflow.Overflow
+  }
+}

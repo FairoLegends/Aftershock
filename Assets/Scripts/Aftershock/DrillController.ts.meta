@@ -1,0 +1,54 @@
+- !<AssetImportMetadata/4bfa8530-2c59-4c91-8c83-6cb75b2a4dbb>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f60198d4-bc60-4a73-aa14-a4a9a16eb279
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f60198d4-bc60-4a73-aa14-a4a9a16eb279
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 4f1df730-d536-497c-9551-e6fedf235c88
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/4f1df730-d536-497c-9551-e6fedf235c88>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 80dca73f-1c1b-44ed-895d-a6ac2ba5648d
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    config: false
+    headPose: false
+    safetyPanel: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+      safetyPanel: !<MappingBased.AssignableType_3> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Drill state machine (TDD §4)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component with every tunable"}'
+    - '// @input AssignableType_2 headPose {"hint":"HeadPose component (camera position and look direction)"}'
+    - '// @input AssignableType_3 safetyPanel {"hint":"SafetyPanel component (reminder + Continue)"}'

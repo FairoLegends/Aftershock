@@ -1,0 +1,48 @@
+- !<AssetImportMetadata/b1f4c191-d1e5-4aaa-aa20-14ca3de230bd>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> a8c1b192-e7d5-402e-8c62-566972286fb6
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> a8c1b192-e7d5-402e-8c62-566972286fb6
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 4884cf0a-8739-44b0-b7fe-1b3728940956
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/4884cf0a-8739-44b0-b7fe-1b3728940956>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: d0b50231-9130-44ee-a0c2-61448fe25d0d
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    cameraObject: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - cameraObject: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Head pose from the camera"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input SceneObject cameraObject {"hint":"The scene camera (Perspective + DeviceTracking World)"}'

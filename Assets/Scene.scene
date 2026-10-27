@@ -4,6 +4,9 @@
     - !<own> 00000000-0000-0065-0000-000000000064
     - !<own> 0005641c-028d-459a-0000-000000014b4d
     - !<own> f5d74682-203a-4970-81ea-9fa7b88c96bb
+    - !<own> abd20522-42ae-4f41-a3c2-bf7bade229ec
+    - !<own> 566975b2-1733-4f45-b4be-81889ddc015c
+    - !<own> 7cb88c0e-0313-4111-912f-ede375df1f49
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -189,6 +192,22 @@
     - !<own> 276368e3-f687-4cc6-947d-24de3a78c9af
   Components:
     []
+- !<ScriptComponent/043cb06d-1821-4c7c-995c-c572190f8c34>
+  PrefabRemaps:
+    []
+  Name: LeafIndex
+  Enabled: true
+  ScriptAsset: !<reference> bba30e9a-4700-474c-b7f0-547e403dc9b0
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/0451d993-a1f7-464e-9b69-32c0d9af8ed7>
   PrefabRemaps:
     []
@@ -591,6 +610,23 @@
     []
   Components:
     []
+- !<SceneObject/2510a6c7-5808-4efc-b781-f0f7f014c414>
+  PrefabRemaps:
+    []
+  Name: DrillController
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 3e9f2147-1876-4514-b04c-298e432ea45f
+    - !<own> fa96ddb3-29c7-4a6c-a42c-6ed441585277
+    - !<own> fde14958-1579-47f7-bc39-bacec7aba013
 - !<SceneObject/264571d0-f879-411b-8deb-ff6d9921317f>
   PrefabRemaps:
     []
@@ -743,6 +779,22 @@
     - !<own> e42bbb9f-e951-4432-be2e-3cc712b1fc33
   Components:
     []
+- !<ScriptComponent/34964d5f-4a36-4e04-99dd-d696e8ddf6a5>
+  PrefabRemaps:
+    []
+  Name: AgentInteractScript
+  Enabled: true
+  ScriptAsset: !<reference> 29091811-e792-46be-bfa4-28ddec5f11be
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<RenderMeshVisual/35501b69-b651-41e6-9b64-72a252df8105>
   PrefabRemaps:
     []
@@ -839,6 +891,66 @@
     - !<own> 988c408a-99dc-47e6-b7c4-efbf4bf8dc3c
   Components:
     []
+- !<ScriptComponent/3e9f2147-1876-4514-b04c-298e432ea45f>
+  PrefabRemaps:
+    []
+  Name: DrillConfig
+  Enabled: true
+  ScriptAsset: !<reference> 541363e0-6f53-4b14-af81-2c3267aca86e
+  ScriptInputsDefault:
+    quakeDurationMin: true
+    quakeDurationMax: true
+    quakeWaitMin: true
+    quakeWaitMax: true
+    warningShowSeconds: true
+    duckDrop: true
+    duckHysteresis: true
+    safeZoneMargin: true
+    safeHoldSeconds: true
+    healthStart: true
+    healthDrainPerSecond: true
+    shakeAmplitudeCm: true
+    shakeTiltDeg: true
+    shakeFrequencyMinHz: true
+    shakeFrequencyMaxHz: true
+    fovHalfAngleHorizontal: true
+    fovHalfAngleVertical: true
+    hudDistance: true
+    hudBelowEye: true
+    timerMode: true
+    testMode: true
+    testWaitSeconds: true
+    testDurationSeconds: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      quakeDurationMin: !<float> 45.000000
+      quakeDurationMax: !<float> 60.000000
+      quakeWaitMin: !<float> 8.000000
+      quakeWaitMax: !<float> 15.000000
+      warningShowSeconds: 2.500000
+      duckDrop: !<float> 40.000000
+      duckHysteresis: !<float> 10.000000
+      safeZoneMargin: !<float> 15.000000
+      safeHoldSeconds: !<float> 1.000000
+      healthStart: !<float> 100.000000
+      healthDrainPerSecond: !<float> 4.000000
+      shakeAmplitudeCm: 2.500000
+      shakeTiltDeg: 1.200000
+      shakeFrequencyMinHz: !<float> 2.000000
+      shakeFrequencyMaxHz: !<float> 6.000000
+      fovHalfAngleHorizontal: !<float> 16.000000
+      fovHalfAngleVertical: 18.500000
+      hudDistance: !<float> 110.000000
+      hudBelowEye: !<float> 10.000000
+      timerMode: elapsed
+      testMode: false
+      testWaitSeconds: !<float> 1.000000
+      testDurationSeconds: !<float> 8.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/4051028a-c608-4a97-b3d5-1a3912a7c007>
   PrefabRemaps:
     []
@@ -974,6 +1086,21 @@
     - !<own> 46b79537-a269-46f1-9483-500d7a4170d6
   Components:
     []
+- !<SceneObject/566975b2-1733-4f45-b4be-81889ddc015c>
+  PrefabRemaps:
+    []
+  Name: LeafIndex
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 043cb06d-1821-4c7c-995c-c572190f8c34
 - !<SceneObject/58ef319f-850e-40dd-8295-e6dc36ab4854>
   PrefabRemaps:
     []
@@ -1139,6 +1266,22 @@
     - !<own> 80574bd1-697b-4bb5-b9ce-13b340146d82
   Components:
     - !<own> ccf4d3bc-d3c2-4580-b9c5-62f164ef7eef
+- !<ScriptComponent/654d921f-17b3-4033-b89b-c7d379bdd396>
+  PrefabRemaps:
+    []
+  Name: SafetyPanel
+  Enabled: true
+  ScriptAsset: !<reference> c265c16b-7629-4d49-8d84-4ba9690a7ab8
+  ScriptInputsDefault:
+    backPlateStyle: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      backPlateStyle: default
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/6a7a67db-5675-49bb-8f31-ba0588e3cffc>
   PrefabRemaps:
     []
@@ -1214,6 +1357,21 @@
     - !<own> 4c195c04-c397-454e-bd08-3485f37d84fe
   Components:
     []
+- !<SceneObject/6f8b015a-a79a-4ad5-ac10-af84e5960782>
+  PrefabRemaps:
+    []
+  Name: SafetyPanel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: -10.000000, z: -110.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 654d921f-17b3-4033-b89b-c7d379bdd396
 - !<SceneObject/7037a633-4899-4f2e-bc97-2e3f35395687>
   PrefabRemaps:
     []
@@ -1338,6 +1496,22 @@
     - !<own> 3b4f5057-b516-4d3b-9c8d-14c81af2f505
   Components:
     []
+- !<SceneObject/7cb88c0e-0313-4111-912f-ede375df1f49>
+  PrefabRemaps:
+    []
+  Name: AiPreviewAgent Handler
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> f54d645c-c572-4dc5-8ba0-cdd00a05c992
+    - !<own> 34964d5f-4a36-4e04-99dd-d696e8ddf6a5
 - !<SceneObject/7e2075c6-0882-4275-8365-16a03da73298>
   PrefabRemaps:
     []
@@ -1760,6 +1934,22 @@
     []
   Components:
     - !<own> 11c4bb09-7c38-4023-9802-74f9f28709a9
+- !<SceneObject/abd20522-42ae-4f41-a3c2-bf7bade229ec>
+  PrefabRemaps:
+    []
+  Name: AftershockRoot
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 2510a6c7-5808-4efc-b781-f0f7f014c414
+    - !<own> 6f8b015a-a79a-4ad5-ac10-af84e5960782
+  Components:
+    []
 - !<SceneObject/abfa4c71-3560-46f0-9471-90e212f21185>
   PrefabRemaps:
     []
@@ -2382,6 +2572,22 @@
   Components:
     - !<own> d3e2fbc5-8795-4913-9af6-c8626f8e6d9c
     - !<own> 275aeb4d-77ac-4b1b-811e-907652542110
+- !<ScriptComponent/f54d645c-c572-4dc5-8ba0-cdd00a05c992>
+  PrefabRemaps:
+    []
+  Name: AgentInspectScript
+  Enabled: true
+  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/f5d74682-203a-4970-81ea-9fa7b88c96bb>
   PrefabRemaps:
     - 012a3973-9507-4230-a6ff-2b8dfd2154fe: e3ec5982-f5aa-45f3-4551-4d3a92a1f432
@@ -2573,6 +2779,22 @@
     - !<own> a7526b33-fca3-4f28-8e32-b0e9aa13c4b4
   Components:
     []
+- !<ScriptComponent/fa96ddb3-29c7-4a6c-a42c-6ed441585277>
+  PrefabRemaps:
+    []
+  Name: HeadPose
+  Enabled: true
+  ScriptAsset: !<reference> a8c1b192-e7d5-402e-8c62-566972286fb6
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      cameraObject: !<reference.SceneObject> 00000000-0000-0065-0000-000000000064
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/fcc185fc-4e88-4e9e-9c71-40bd83b1b0ed>
   PrefabRemaps:
     []
@@ -2588,6 +2810,24 @@
     - !<own> 2dae2a27-8ce6-466a-8bff-622195c1b3a8
   Components:
     []
+- !<ScriptComponent/fde14958-1579-47f7-bc39-bacec7aba013>
+  PrefabRemaps:
+    []
+  Name: DrillController
+  Enabled: true
+  ScriptAsset: !<reference> f60198d4-bc60-4a73-aa14-a4a9a16eb279
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
+      headPose: !<MappingBased.AssignableType_2> fa96ddb3-29c7-4a6c-a42c-6ed441585277
+      safetyPanel: !<MappingBased.AssignableType_3> 654d921f-17b3-4033-b89b-c7d379bdd396
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/fe93d992-1114-4f1f-8bef-0a0bbd75747d>
   PrefabRemaps:
     []
