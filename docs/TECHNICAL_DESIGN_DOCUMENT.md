@@ -112,6 +112,7 @@ Stages follow the user's current state, so standing up again shows `instr.duck` 
 | `shakeFrequencyHz` | 2–6 Hz, layered | (default) |
 | `fovHalfAngleHorizontal` / `Vertical` | 16° / 18.5° (SPECS view about 32° × 37°) | Pack rules |
 | `hudDistance` | 110 cm, 10 cm below eye level | Pack rules + UI Kit default |
+| `eyeHeight` | 160 cm: the floor sits this far below the head's start height (the preview starts the head at Y = 0, measured in Slice 1). If the preview's own floor grid height can be read, use it instead and report the number. | (default) |
 | `timerMode` | Elapsed time since the quake started | Learner (Q3) |
 | `testMode` | false; when true: wait 1 s, duration 8 s | Test hook (§8) |
 

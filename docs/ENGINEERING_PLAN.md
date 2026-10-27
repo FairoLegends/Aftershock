@@ -102,6 +102,16 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - The demo video is public on YouTube and under 3 minutes.
 - Every submission text is written by the learner.
 
+## 5a. Decisions taken by the orchestrator (open to the learner's veto)
+
+Slice 1 questions the learner had not answered when Slice 2 started (27 Oct). The orchestrator kept the documented design:
+1. Safety panel text sizes and light backing: kept as built.
+2. Panels with buttons stay at 110 cm (DESIGN_BRIEF §6.1); buttons are pinched by ray. Moving them to 50–60 cm is a design change for the learner to request.
+3. Two-line "Lanjut / Continue" button label: kept (Indonesian over English, as every string).
+4. LEAF moves the head with `HeadPose.setOverride` (TDD §8); the learner's manual WASD/Q-E run remains the proof.
+5. Tool-added packages AiPreviewAgentInspect / AiPreviewAgentInteract: kept until the build is done, removed before submission.
+Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner plugin, scenarios are checked by hand and reported as such. Without Lens Studio sign-in, furniture uses primitives.
+
 ## 6. Status
 
 | Slice | Status | Commit | LEAF | Learner checkpoint |
