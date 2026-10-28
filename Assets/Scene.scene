@@ -1357,6 +1357,7 @@
     fovHalfAngleHorizontal: true
     fovHalfAngleVertical: true
     hudDistance: true
+    resultBelowEye: true
     pinchGuardSeconds: true
     timerMode: true
     eyeHeight: true
@@ -1396,6 +1397,7 @@
       fovHalfAngleVertical: 18.500000
       hudDistance: !<float> 110.000000
       hudBelowEye: !<float> 22.000000
+      resultBelowEye: !<float> 10.000000
       pinchGuardSeconds: 0.500000
       timerMode: elapsed
       eyeHeight: !<float> 160.000000

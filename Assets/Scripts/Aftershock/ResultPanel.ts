@@ -7,7 +7,7 @@ import {ScoreBreakdown} from "./ScoreCalculator"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
 import {createLightBacking, drawOnTop, PinchGuard} from "./UiBacking"
 
-// DESIGN_BRIEF §5 type scale (same as SafetyPanel).
+// DESIGN_BRIEF §5 type scale (same as SafetyPanel). Used by the Restart label only.
 type TextRole = "Headline2" | "Caption"
 const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
   Headline2: {size: 48, weight: 700},
@@ -15,11 +15,18 @@ const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
 }
 const ENGLISH_SCALE = 0.8
 
+// Panel text at the HUD scale (ENGINEERING_PLAN 5i item 4): em heights in cm,
+// Text.size = em (cm) x SIZE_PER_CM, as in Hud.ts.
+const SIZE_PER_CM = 43.886
+const BIG_EM_CM = 3.5 // title and score line
+const SMALL_EM_CM = 2 // the other detail lines
+const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the panel font is 1.25 em
+
 // Panel layout (cm). Not drill tunables: they only shape the panel.
-const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood);
+const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood); longer lines wrap
 const PAD = 2.5
 const ROW_GAP = 1.6 // above each bilingual pair
-const LINE_ID_H = 1.8
+const LINE_ID_H = 1.8 // Restart label lines
 const LINE_EN_H = 1.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
 const DETAIL_LINES = 3
@@ -106,9 +113,9 @@ export class ResultPanel extends BaseScriptComponent {
       this.details.push(this.addPair(content, "Line" + (i + 1)))
     }
     this.addRestartButton(content)
-    this.setPair(this.title, null, false)
+    this.setPair(this.title, null, false, BIG_EM_CM)
     for (const pair of this.details) {
-      this.setPair(pair, null, true)
+      this.setPair(pair, null, true, SMALL_EM_CM)
     }
   }
 
@@ -131,16 +138,16 @@ export class ResultPanel extends BaseScriptComponent {
    */
   showResult(b: ScoreBreakdown): void {
     this._mode = "result"
-    this.setPair(this.title, lines("result.title"), false)
+    this.setPair(this.title, lines("result.title"), false, BIG_EM_CM)
     const score = fill("result.score", "{score}", "" + b.score)
     if (b.tSafe === null) {
-      this.setPair(this.details[0], lines("result.never"), true)
-      this.setPair(this.details[1], score, true)
-      this.setPair(this.details[2], null, true)
+      this.setPair(this.details[0], lines("result.never"), true, SMALL_EM_CM)
+      this.setPair(this.details[1], score, true, BIG_EM_CM)
+      this.setPair(this.details[2], null, true, SMALL_EM_CM)
     } else {
-      this.setPair(this.details[0], fill("result.speed", "{s}", b.tSafe.toFixed(1)), true)
-      this.setPair(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), true)
-      this.setPair(this.details[2], score, true)
+      this.setPair(this.details[0], fill("result.speed", "{s}", b.tSafe.toFixed(1)), true, SMALL_EM_CM)
+      this.setPair(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), true, SMALL_EM_CM)
+      this.setPair(this.details[2], score, true, BIG_EM_CM)
     }
     this.showPanel()
   }
@@ -148,10 +155,10 @@ export class ResultPanel extends BaseScriptComponent {
   /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
   showGameOver(reason: StringKey): void {
     this._mode = "gameOver"
-    this.setPair(this.title, lines("over.title"), false)
-    this.setPair(this.details[0], lines(reason), true)
-    this.setPair(this.details[1], null, true)
-    this.setPair(this.details[2], null, true)
+    this.setPair(this.title, lines("over.title"), false, BIG_EM_CM)
+    this.setPair(this.details[0], lines(reason), true, SMALL_EM_CM)
+    this.setPair(this.details[1], null, true, SMALL_EM_CM)
+    this.setPair(this.details[2], null, true, SMALL_EM_CM)
     this.showPanel()
   }
 
@@ -179,31 +186,51 @@ export class ResultPanel extends BaseScriptComponent {
     return this.shownTexts.map((t) => t.text).filter((s) => s.length > 0)
   }
 
-  /** Fills a line pair from a bilingual string, or collapses it when text is null. */
-  private setPair(pair: LinePair, text: ReturnType<typeof lines> | null, gapAbove: boolean): void {
+  /**
+   * Fills a line pair from a bilingual string at `emCm` (English at 80%), or
+   * collapses it when text is null.
+   */
+  private setPair(pair: LinePair, text: ReturnType<typeof lines> | null, gapAbove: boolean, emCm: number): void {
     const shown = text !== null
     setLinePair(pair.id, pair.en, shown ? text : {primary: "", secondary: ""})
-    pair.idItem.overrideHeight = shown ? LINE_ID_H : HIDDEN_H
-    pair.enItem.overrideHeight = shown ? LINE_EN_H : HIDDEN_H
+    this.fitLine(pair.id, pair.idItem, shown, emCm)
+    this.fitLine(pair.en, pair.enItem, shown, emCm * ENGLISH_SCALE)
     pair.idItem.marginTop = shown && gapAbove ? ROW_GAP : 0
   }
 
+  /**
+   * Sizes a line and grows its slot to the number of lines it wraps to inside
+   * INNER_W. getBoundingBox is limited to 5 calls per Text per frame (measured);
+   * this makes one per line per show.
+   */
+  private fitLine(t: Text, item: FlexItem, shown: boolean, emCm: number): void {
+    t.size = emCm * SIZE_PER_CM
+    const lineH = emCm * LINE_H_PER_EM
+    let h = shown ? lineH : HIDDEN_H
+    if (shown && t.text.length > 0) {
+      const box = t.getBoundingBox()
+      h = Math.max(1, Math.round((box.top - box.bottom) / lineH)) * lineH
+    }
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -h / 2, h / 2)
+    item.overrideHeight = h
+  }
+
   private addPair(parent: SceneObject, name: string): LinePair {
-    const id = this.addLine(parent, name + ".id", LINE_ID_H, 1)
-    const en = this.addLine(parent, name + ".en", LINE_EN_H, ENGLISH_SCALE)
+    const id = this.addLine(parent, name + ".id")
+    const en = this.addLine(parent, name + ".en")
     return {id: id.text, en: en.text, idItem: id.item, enItem: en.item}
   }
 
-  private addLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {
+  private addLine(parent: SceneObject, name: string): {text: Text; item: FlexItem} {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
     t.text = ""
-    this.styleText(t, "Headline2", scale)
-    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -height / 2, height / 2)
+    this.styleText(t, SMALL_EM_CM * SIZE_PER_CM, true)
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -HIDDEN_H / 2, HIDDEN_H / 2)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
     item.overrideWidth = INNER_W
-    item.overrideHeight = height
+    item.overrideHeight = HIDDEN_H
     item.alignSelf = FlexAlignSelf.Center
     this.shownTexts.push(t)
     return {text: t, item}
@@ -249,17 +276,17 @@ export class ResultPanel extends BaseScriptComponent {
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
     t.text = text
-    this.styleText(t, "Headline2", scale)
+    // Restart label unchanged: Headline2, English at 80% but never under the Caption floor.
+    this.styleText(t, Math.max(TYPE_SCALE.Headline2.size * scale, TYPE_SCALE.Caption.size), false)
     const w = BUTTON_W - 0.5
     t.layoutRect = Rect.create(-w / 2, w / 2, -height / 2, height / 2)
     so.createComponent(FlexItem.getTypeName())
     this.shownTexts.push(t)
   }
 
-  private styleText(t: Text, role: TextRole, scale: number): void {
-    // English line: 80% of the Indonesian size, never under the Caption floor.
-    t.size = Math.max(TYPE_SCALE[role].size * scale, TYPE_SCALE.Caption.size)
-    ;(t as Text & {weight?: number}).weight = TYPE_SCALE[role].weight
+  private styleText(t: Text, size: number, wrap: boolean): void {
+    t.size = size
+    ;(t as Text & {weight?: number}).weight = TYPE_SCALE.Headline2.weight
     t.depthTest = true
     t.textFill.color = WHITE
     if (this.textOutlineSize > 0) {
@@ -269,7 +296,7 @@ export class ResultPanel extends BaseScriptComponent {
     }
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
-    t.horizontalOverflow = HorizontalOverflow.Overflow
+    t.horizontalOverflow = wrap ? HorizontalOverflow.Wrap : HorizontalOverflow.Overflow
     t.verticalOverflow = VerticalOverflow.Overflow
   }
 }

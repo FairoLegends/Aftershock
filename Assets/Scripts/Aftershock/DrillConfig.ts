@@ -103,6 +103,10 @@ export class DrillConfig extends BaseScriptComponent {
   hudBelowEye: number = 22
 
   @input
+  @hint("Result / game-over panel center sits this far below eye level (cm). Smaller than hudBelowEye so the taller panel, Restart included, stays in view with the head level (ENGINEERING_PLAN 5i item 4).")
+  resultBelowEye: number = 10
+
+  @input
   @hint("A newly shown panel ignores button presses for this long, in seconds (ENGINEERING_PLAN 5h item 1)")
   pinchGuardSeconds: number = 0.5
 

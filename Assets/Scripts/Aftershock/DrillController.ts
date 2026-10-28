@@ -691,7 +691,7 @@ export class DrillController extends BaseScriptComponent {
       this.headPose.position,
       this.headPose.forward,
       this.config.hudDistance,
-      this.config.hudBelowEye
+      this.config.resultBelowEye
     )
   }
 
