@@ -193,5 +193,6 @@ Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner p
 | 3 | built, awaiting learner check | see log | DC2 checked by hand (pass; rumble audibility unconfirmed) | pending |
 | 4 | built, 2 checks open | see log | DC3 checked by hand (arrow, duck, hold) | pending |
 | 5 | built, awaiting learner check | see log | DC4, DC5 checked by hand (pass) | pending |
-| 5P | built, 2 checks open | see log | layouts, baseline fix, danger drain checked by hand | pending |
-| 6 | not started | — | — | — |
+| 5P | built, checked by learner | see log | layouts, baseline fix, danger drain checked by hand | pending |
+| 5L | built + fix, checked by learner 28 Oct | see log | DC7 (language kept, layouts differ) | done |
+| 6 | 6A done (LEAF), 6B open | see log | DC1–DC7 auto-run: 7/7 passed (log 28 Oct) | 6B comfort + judge it |

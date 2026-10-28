@@ -194,6 +194,11 @@ One scenario per done criterion, named `DC1_…` to `DC5_…`, registered in `Le
 | `DC4_StandUpDrainsAndGameOver` | Safe, then override standing; wait | Health decreases relative to the value before standing; penalty grows; at health 0 state `GAME_OVER` with `over.why.stood`; pinch Restart → `BRIEFING` |
 | `DC5_QuakeEndsScore` | Safe until the quake ends; then override outside the zone | `POST_QUAKE` with `instr.comeOut`; after leaving: `RESULT` with a score equal to `ScoreCalculator` for the recorded inputs; Restart visible |
 
+| `DC6_DangerZoneDrains` | testMode; head pinned in the cabinet danger zone, no cover | Health falls relative to before; at 0 `GAME_OVER` with `over.why.danger` |
+| `DC7_LanguagesAndRestart` | Pick ja; run a drill; Restart twice | Safety primary line in ja; Restart keeps ja and goes to `BRIEFING`; each Restart gives a different layout |
+
+Run: enable `LeafAutoRun` (AftershockScenarioClient), refresh the preview, read `PASSED`/`FAILED` and `[SUCCESS]` from the Lens Studio log, disable it again. The LeafPlugin panel is not installed, so this auto-run is the runner. `DrillController.resetForTest()` is the only extra test hook.
+
 Use relative assertions for numbers (value before vs after), as the LEAF skill requires. Every scene-object name used in a test must exist in the scene (checked by the agent before writing the test).
 
 ## 10. Performance and comfort budget
