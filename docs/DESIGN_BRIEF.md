@@ -68,6 +68,7 @@ Coordinates in cm, relative to the user's start position on the floor, +Y up, �
 | Shelf with items | 80 × 30 × 180 | (150, 0, −60) | Right; small boxes and books on it (fall candidates for stretch S1) |
 | Glass window | 120 wide × 120 tall, bottom edge 90 cm | (0, 0, +170) | Behind, on a virtual wall section |
 | Safe-zone marker | Rectangular floor outline 130 × 80 (learner kept the rectangle), plus label | Under the table | Steady before the quake, blinks 2 Hz during it |
+| Danger-zone label | 2.5 cm red `#FF5A4F` type, just below the hazard label on the same object, same facing (learner, 28 Oct) | On each hazard | From BRIEFING to the end of the quake |
 | Hazard labels | Fit text, 2.5 cm type, on a light semi-transparent backing (never dark grey: the display is additive and dark fades) | On each hazard, facing the room center | Visible from the start position |
 
 Floor and wall sections are faint outlines only (not solid), so the room reads as an overlay.

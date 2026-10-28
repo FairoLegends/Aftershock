@@ -156,6 +156,10 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 3. The room stays visible behind the result and game-over panels (learner: 1a).
 4. Health drain rule after 5P: drain while exposed after first cover (Q5) OR while inside a danger zone during the quake (from the quake start). One drain at a time, never doubled. Game-over reason: `over.why.danger` if the user was in a danger zone when health hit 0, else `over.why.stood`.
 
+## 5g. Learner decision after Slice 5P (28 Oct)
+
+1. The "Zona bahaya / Danger zone" label moves up next to its hazard label (just below it, same facing), so both read together from the start spot. The red floor area stays on the floor.
+
 ## 5a. Decisions taken by the orchestrator (open to the learner's veto)
 
 Slice 1 questions the learner had not answered when Slice 2 started (27 Oct). The orchestrator kept the documented design:
