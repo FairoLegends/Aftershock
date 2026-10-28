@@ -1381,6 +1381,8 @@
       hudBelowEye: !<float> 22.000000
       timerMode: elapsed
       eyeHeight: !<float> 160.000000
+      fontJa: !<reference.Font> 0dd7ea67-5428-41a0-943a-f6d12cd1b5a6
+      fontZh: !<reference.Font> 6436afc0-6595-4825-b7a9-71e841f50bb4
       tableDistanceMin: !<float> 100.000000
       tableDistanceMax: !<float> 200.000000
       hazardDistanceMin: !<float> 120.000000
@@ -3010,6 +3012,7 @@
     - !<own> 8a025c21-2752-4be4-9004-c8a2cfdf3936
     - !<own> 2e0d1fe3-9eee-4484-bdec-82eaaca8977e
     - !<own> 392fc1e9-36b5-4b4c-8dbb-7d7bb0469a05
+    - !<own> e5650498-bb26-4ab9-abb8-94ee5fdefcfc
   Components:
     []
 - !<SceneObject/abfa4c71-3560-46f0-9471-90e212f21185>
@@ -3689,6 +3692,22 @@
     - !<own> bb9036be-541f-49e7-9554-c297d354da21
   Components:
     []
+- !<ScriptComponent/d32ea2bd-a740-49d9-b50b-2aa2320a6778>
+  PrefabRemaps:
+    []
+  Name: LanguagePanel
+  Enabled: true
+  ScriptAsset: !<reference> 04de34fb-a251-451b-a7cf-79e1e46e56fc
+  ScriptInputsDefault:
+    backingColor: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+  ScriptTypes:
+    "":
+      {}
 - !<ScriptComponent/d3e2fbc5-8795-4913-9af6-c8626f8e6d9c>
   PrefabRemaps:
     []
@@ -4075,6 +4094,21 @@
     InvertRotation: false
   SurfaceOptions: !<SurfaceOptions>
     EnhanceWithNativeAR: false
+- !<SceneObject/e5650498-bb26-4ab9-abb8-94ee5fdefcfc>
+  PrefabRemaps:
+    []
+  Name: LanguagePanel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: -10.000000, z: -110.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> d32ea2bd-a740-49d9-b50b-2aa2320a6778
 - !<SceneObject/e76a5053-8f30-4cda-9cd1-def2036e3255>
   PrefabRemaps:
     []
@@ -4567,20 +4601,21 @@
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       headPose: !<MappingBased.AssignableType_2> fa96ddb3-29c7-4a6c-a42c-6ed441585277
       safetyPanel: !<MappingBased.AssignableType_3> 654d921f-17b3-4033-b89b-c7d379bdd396
+      languagePanel: !<MappingBased.AssignableType_4> d32ea2bd-a740-49d9-b50b-2aa2320a6778
       room: !<reference.SceneObject> 6923e43a-847b-4e30-87c0-a95e552d7567
-      safeZone: !<MappingBased.AssignableType_4> f424190f-06ef-42f7-aab6-1e57655f76e5
-      cabinetLabel: !<MappingBased.AssignableType_5> 49b4f2e9-f66a-40a7-9eb6-d3b39cb1fcc6
-      shelfLabel: !<MappingBased.AssignableType_6> f07635bb-92d2-428e-b069-a0b3e8be1e2f
-      glassLabel: !<MappingBased.AssignableType_7> ba1ffb72-4db1-4524-ab32-374e220de3a4
-      cabinetDanger: !<MappingBased.AssignableType_8> 788a256a-0204-487b-9300-bc907d557f18
-      shelfDanger: !<MappingBased.AssignableType_9> 2248f892-fbfb-4c6f-b9ed-ce6cf0413674
-      glassDanger: !<MappingBased.AssignableType_10> 834ca51d-8b31-42cc-8a3b-017fa4020db4
-      briefingPanel: !<MappingBased.AssignableType_11> 1027d762-804c-4e82-89ed-9adff4269407
-      quakeShaker: !<MappingBased.AssignableType_12> 30de3aec-07f9-441e-8f20-3c0a7158ba47
-      hud: !<MappingBased.AssignableType_13> 33b6a306-db2b-4c96-884a-801d79061b45
-      offscreenArrow: !<MappingBased.AssignableType_14> ffca1e4f-b3c0-4179-b09f-25268688f6c7
+      safeZone: !<MappingBased.AssignableType_5> f424190f-06ef-42f7-aab6-1e57655f76e5
+      cabinetLabel: !<MappingBased.AssignableType_6> 49b4f2e9-f66a-40a7-9eb6-d3b39cb1fcc6
+      shelfLabel: !<MappingBased.AssignableType_7> f07635bb-92d2-428e-b069-a0b3e8be1e2f
+      glassLabel: !<MappingBased.AssignableType_8> ba1ffb72-4db1-4524-ab32-374e220de3a4
+      cabinetDanger: !<MappingBased.AssignableType_9> 788a256a-0204-487b-9300-bc907d557f18
+      shelfDanger: !<MappingBased.AssignableType_10> 2248f892-fbfb-4c6f-b9ed-ce6cf0413674
+      glassDanger: !<MappingBased.AssignableType_11> 834ca51d-8b31-42cc-8a3b-017fa4020db4
+      briefingPanel: !<MappingBased.AssignableType_12> 1027d762-804c-4e82-89ed-9adff4269407
+      quakeShaker: !<MappingBased.AssignableType_13> 30de3aec-07f9-441e-8f20-3c0a7158ba47
+      hud: !<MappingBased.AssignableType_14> 33b6a306-db2b-4c96-884a-801d79061b45
+      offscreenArrow: !<MappingBased.AssignableType_15> ffca1e4f-b3c0-4179-b09f-25268688f6c7
       rumbleAudio: !<reference.AudioComponent> 142be6a5-ecbe-4d9d-a930-dd55eb623006
-      resultPanel: !<MappingBased.AssignableType_15> ee29e4a0-2b17-446e-b061-0293c4c30acb
+      resultPanel: !<MappingBased.AssignableType_16> ee29e4a0-2b17-446e-b061-0293c4c30acb
   ScriptTypes:
     "":
       {}

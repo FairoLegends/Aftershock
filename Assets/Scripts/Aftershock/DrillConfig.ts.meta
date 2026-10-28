@@ -32,6 +32,8 @@
     duckDrop: false
     duckHysteresis: false
     eyeHeight: false
+    fontJa: false
+    fontZh: false
     fovHalfAngleHorizontal: false
     fovHalfAngleVertical: false
     hazardDistanceMax: false
@@ -95,6 +97,8 @@
       hudBelowEye: !<float> 10.000000
       timerMode: elapsed
       eyeHeight: !<float> 160.000000
+      fontJa: !<reference.Font> 00000000-0000-0000-0000-000000000000
+      fontZh: !<reference.Font> 00000000-0000-0000-0000-000000000000
       tableDistanceMin: !<float> 100.000000
       tableDistanceMax: !<float> 200.000000
       hazardDistanceMin: !<float> 120.000000
@@ -146,6 +150,10 @@
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'
     - "// @input float eyeHeight = 160 {\"hint\":\"Floor sits this far below the head's start height (cm). The preview starts the head at Y = 0.\"}"
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Fonts"}'
+    - '// @input Asset.Font fontJa {"hint":"Japanese font for every ja line (Fonts/NotoSansJP-Aftershock.ttf). The default font has no CJK glyphs."}'
+    - '// @input Asset.Font fontZh {"hint":"Simplified Chinese font for every zh line (Fonts/NotoSansSC-Aftershock.ttf)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Layout and danger zones"}'
     - '// @input float tableDistanceMin = 100 {"hint":"Closest the table center may be to the start spot (cm)"}'
