@@ -103,6 +103,10 @@ export class DrillConfig extends BaseScriptComponent {
   hudBelowEye: number = 22
 
   @input
+  @hint("A newly shown panel ignores button presses for this long, in seconds (ENGINEERING_PLAN 5h item 1)")
+  pinchGuardSeconds: number = 0.5
+
+  @input
   @hint("Timer shows elapsed time since the quake started (learner, Q3)")
   @widget(new ComboBoxWidget([new ComboBoxItem("Elapsed", "elapsed")]))
   timerMode: string = "elapsed"

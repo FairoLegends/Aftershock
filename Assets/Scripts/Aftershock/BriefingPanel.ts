@@ -2,7 +2,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {createLightBacking, drawOnTop} from "./UiBacking"
 
 // DESIGN_BRIEF §5: instruction type is 3.5 cm at 110 cm. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -94,6 +94,7 @@ export class BriefingPanel extends BaseScriptComponent {
 
   show(): void {
     this.sceneObject.enabled = true
+    drawOnTop(this.sceneObject) // 5h item 3; no button here, so no pinch guard
   }
 
   hide(): void {

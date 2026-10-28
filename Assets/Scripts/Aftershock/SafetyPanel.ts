@@ -4,7 +4,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {createLightBacking, drawOnTop, PinchGuard} from "./UiBacking"
 
 /** One string's two lines: selected language on top, English below at 80%. */
 interface LinePair {
@@ -61,6 +61,8 @@ export class SafetyPanel extends BaseScriptComponent {
 
   private readonly continueEvent = new Event()
   readonly onContinue: PublicApi<void> = this.continueEvent.publicApi()
+  /** 5h item 1: presses are ignored for pinchGuard.seconds after show(). */
+  readonly pinchGuard = new PinchGuard()
 
   private readonly shownTexts: Text[] = []
   private readonly pairs: LinePair[] = []
@@ -111,6 +113,8 @@ export class SafetyPanel extends BaseScriptComponent {
 
   show(): void {
     this.sceneObject.enabled = true
+    drawOnTop(this.sceneObject)
+    this.pinchGuard.arm()
   }
 
   hide(): void {
@@ -180,7 +184,9 @@ export class SafetyPanel extends BaseScriptComponent {
     const secondary = this.addButtonLine(label, "btn.continue.en", LINE_EN_H, ENGLISH_SCALE)
     this.pairs.push({key: "btn.continue", primary: primary.text, secondary: secondary.text, secondaryItem: secondary.item, height: LINE_EN_H})
 
-    btn.onTriggerUp.add(() => this.continueEvent.invoke())
+    btn.onTriggerUp.add(() => {
+      if (this.pinchGuard.open) this.continueEvent.invoke()
+    })
   }
 
   private addButtonLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {

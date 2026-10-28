@@ -305,6 +305,10 @@ export class DrillController extends BaseScriptComponent {
     this.languagePanel.onPick.add((lang) => this.onLanguagePicked(lang))
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())
+    // 5h item 1: each panel ignores presses for its first pinchGuardSeconds.
+    this.languagePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
+    this.safetyPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
+    this.resultPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.transitionTo("LANGUAGE")
   }
 
@@ -393,7 +397,7 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
-  /** Picker placed once in front of the head (hudDistance ahead, hudBelowEye down); nothing else shows. */
+  /** Picker placed once at eye level, hudDistance ahead (5h item 2: no hudBelowEye); nothing else shows. */
   private enterLanguage(): void {
     this._instructionKey = null
     this.hideArrow()
@@ -403,12 +407,7 @@ export class DrillController extends BaseScriptComponent {
     this.hud.hide()
     this.resultPanel.hide()
     this.safetyPanel.hide()
-    this.languagePanel.placeInFront(
-      this.headPose.position,
-      this.headPose.forward,
-      this.config.hudDistance,
-      this.config.hudBelowEye
-    )
+    this.languagePanel.placeInFront(this.headPose.position, this.headPose.forward, this.config.hudDistance, 0)
     this.languagePanel.show()
   }
 

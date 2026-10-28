@@ -4,7 +4,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {Lang, LANGS, setLineText, STRINGS} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {createLightBacking, drawOnTop, PinchGuard} from "./UiBacking"
 
 // Same type scale as SafetyPanel (size / 43.886 = em-square in cm at 110 cm).
 const TITLE_SIZE = 38 // Caption: five title lines stay small
@@ -16,9 +16,9 @@ const INNER_W = 32
 const PAD = 2.5
 const TITLE_GAP = 0.3
 const TITLE_H = 1.5
-const BUTTON_GAP = 1.2
-const BUTTON_W = 18 // DESIGN_BRIEF §6.1: at least 12 x 5 cm
-const BUTTON_H = 5
+const BUTTON_GAP = 0.8 // 5h item 2: packed tighter (was 1.2)
+const BUTTON_W = 18
+const BUTTON_H = 4 // 5h item 2 (learner): 4 cm tall so all five fit in view at eye level
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
@@ -44,6 +44,8 @@ export class LanguagePanel extends BaseScriptComponent {
   private readonly pickEvent = new Event<Lang>()
   /** Raised with the picked language when a button is pressed (pinch or click). */
   readonly onPick: PublicApi<Lang> = this.pickEvent.publicApi()
+  /** 5h item 1: presses are ignored for pinchGuard.seconds after show(). */
+  readonly pinchGuard = new PinchGuard()
 
   private readonly shownTexts: Text[] = []
   private readonly textLangs: Lang[] = []
@@ -99,6 +101,8 @@ export class LanguagePanel extends BaseScriptComponent {
       setLineText(this.shownTexts[i], this.shownTexts[i].text, this.textLangs[i])
     }
     this.sceneObject.enabled = true
+    drawOnTop(this.sceneObject)
+    this.pinchGuard.arm()
   }
 
   hide(): void {
@@ -138,7 +142,9 @@ export class LanguagePanel extends BaseScriptComponent {
     label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
     this.addText(label, STRINGS["lang.name"][lang], BUTTON_SIZE, BUTTON_W - 0.5, BUTTON_H - 0.5, lang)
 
-    btn.onTriggerUp.add(() => this.pickEvent.invoke(lang))
+    btn.onTriggerUp.add(() => {
+      if (this.pinchGuard.open) this.pickEvent.invoke(lang)
+    })
   }
 
   private addText(so: SceneObject, text: string, size: number, width: number, height: number, lang: Lang): Text {

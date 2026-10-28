@@ -5,7 +5,7 @@ import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUI
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {ScoreBreakdown} from "./ScoreCalculator"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {createLightBacking, drawOnTop, PinchGuard} from "./UiBacking"
 
 // DESIGN_BRIEF §5 type scale (same as SafetyPanel).
 type TextRole = "Headline2" | "Caption"
@@ -59,6 +59,8 @@ export class ResultPanel extends BaseScriptComponent {
   private readonly restartEvent = new Event()
   /** Raised when Restart is pressed (pinch or click). */
   readonly onRestart: PublicApi<void> = this.restartEvent.publicApi()
+  /** 5h item 1: presses are ignored for pinchGuard.seconds after the panel shows. */
+  readonly pinchGuard = new PinchGuard()
 
   private title: LinePair | null = null
   private details: LinePair[] = []
@@ -130,7 +132,7 @@ export class ResultPanel extends BaseScriptComponent {
       this.setPair(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), true)
       this.setPair(this.details[2], score, true)
     }
-    this.sceneObject.enabled = true
+    this.showPanel()
   }
 
   /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
@@ -140,7 +142,13 @@ export class ResultPanel extends BaseScriptComponent {
     this.setPair(this.details[0], lines(reason), true)
     this.setPair(this.details[1], null, true)
     this.setPair(this.details[2], null, true)
+    this.showPanel()
+  }
+
+  private showPanel(): void {
     this.sceneObject.enabled = true
+    drawOnTop(this.sceneObject)
+    this.pinchGuard.arm()
   }
 
   hide(): void {
@@ -221,7 +229,9 @@ export class ResultPanel extends BaseScriptComponent {
     refreshRestart()
     onLanguageChanged.add(refreshRestart)
 
-    btn.onTriggerUp.add(() => this.restartEvent.invoke())
+    btn.onTriggerUp.add(() => {
+      if (this.pinchGuard.open) this.restartEvent.invoke()
+    })
   }
 
   private addButtonLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {

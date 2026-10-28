@@ -5,7 +5,7 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {createLightBacking, drawOnTop} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -132,6 +132,7 @@ export class Hud extends BaseScriptComponent {
   show(): void {
     this.snapNext = true
     this.sceneObject.enabled = true
+    drawOnTop(this.sceneObject) // 5h item 3: panel and warning banner draw over the room
   }
 
   /** Hides the HUD and the warning banner. */
