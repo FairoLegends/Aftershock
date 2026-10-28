@@ -28,16 +28,20 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    dangerMargin: false
     duckDrop: false
     duckHysteresis: false
     eyeHeight: false
     fovHalfAngleHorizontal: false
     fovHalfAngleVertical: false
+    hazardDistanceMax: false
+    hazardDistanceMin: false
     healthAlarmBelow: false
     healthDrainPerSecond: false
     healthStart: false
     hudBelowEye: false
     hudDistance: false
+    layoutSeed: false
     markerBlinkHz: false
     quakeDurationMax: false
     quakeDurationMin: false
@@ -50,6 +54,9 @@
     shakeFrequencyMinHz: false
     shakeRampSeconds: false
     shakeTiltDeg: false
+    startClearRadius: false
+    tableDistanceMax: false
+    tableDistanceMin: false
     testDurationSeconds: false
     testMode: false
     testWaitSeconds: false
@@ -88,6 +95,13 @@
       hudBelowEye: !<float> 10.000000
       timerMode: elapsed
       eyeHeight: !<float> 160.000000
+      tableDistanceMin: !<float> 100.000000
+      tableDistanceMax: !<float> 200.000000
+      hazardDistanceMin: !<float> 120.000000
+      hazardDistanceMax: !<float> 240.000000
+      dangerMargin: !<float> 60.000000
+      startClearRadius: !<float> 50.000000
+      layoutSeed: !<float> 0.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -132,6 +146,15 @@
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'
     - "// @input float eyeHeight = 160 {\"hint\":\"Floor sits this far below the head's start height (cm). The preview starts the head at Y = 0.\"}"
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Layout and danger zones"}'
+    - '// @input float tableDistanceMin = 100 {"hint":"Closest the table center may be to the start spot (cm)"}'
+    - '// @input float tableDistanceMax = 200 {"hint":"Farthest the table center may be from the start spot (cm). ShakeOut: do not run far."}'
+    - '// @input float hazardDistanceMin = 120 {"hint":"Closest a hazard center may be to the start spot (cm)"}'
+    - '// @input float hazardDistanceMax = 240 {"hint":"Farthest a hazard center may be from the start spot (cm)"}'
+    - '// @input float dangerMargin = 60 {"hint":"Danger zone = hazard footprint grown by this margin (cm)"}'
+    - '// @input float startClearRadius = 50 {"hint":"No furniture or danger zone within this radius of the start spot (cm)"}'
+    - '// @input float layoutSeed {"hint":"0 = new random layout every start and Restart; any other number = the same layout every time (for filming)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'
