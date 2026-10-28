@@ -156,6 +156,12 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 3. The room stays visible behind the result and game-over panels (learner: 1a).
 4. Health drain rule after 5P: drain while exposed after first cover (Q5) OR while inside a danger zone during the quake (from the quake start). One drain at a time, never doubled. Game-over reason: `over.why.danger` if the user was in a danger zone when health hit 0, else `over.why.stood`.
 
+## 5h. Learner decisions after Slice 5L (28 Oct)
+
+1. Input guard: every newly shown panel (language picker, safety, briefing Continue, result/game-over Restart) ignores pinches for its first 0.5 s, so the pinch that closed the previous panel cannot press a button on the next one. Tunable `pinchGuardSeconds` = 0.5.
+2. Language picker sits at eye level (not hudBelowEye) and its buttons are packed tighter (4 cm tall, smaller gaps), so all five buttons fit in view with the head level.
+3. Panels and HUD always draw on top of the room: their text and backings ignore depth and render after the furniture, so a hazard placed in front of the user cannot cover them.
+
 ## 5g. Learner decision after Slice 5P (28 Oct)
 
 1. The "Zona bahaya / Danger zone" label moves up next to its hazard label (just below it, same facing), so both read together from the start spot. The red floor area stays on the floor.
