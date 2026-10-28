@@ -160,6 +160,7 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 
 1. The "Zona bahaya / Danger zone" label sits just ABOVE its hazard label (was below, 5g), so the briefing panel and the HUD, which draw on top, no longer cover it.
 2. Hazard labels (with their danger labels) hide when the quake starts and stay hidden through POST_QUAKE; they show again on the next BRIEFING. The red floor areas and the blinking safe-zone marker stay. The labels are for learning before the quake; during it the instructions lead.
+4. Result / game-over text grows to the HUD scale: the title ("Latihan selesai" / "Nyawa habis") and the score line 3.5 cm, the explanation lines 2 cm, each English line at 80%. Long lines wrap; the panel may rise (smaller below-eye offset) so the whole panel, Restart included, stays inside the view with the head level. The 50% backing and the outline stay.
 3. The result / game-over panel backing goes from 25% to 50% white, so its text reads over light furniture; the room still shows faintly behind it (5f-3).
 
 ## 5h. Learner decisions after Slice 5L (28 Oct)
