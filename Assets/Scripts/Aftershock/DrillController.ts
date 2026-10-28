@@ -364,6 +364,24 @@ export class DrillController extends BaseScriptComponent {
     this.transitionTo("BRIEFING")
   }
 
+  /**
+   * LEAF test hook only (TDD §8); the drill never calls it. Stops every timer
+   * and quake effect from any state, then a fresh BRIEFING (health healthStart)
+   * or, with toLanguage, the opening picker (nothing else leads to LANGUAGE).
+   */
+  resetForTest(toLanguage: boolean = false): void {
+    console.log(`${LOG} resetForTest from ${this._state}`)
+    this.stopQuakeEffects()
+    this.postQuakeUpdate.enabled = false
+    this.quakeStartTimer.cancel()
+    this._lastScore = null
+    this._quakeDuration = 0
+    this._health = this.config.healthStart
+    this.resultPanel.hide()
+    this._state = null // a reset, not a drill transition
+    this.transitionTo(toLanguage ? "LANGUAGE" : "BRIEFING")
+  }
+
   private transitionTo(next: DrillState): void {
     const prev = this._state
     if (prev !== null && ALLOWED[prev].indexOf(next) < 0) {

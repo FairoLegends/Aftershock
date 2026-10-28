@@ -1341,6 +1341,7 @@
     fovHalfAngleHorizontal: true
     fovHalfAngleVertical: true
     hudDistance: true
+    pinchGuardSeconds: true
     timerMode: true
     eyeHeight: true
     tableDistanceMin: true
@@ -1379,6 +1380,7 @@
       fovHalfAngleVertical: 18.500000
       hudDistance: !<float> 110.000000
       hudBelowEye: !<float> 22.000000
+      pinchGuardSeconds: 0.500000
       timerMode: elapsed
       eyeHeight: !<float> 160.000000
       fontJa: !<reference.Font> 0dd7ea67-5428-41a0-943a-f6d12cd1b5a6
@@ -2331,6 +2333,21 @@
     []
   Components:
     - !<own> 335c5f8b-2917-49e8-8af5-220696e9bc09
+- !<SceneObject/81dd995e-5cca-481e-9d64-89628b90c978>
+  PrefabRemaps:
+    []
+  Name: LeafAutoRun
+  Enabled: false
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 9a028125-4d11-4946-8eba-15669a0ce3d4
 - !<SceneObject/82a4b4e8-283b-441c-8b94-9fdc50c958f2>
   PrefabRemaps:
     []
@@ -2703,6 +2720,22 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<ScriptComponent/9a028125-4d11-4946-8eba-15669a0ce3d4>
+  PrefabRemaps:
+    []
+  Name: AftershockScenarioClient
+  Enabled: true
+  ScriptAsset: !<reference> b63ac728-77db-4529-960c-0b0d1bc7b0a1
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/9b75a405-5108-48db-adab-6d16faaeb770>
   PrefabRemaps:
     []
@@ -3013,6 +3046,7 @@
     - !<own> 2e0d1fe3-9eee-4484-bdec-82eaaca8977e
     - !<own> 392fc1e9-36b5-4b4c-8dbb-7d7bb0469a05
     - !<own> e5650498-bb26-4ab9-abb8-94ee5fdefcfc
+    - !<own> 81dd995e-5cca-481e-9d64-89628b90c978
   Components:
     []
 - !<SceneObject/abfa4c71-3560-46f0-9471-90e212f21185>
