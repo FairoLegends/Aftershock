@@ -114,6 +114,11 @@ Stages follow the user's current state, so standing up again shows `instr.duck` 
 | `hudDistance` | 110 cm | Pack rules + UI Kit default |
 | `hudBelowEye` | 22 cm below eye level, for every panel and the HUD, so the table stays in view while reading | Learner (27 Oct: 20–25 cm) |
 | `eyeHeight` | 160 cm: the floor sits this far below the head's start height. The preview gives no floor height (Slice 2). | Learner (27 Oct) |
+| `tableDistanceMin` / `Max` | 100 / 200 cm from the start spot to the table center | Learner (ShakeOut: max ~2 m); min (default) |
+| `hazardDistanceMin` / `Max` | 120 / 240 cm from the start spot | (default) |
+| `dangerMargin` | 60 cm: the danger zone is the hazard footprint grown by this much toward the room | (default) |
+| `startClearRadius` | 50 cm: no danger zone or furniture inside this radius of the start spot | (default) |
+| `layoutSeed` | 0 = new random layout every start and Restart; any other number = the same layout every time (for filming) | (default) |
 | `timerMode` | Elapsed time since the quake started | Learner (Q3) |
 | `testMode` | false; when true: wait 1 s, duration 8 s | Test hook (§8) |
 
@@ -150,6 +155,8 @@ Format: `"Indonesian / English"`, Indonesian first, as in the brief. Strings quo
 | `result.never` | Kamu tidak berlindung di bawah meja / You never took cover under the table | (default), Q6 |
 | `over.why.stood` | Kamu berdiri sebelum guncangan berhenti / You stood up before the shaking stopped | (default) |
 | `btn.restart` | Ulangi / Restart | (default) |
+| `over.why.danger` | Kamu berdiri di dekat benda yang bisa jatuh / You stayed next to something that can fall | (default), Slice 5P |
+| `label.danger` | Zona bahaya / Danger zone | (default), Slice 5P |
 
 ## 7. Score (`ScoreCalculator.ts`)
 
