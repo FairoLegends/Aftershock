@@ -6,7 +6,7 @@
     - !<own> f5d74682-203a-4970-81ea-9fa7b88c96bb
     - !<own> abd20522-42ae-4f41-a3c2-bf7bade229ec
     - !<own> 566975b2-1733-4f45-b4be-81889ddc015c
-    - !<own> cbf1c2d5-117b-4c2a-9412-70cf5b0e82ad
+    - !<own> dc000092-db39-40e3-a278-c4fcfa01e1c4
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -613,6 +613,22 @@
   MaxDistance: 100.000000
   EnableDirectivityEffect: false
   EnablePositionEffect: false
+- !<ScriptComponent/166098e8-a10a-4d8a-acbd-b659f557b85c>
+  PrefabRemaps:
+    []
+  Name: AgentInspectScript
+  Enabled: true
+  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/16b1270c-6c56-4dc5-b088-6ae4ed39f8b2>
   PrefabRemaps:
     []
@@ -2111,22 +2127,6 @@
     - !<own> f666b5eb-6a03-4db0-9d84-5b34c6e8905a
   Components:
     []
-- !<ScriptComponent/7575fbed-4c83-49a9-84d8-c750b8d93e80>
-  PrefabRemaps:
-    []
-  Name: AgentInspectScript
-  Enabled: true
-  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/7605c62c-4c45-4fc0-b364-2d76d26f2b82>
   PrefabRemaps:
     []
@@ -2812,6 +2812,22 @@
     - !<own> 46ea93d6-d161-4453-9064-6ac11e1d6523
   Components:
     []
+- !<ScriptComponent/a0dc0331-bb11-4367-aedd-a8263c0c12a6>
+  PrefabRemaps:
+    []
+  Name: AgentInteractScript
+  Enabled: true
+  ScriptAsset: !<reference> 29091811-e792-46be-bfa4-28ddec5f11be
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/a4b1ce71-4840-4493-bc52-58f3c13933e1>
   PrefabRemaps:
     []
@@ -3457,22 +3473,6 @@
     []
   Components:
     []
-- !<ScriptComponent/bf65ea51-cef4-4ed3-9a61-f87d8fca7d18>
-  PrefabRemaps:
-    []
-  Name: AgentInteractScript
-  Enabled: true
-  ScriptAsset: !<reference> 29091811-e792-46be-bfa4-28ddec5f11be
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/c058fcd6-a66b-41f7-a853-210539b6d074>
   PrefabRemaps:
     []
@@ -3591,22 +3591,6 @@
     - !<own> 0a0e1d78-8246-4f5b-ab1a-fdc51837956d
   Components:
     []
-- !<SceneObject/cbf1c2d5-117b-4c2a-9412-70cf5b0e82ad>
-  PrefabRemaps:
-    []
-  Name: AiPreviewAgent Handler
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 7575fbed-4c83-49a9-84d8-c750b8d93e80
-    - !<own> bf65ea51-cef4-4ed3-9a61-f87d8fca7d18
 - !<SceneObject/cc2cdf72-20b4-4ce1-80e8-63316e520a83>
   PrefabRemaps:
     []
@@ -3978,6 +3962,22 @@
     - !<own> f74a6bbb-4fba-4d8b-9b4e-64dd1c3e9ac3
   Components:
     []
+- !<SceneObject/dc000092-db39-40e3-a278-c4fcfa01e1c4>
+  PrefabRemaps:
+    []
+  Name: AiPreviewAgent Handler
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 166098e8-a10a-4d8a-acbd-b659f557b85c
+    - !<own> a0dc0331-bb11-4367-aedd-a8263c0c12a6
 - !<SceneObject/dc874f07-0097-4423-8104-109edaf3a1ce>
   PrefabRemaps:
     []
@@ -4250,11 +4250,15 @@
   ScriptAsset: !<reference> 634121c6-c913-47fc-9203-1368fce577a5
   ScriptInputsDefault:
     backingColor: true
+    textOutlineColor: true
+    textOutlineSize: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+      textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
+      textOutlineSize: 0.200000
   ScriptTypes:
     "":
       {}

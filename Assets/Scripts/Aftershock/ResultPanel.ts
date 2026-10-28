@@ -54,6 +54,16 @@ export class ResultPanel extends BaseScriptComponent {
   @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
   @widget(new ColorWidget())
   backingColor: vec4 = new vec4(1, 1, 1, 0.25)
+
+  @input
+  @hint("Thin outline around every panel text, so white text reads over light furniture seen through the backing (same as the HUD)")
+  @widget(new ColorWidget())
+  textOutlineColor: vec4 = new vec4(0.2, 0.2, 0.2, 1)
+
+  @input
+  @hint("Outline strength, 0 (none) to 1 (very strong)")
+  @widget(new SliderWidget(0, 1, 0.05))
+  textOutlineSize: number = 0.2
   @ui.group_end
 
   private readonly restartEvent = new Event()
@@ -252,6 +262,11 @@ export class ResultPanel extends BaseScriptComponent {
     ;(t as Text & {weight?: number}).weight = TYPE_SCALE[role].weight
     t.depthTest = true
     t.textFill.color = WHITE
+    if (this.textOutlineSize > 0) {
+      t.outlineSettings.enabled = true
+      t.outlineSettings.size = this.textOutlineSize
+      t.outlineSettings.fill.color = this.textOutlineColor
+    }
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Overflow
