@@ -26,6 +26,8 @@ export type StringKey =
   | "result.never"
   | "over.why.stood"
   | "btn.restart"
+  | "over.why.danger"
+  | "label.danger"
 
 export const STRINGS: Record<StringKey, string> = {
   "safety.drill": "Ini latihan, bukan peringatan gempa sungguhan / This is a drill, not a real earthquake alert",
@@ -50,7 +52,9 @@ export const STRINGS: Record<StringKey, string> = {
   "over.title": "Nyawa habis / Out of health",
   "result.never": "Kamu tidak berlindung di bawah meja / You never took cover under the table",
   "over.why.stood": "Kamu berdiri sebelum guncangan berhenti / You stood up before the shaking stopped",
-  "btn.restart": "Ulangi / Restart"
+  "btn.restart": "Ulangi / Restart",
+  "over.why.danger": "Kamu berdiri di dekat benda yang bisa jatuh / You stayed next to something that can fall",
+  "label.danger": "Zona bahaya / Danger zone"
 }
 
 const SEPARATOR = " / "

@@ -167,6 +167,10 @@ Slice 1 questions the learner had not answered when Slice 2 started (27 Oct). Th
 6. (Slice 4) The arrow aims at the safe-zone label point above the table top, not the floor center, so looking level at the table counts as "in view".
 7. (Slice 4) The arrow stays out of the HUD panel: it is clamped to the view edge above or beside the HUD, never over the health and timer row.
 8. (Slice 4) The arrow hides while the user is inside the safe zone (the brief: it shows only when the safe zone is out of view; under the table it is the user's own spot).
+9. (Slice 5P) Danger zones grow by `dangerMargin` on all four sides (the virtual room has no walls, so every side faces the room).
+10. (Slice 5P) The fixed floor outline is hidden, since the layout now reaches beyond it; the wall-edge bars move with the glass window.
+11. (Slice 5P) The table may land at any bearing, including behind the user; the briefing instruction and the arrow guide them to it.
+12. (Slice 5P) Lens Studio writes a `.gitattributes` that sends `Assets/**` and `Packages/**` to Git LFS. This repo keeps assets as plain git objects, so the file is excluded locally (`.git/info/exclude`) and neutralised in `.git/info/attributes`.
 Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner plugin, scenarios are checked by hand and reported as such. Without Lens Studio sign-in, furniture uses primitives.
 
 ## 6. Status

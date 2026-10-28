@@ -1,5 +1,6 @@
 import {DrillConfig} from "./DrillConfig"
 import {HazardLabel} from "./HazardLabel"
+import {insideRect} from "./LayoutGenerator"
 
 /**
  * The safe zone under the table (TDD §3.1): containment test and the marker
@@ -16,7 +17,7 @@ export class SafeZone extends BaseScriptComponent {
   config: DrillConfig
 
   @input
-  @hint("Table whose footprint is the safe zone. Keep it unrotated around Y.")
+  @hint("Table whose footprint is the safe zone. Width runs along its local X, depth along local Z.")
   table: SceneObject
 
   @ui.group_start("Settings")
@@ -40,6 +41,7 @@ export class SafeZone extends BaseScriptComponent {
   private _blinking = false
   private restCenter: vec3 | null = null
   private restAim: vec3 | null = null
+  private restYaw = 0 // radians, world; the table turns with the layout and the Room heading
 
   onAwake(): void {
     this.blinkEvent = this.createEvent("UpdateEvent")
@@ -53,7 +55,10 @@ export class SafeZone extends BaseScriptComponent {
    * Room; the zone does not, so shaking never flips contains().
    */
   captureRest(): void {
-    this.restCenter = this.table.getTransform().getWorldPosition()
+    const t = this.table.getTransform()
+    this.restCenter = t.getWorldPosition()
+    const localX = t.getWorldRotation().multiplyVec3(vec3.right())
+    this.restYaw = Math.atan2(-localX.z, localX.x) // local X = (cos yaw, −sin yaw)
     const label = this.findLabel()
     this.restAim = label ? label.getTransform().getWorldPosition() : null
   }
@@ -62,10 +67,7 @@ export class SafeZone extends BaseScriptComponent {
   contains(position: vec3): boolean {
     const c = this.center
     const m = this.config.safeZoneMargin
-    return (
-      Math.abs(position.x - c.x) <= this.footprintWidth / 2 + m &&
-      Math.abs(position.z - c.z) <= this.footprintDepth / 2 + m
-    )
+    return insideRect(position.x, position.z, c.x, c.z, this.restYaw, this.footprintWidth / 2 + m, this.footprintDepth / 2 + m)
   }
 
   /**

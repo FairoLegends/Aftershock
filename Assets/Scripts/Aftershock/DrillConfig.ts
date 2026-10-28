@@ -114,6 +114,36 @@ export class DrillConfig extends BaseScriptComponent {
   eyeHeight: number = 160
   @ui.group_end
 
+  @ui.group_start("Layout and danger zones")
+  @input
+  @hint("Closest the table center may be to the start spot (cm)")
+  tableDistanceMin: number = 100
+
+  @input
+  @hint("Farthest the table center may be from the start spot (cm). ShakeOut: do not run far.")
+  tableDistanceMax: number = 200
+
+  @input
+  @hint("Closest a hazard center may be to the start spot (cm)")
+  hazardDistanceMin: number = 120
+
+  @input
+  @hint("Farthest a hazard center may be from the start spot (cm)")
+  hazardDistanceMax: number = 240
+
+  @input
+  @hint("Danger zone = hazard footprint grown by this margin (cm)")
+  dangerMargin: number = 60
+
+  @input
+  @hint("No furniture or danger zone within this radius of the start spot (cm)")
+  startClearRadius: number = 50
+
+  @input
+  @hint("0 = new random layout every start and Restart; any other number = the same layout every time (for filming)")
+  layoutSeed: number = 0
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")

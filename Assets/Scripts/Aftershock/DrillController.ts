@@ -1,8 +1,10 @@
 import {BriefingPanel} from "./BriefingPanel"
+import {DangerZone} from "./DangerZone"
 import {DrillConfig} from "./DrillConfig"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
+import {generateLayout, HAZARDS, Layout, LayoutItem, Placement} from "./LayoutGenerator"
 import {OffscreenArrow} from "./OffscreenArrow"
 import {QuakeShaker} from "./QuakeShaker"
 import {ResultPanel} from "./ResultPanel"
@@ -27,11 +29,14 @@ const LOG = "[Aftershock]"
 
 /**
  * The only owner of drill state (TDD §4). SAFETY → BRIEFING → QUAKE →
- * POST_QUAKE work. BRIEFING captures the duck baseline and the safe zone's
- * rest footprint. Each QUAKE frame checks cover (inZone, ducked), stages the
- * instruction and drives the off-screen arrow (Slice 4). Once safe, exposure
- * drains health (0 → GAME_OVER); leaving the zone after the quake → RESULT
- * with the TDD §7 score; Restart → BRIEFING with a full reset (Slice 5).
+ * POST_QUAKE work. The room floor height (floorY) is fixed once at start;
+ * every BRIEFING places the Room at the wearer's spot and heading, applies a
+ * new procedural layout (Slice 5P) and captures the safe and danger zones at
+ * rest. The duck baseline is always floorY + eyeHeight. Each QUAKE frame
+ * checks cover (inZone, ducked) and danger, stages the instruction and drives
+ * the off-screen arrow. Health drains while exposed after first cover or
+ * inside a danger zone (0 → GAME_OVER); leaving the zone after the quake →
+ * RESULT with the TDD §7 score; Restart → BRIEFING with a full reset.
  */
 @component
 export class DrillController extends BaseScriptComponent {
@@ -50,11 +55,11 @@ export class DrillController extends BaseScriptComponent {
   safetyPanel: SafetyPanel
 
   @input
-  @hint("Room root. At start its floor is placed eyeHeight below the head.")
+  @hint("Room root. At start its floor is placed eyeHeight below the head; every BRIEFING moves it to the wearer's spot and heading.")
   room: SceneObject
 
   @input
-  @hint("SafeZone component on the table's marker")
+  @hint("SafeZone component on the table's marker. Its table and marker are moved by the layout.")
   safeZone: SafeZone
 
   @input
@@ -68,6 +73,18 @@ export class DrillController extends BaseScriptComponent {
   @input
   @hint("Hazard label on the glass window")
   glassLabel: HazardLabel
+
+  @input
+  @hint("DangerZone (kind Cabinet) on a child of the Cabinet")
+  cabinetDanger: DangerZone
+
+  @input
+  @hint("DangerZone (kind Shelf) on a child of the Shelf")
+  shelfDanger: DangerZone
+
+  @input
+  @hint("DangerZone (kind Glass) on a child of the GlassWindow")
+  glassDanger: DangerZone
 
   @input
   @hint("BriefingPanel component (instr.brief)")
@@ -108,6 +125,14 @@ export class DrillController extends BaseScriptComponent {
   private _lastScore: ScoreBreakdown | null = null
   private _secondsStanding = 0 // s exposed after first safe (TDD §7 penalty)
   private baselineHeadY: number | null = null
+  private _floorY = 0 // cm, world; fixed once at start
+  private roomYaw = 0 // radians; the Room's heading, from the wearer's look at BRIEFING
+  private zones: Record<string, DangerZone> = {}
+  private labels: Record<string, HazardLabel> = {}
+  private _layout: Layout | null = null
+  private _inDanger = false
+  private _secondsInDanger = 0 // s inside a danger zone during QUAKE
+  private _gameOverReason: StringKey | null = null
   private _inZone = false
   private _ducked = false
   private _hasBeenSafe = false
@@ -135,9 +160,29 @@ export class DrillController extends BaseScriptComponent {
   get secondsStanding(): number {
     return this._secondsStanding
   }
-  /** Head height captured when BRIEFING starts (cm), or null before that. */
+  /** Duck baseline (cm): always floorY + eyeHeight, set when BRIEFING starts; null before that. */
   get duckBaseline(): number | null {
     return this.baselineHeadY
+  }
+  /** Room floor world Y (cm), fixed once at start. */
+  get floorY(): number {
+    return this._floorY
+  }
+  /** This drill's layout (Room-local cm, radians), or null before the first BRIEFING. */
+  get layout(): Layout | null {
+    return this._layout
+  }
+  /** Head XZ inside any danger zone (QUAKE). */
+  get inDanger(): boolean {
+    return this._inDanger
+  }
+  /** Seconds inside a danger zone during this drill's QUAKE. */
+  get secondsInDanger(): number {
+    return this._secondsInDanger
+  }
+  /** Why the last GAME_OVER happened (over.why.danger or over.why.stood), or null. */
+  get gameOverReason(): StringKey | null {
+    return this._gameOverReason
   }
   /** This drill's quake length (s), picked when QUAKE starts. */
   get quakeDuration(): number {
@@ -187,6 +232,9 @@ export class DrillController extends BaseScriptComponent {
       ["cabinetLabel", this.cabinetLabel],
       ["shelfLabel", this.shelfLabel],
       ["glassLabel", this.glassLabel],
+      ["cabinetDanger", this.cabinetDanger],
+      ["shelfDanger", this.shelfDanger],
+      ["glassDanger", this.glassDanger],
       ["briefingPanel", this.briefingPanel],
       ["quakeShaker", this.quakeShaker],
       ["hud", this.hud],
@@ -197,6 +245,16 @@ export class DrillController extends BaseScriptComponent {
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
     if (missing.length > 0) {
       console.error(`${LOG} DrillController: missing input(s): ${missing.join(", ")}`)
+      return
+    }
+    this.zones = {cabinet: this.cabinetDanger, shelf: this.shelfDanger, glass: this.glassDanger}
+    this.labels = {cabinet: this.cabinetLabel, shelf: this.shelfLabel, glass: this.glassLabel}
+    const wrong = HAZARDS.filter((h) => this.zones[h].item !== h || !this.zones[h].hazard).map((h) => h + "Danger")
+    if (!this.safeZone.table || !this.safeZone.marker) {
+      wrong.push("safeZone.table/marker")
+    }
+    if (wrong.length > 0) {
+      console.error(`${LOG} DrillController: wrong kind or no hazard parent: ${wrong.join(", ")}`)
       return
     }
     // Ambient loop: latency is fine (specs-audio).
@@ -213,9 +271,14 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} head at start: position (${fmt(p.x)}, ${fmt(p.y)}, ${fmt(p.z)}) cm, forward (${fmt(f.x)}, ${fmt(f.y)}, ${fmt(f.z)})`)
 
     // Furniture positions are relative to the user's start spot on the floor.
-    const floorY = p.y - this.config.eyeHeight
-    this.room.getTransform().setWorldPosition(new vec3(p.x, floorY, p.z))
-    console.log(`${LOG} room floor at Y = ${fmt(floorY)} cm (eyeHeight ${fmt(this.config.eyeHeight)} cm)`)
+    // The floor height is fixed here once; BRIEFING only moves the Room in XZ and heading.
+    this._floorY = p.y - this.config.eyeHeight
+    console.log(`${LOG} room floor at Y = ${fmt(this._floorY)} cm (eyeHeight ${fmt(this.config.eyeHeight)} cm)`)
+    // Labels follow their hazard: same pose relative to it as authored (Slice 2).
+    for (const h of HAZARDS) {
+      this.labels[h].sceneObject.setParentPreserveWorldTransform(this.zones[h].hazard)
+    }
+    this.placeRoom()
 
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())
@@ -298,6 +361,7 @@ export class DrillController extends BaseScriptComponent {
     this._instructionKey = null
     this.hideArrow()
     this.setRoomLabelsShown(false)
+    this.setDangerZonesShown(false)
     this.briefingPanel.hide()
     this.hud.hide()
     this.resultPanel.hide()
@@ -315,12 +379,23 @@ export class DrillController extends BaseScriptComponent {
     this.resultPanel.hide()
     this._health = this.config.healthStart
     this._secondsStanding = 0
+    this._secondsInDanger = 0
+    this._inDanger = false
+    this._gameOverReason = null
     this.resetCover()
     this._instructionKey = "instr.brief"
-    this.baselineHeadY = this.headPose.position.y
-    console.log(`${LOG} BRIEFING: duck baseline head Y = ${fmt(this.baselineHeadY)} cm (ducked at <= ${fmt(this.baselineHeadY - this.config.duckDrop)} cm)`)
-    this.safeZone.captureRest() // Room is at rest here, so the zone never shakes
+    // ENGINEERING_PLAN 5f item 1: never the current head height (restarting while ducked broke ducking).
+    this.baselineHeadY = this._floorY + this.config.eyeHeight
+    console.log(`${LOG} BRIEFING: duck baseline = floorY ${fmt(this._floorY)} + eyeHeight ${fmt(this.config.eyeHeight)} = ${fmt(this.baselineHeadY)} cm (ducked at <= ${fmt(this.baselineHeadY - this.config.duckDrop)} cm)`)
+    this.placeRoom() // 5f item 2: wearer's current spot and heading, floor height unchanged
+    this.applyLayout()
+    // Room is at rest here, so the zones never shake; the arrow aims at the new safeZone.aimPoint.
+    this.safeZone.captureRest()
+    for (const h of HAZARDS) {
+      this.zones[h].captureRest()
+    }
     this.setRoomLabelsShown(true)
+    this.setDangerZonesShown(true)
     this.briefingPanel.placeInFront(
       this.headPose.position,
       this.headPose.forward,
@@ -367,17 +442,42 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setElapsed(now - this.quakeStartTime)
     this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
     this.updateCover(now)
+    this.updateDanger()
 
-    // Exposed once safe: hasBeenSafe && !(inZone && ducked) (TDD §4.1, §7).
-    if (this._state === "QUAKE" && this._hasBeenSafe && !this.isSafe) {
+    // ENGINEERING_PLAN 5f item 4: drain while exposed once safe (hasBeenSafe && !(inZone && ducked),
+    // TDD §4.1, §7) OR inside a danger zone; one drain, never doubled.
+    const exposed = this._hasBeenSafe && !this.isSafe
+    if (this._state === "QUAKE" && (exposed || this._inDanger)) {
       const dt = getDeltaTime()
-      this._secondsStanding += dt
+      if (exposed) {
+        this._secondsStanding += dt
+      }
+      if (this._inDanger) {
+        this._secondsInDanger += dt
+      }
       this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * dt)
       this.hud.setHealth(this._health)
       if (this._health <= 0) {
-        console.log(`${LOG} QUAKE: health reached 0 after ${fmt(this._secondsStanding)} s exposed`)
+        this._gameOverReason = this._inDanger ? "over.why.danger" : "over.why.stood"
+        console.log(`${LOG} QUAKE: health reached 0 after ${fmt(this._secondsStanding)} s exposed, ${fmt(this._secondsInDanger)} s in danger (${this._gameOverReason})`)
         this.onHealthDepleted()
       }
+    }
+  }
+
+  /** Head XZ inside any danger zone's rest area (QUAKE). */
+  private updateDanger(): void {
+    const head = this.headPose.position
+    let inDanger = false
+    for (const h of HAZARDS) {
+      if (this.zones[h].contains(head)) {
+        inDanger = true
+        break
+      }
+    }
+    if (inDanger !== this._inDanger) {
+      this._inDanger = inDanger
+      console.log(`${LOG} QUAKE: ${inDanger ? "entered" : "left"} a danger zone`)
     }
   }
 
@@ -497,14 +597,21 @@ export class DrillController extends BaseScriptComponent {
   private enterGameOver(): void {
     this.stopQuakeEffects()
     this._lastScore = null
+    const reason = this._gameOverReason ? this._gameOverReason : "over.why.stood"
     this.showResultPanel()
-    this.resultPanel.showGameOver()
+    this.resultPanel.showGameOver(reason)
   }
 
-  /** Hides the HUD and arrow, then places the result panel in front of the head. */
+  /**
+   * Hides the HUD, arrow, labels and danger zones, then places the result panel
+   * in front of the head. The room stays visible behind it (5f item 3).
+   */
   private showResultPanel(): void {
     this.hud.hide()
     this.hideArrow()
+    this.setRoomLabelsShown(false)
+    this.setDangerZonesShown(false)
+    this.room.enabled = true
     this._instructionKey = null
     this.resultPanel.placeInFront(
       this.headPose.position,
@@ -529,6 +636,83 @@ export class DrillController extends BaseScriptComponent {
       this.safeZone.hideMarker()
     }
   }
+
+  /** Danger zones show from BRIEFING through POST_QUAKE (Slice 5P). */
+  private setDangerZonesShown(shown: boolean): void {
+    for (const h of HAZARDS) {
+      if (shown) {
+        this.zones[h].show()
+      } else {
+        this.zones[h].hide()
+      }
+    }
+  }
+
+  /**
+   * Puts the Room's origin under the head at floorY and turns it (yaw only,
+   * level) so its −Z is the head's level look direction. Looking straight up
+   * or down keeps the last heading.
+   */
+  private placeRoom(): void {
+    const p = this.headPose.position
+    const f = this.headPose.forward
+    if (Math.sqrt(f.x * f.x + f.z * f.z) > 1e-4) {
+      this.roomYaw = Math.atan2(-f.x, -f.z) // local −Z = (−sin, −cos) → level forward
+    }
+    const t = this.room.getTransform()
+    t.setWorldPosition(new vec3(p.x, this._floorY, p.z))
+    t.setWorldRotation(quat.angleAxis(this.roomYaw, vec3.up()))
+    console.log(`${LOG} room placed at (${fmt(p.x)}, ${fmt(this._floorY)}, ${fmt(p.z)}) cm, heading ${fmt(this.roomYaw * RAD_TO_DEG)} deg`)
+  }
+
+  /**
+   * New layout (LayoutGenerator) in Room-local space: the table and its marker,
+   * then each hazard; its label keeps its authored offset and turns to the start spot.
+   */
+  private applyLayout(): void {
+    const layout = generateLayout(this.config)
+    this._layout = layout
+    if (layout.fallback) {
+      console.warn(`${LOG} BRIEFING: no valid layout in ${layout.tries} tries (seed ${layout.seed}); using the Slice 2 fixed layout`)
+    } else {
+      console.log(`${LOG} BRIEFING: layout seed ${layout.seed}${this.config.layoutSeed === 0 ? " (new)" : " (fixed)"}, ${layout.tries} tries`)
+    }
+    const items = layout.items
+    placeItem(this.safeZone.table, items.table)
+    placeItem(this.safeZone.marker, items.table)
+    this.logItem("table", items.table)
+    for (const h of HAZARDS) {
+      const at = items[h]
+      placeItem(this.zones[h].hazard, at)
+      this.aimLabel(this.labels[h], at)
+      this.logItem(h, at)
+    }
+  }
+
+  /** Turns a label (a child of its hazard at `at`) so its +Z faces the start spot. */
+  private aimLabel(label: HazardLabel, at: Placement): void {
+    const t = label.sceneObject.getTransform()
+    const lp = t.getLocalPosition()
+    const c = Math.cos(at.yaw)
+    const s = Math.sin(at.yaw)
+    // Label position in Room-local space: local X → (cos, −sin), local Z → (sin, cos).
+    const x = at.x + lp.x * c + lp.z * s
+    const z = at.z - lp.x * s + lp.z * c
+    t.setLocalRotation(quat.angleAxis(Math.atan2(-x, -z) - at.yaw, vec3.up()))
+  }
+
+  private logItem(item: LayoutItem, at: Placement): void {
+    console.log(`${LOG}   ${item} at (${fmt(at.x)}, ${fmt(at.z)}) cm, yaw ${fmt(at.yaw * RAD_TO_DEG)} deg, ${fmt(Math.sqrt(at.x * at.x + at.z * at.z))} cm from start`)
+  }
+}
+
+const RAD_TO_DEG = 180 / Math.PI // layout yaw is radians; logs show degrees
+
+/** Moves a Room child to a layout placement (Room-local cm, yaw radians), keeping its height. */
+function placeItem(so: SceneObject, at: Placement): void {
+  const t = so.getTransform()
+  t.setLocalPosition(new vec3(at.x, t.getLocalPosition().y, at.z))
+  t.setLocalRotation(quat.angleAxis(at.yaw, vec3.up()))
 }
 
 function fmt(n: number): string {
