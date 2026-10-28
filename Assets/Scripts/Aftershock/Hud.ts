@@ -4,7 +4,7 @@ import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUI
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
-import {splitBilingual, STRINGS, StringKey} from "./Strings"
+import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
 import {createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm.
@@ -146,10 +146,25 @@ export class Hud extends BaseScriptComponent {
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
 
+  private readonly pairs: {key: StringKey; primary: Text; secondary: Text}[] = []
+
+  /** Re-renders the banner, the labels and the current instruction in the selected language (Slice 5L). */
+  private refreshTexts(): void {
+    for (const p of this.pairs) {
+      setLinePair(p.primary, p.secondary, lines(p.key))
+    }
+    if (this._instructionKey) {
+      this.setInstruction(this._instructionKey)
+    }
+  }
+
+  private addPair(key: StringKey, primary: Text, secondary: Text): void {
+    this.pairs.push({key, primary, secondary})
+    setLinePair(primary, secondary, lines(key))
+  }
+
   setInstruction(key: StringKey): void {
-    const parts = splitBilingual(STRINGS[key])
-    this.instructionId.text = parts.id
-    this.instructionEn.text = parts.en
+    setLinePair(this.instructionId, this.instructionEn, lines(key))
     this._instructionKey = key
   }
 
@@ -294,9 +309,12 @@ export class Hud extends BaseScriptComponent {
     flex.onLayoutComplete.add((r) => {
       backing.size = new vec2(r.containerWidth, r.containerHeight)
     })
-    const parts = splitBilingual(STRINGS["warn.quake"])
-    this.addText(content, "Warning.id", parts.id, WARNING_EM_CM, WARN_W, WARN_ID_H, this.alarmColor, false)
-    this.addText(content, "Warning.en", parts.en, WARNING_EM_CM * ENGLISH_SCALE, WARN_W, WARN_EN_H, this.alarmColor, false)
+    this.addPair(
+      "warn.quake",
+      this.addText(content, "Warning.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, this.alarmColor, false),
+      this.addText(content, "Warning.en", "", WARNING_EM_CM * ENGLISH_SCALE, WARN_W, WARN_EN_H, this.alarmColor, false)
+    )
+    onLanguageChanged.add(() => this.refreshTexts())
     banner.enabled = false
     this.banner = banner
   }
@@ -309,9 +327,11 @@ export class Hud extends BaseScriptComponent {
     item.overrideHeight = LABEL_ID_H + LABEL_EN_H
     const flex = this.column(so, 0, 0)
     flex.width = LABEL_W
-    const parts = splitBilingual(STRINGS[key])
-    this.addText(so, name + ".id", parts.id, SMALL_EM_CM, LABEL_W, LABEL_ID_H, this.textColor, false)
-    this.addText(so, name + ".en", parts.en, SMALL_EM_CM * ENGLISH_SCALE, LABEL_W, LABEL_EN_H, this.textColor, false)
+    this.addPair(
+      key,
+      this.addText(so, name + ".id", "", SMALL_EM_CM, LABEL_W, LABEL_ID_H, this.textColor, false),
+      this.addText(so, name + ".en", "", SMALL_EM_CM * ENGLISH_SCALE, LABEL_W, LABEL_EN_H, this.textColor, false)
+    )
   }
 
   private column(so: SceneObject, gap: number, pad: number): FlexLayout {

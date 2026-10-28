@@ -5,7 +5,7 @@ import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {DrillController} from "../DrillController"
 import {SafeZone} from "../SafeZone"
-import {splitBilingual, STRINGS, StringKey} from "../Strings"
+import {lines, StringKey} from "../Strings"
 
 const FURNITURE = ["Table", "Cabinet", "Shelf", "GlassWindow"]
 const HAZARD_LABELS = ["CabinetLabel", "ShelfLabel", "GlassLabel"]
@@ -22,6 +22,12 @@ export class DC1_SafetyThenRoom extends Scenario {
     const controller = findSceneObjectByName("DrillController").getComponent(
       DrillController.getTypeName()
     ) as DrillController
+    const interactor = new DefaultLeafInteractor()
+
+    // Slice 5L: the Lens opens on the language picker; Bahasa Indonesia → SAFETY.
+    expect(controller.state).toBe("LANGUAGE")
+    await interactor.trigger(findInteractableByName("LangButton.id"))
+    await sleep(500)
     expect(controller.state).toBe("SAFETY")
 
     const panel = findSceneObjectByName("SafetyPanel")
@@ -35,7 +41,6 @@ export class DC1_SafetyThenRoom extends Scenario {
       expect(findSceneObjectByName(name).isEnabledInHierarchy).toBe(false)
     }
 
-    const interactor = new DefaultLeafInteractor()
     await interactor.trigger(findInteractableByName("ContinueButton"))
     await sleep(500)
 
@@ -62,7 +67,8 @@ export class DC1_SafetyThenRoom extends Scenario {
   }
 
   private expectBilingualVisible(key: StringKey): void {
-    const parts = splitBilingual(STRINGS[key])
+    const l = lines(key)
+    const parts = {id: l.primary, en: l.secondary}
     const id = findSceneObjectByName(key + ".id")
     const en = findSceneObjectByName(key + ".en")
     expect((id.getComponent("Component.Text") as Text).text).toBe(parts.id)

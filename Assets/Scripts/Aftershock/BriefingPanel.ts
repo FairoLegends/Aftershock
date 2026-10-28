@@ -1,7 +1,7 @@
 import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
-import {splitBilingual, STRINGS} from "./Strings"
+import {lines, onLanguageChanged, setLinePair} from "./Strings"
 import {createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5: instruction type is 3.5 cm at 110 cm. size / 43.886 = em-square in cm.
@@ -15,6 +15,7 @@ const PAD = 2.5
 const ROW_GAP = 1.0
 const LINE_ID_H = 8.4 // two wrapped lines
 const LINE_EN_H = 6.8
+const HIDDEN_H = 0.001 // the English line collapses to this when English is selected
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
 const WHITE = new vec4(1, 1, 1, 1)
@@ -35,6 +36,9 @@ export class BriefingPanel extends BaseScriptComponent {
   @ui.group_end
 
   private readonly shownTexts: Text[] = []
+  private primary: Text
+  private secondary: Text
+  private secondaryItem: FlexItem
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -60,9 +64,19 @@ export class BriefingPanel extends BaseScriptComponent {
       backing.size = new vec2(r.containerWidth, r.containerHeight)
     })
 
-    const parts = splitBilingual(STRINGS["instr.brief"])
-    this.addLine(content, "instr.brief.id", parts.id, LINE_ID_H, 1)
-    this.addLine(content, "instr.brief.en", parts.en, LINE_EN_H, ENGLISH_SCALE)
+    this.primary = this.addLine(content, "instr.brief.id", LINE_ID_H, 1).text
+    const secondary = this.addLine(content, "instr.brief.en", LINE_EN_H, ENGLISH_SCALE)
+    this.secondary = secondary.text
+    this.secondaryItem = secondary.item
+    this.refresh()
+    onLanguageChanged.add(() => this.refresh())
+  }
+
+  /** Re-renders instr.brief in the selected language (Slice 5L); English only collapses the second line. */
+  private refresh(): void {
+    const l = lines("instr.brief")
+    setLinePair(this.primary, this.secondary, l)
+    this.secondaryItem.overrideHeight = l.secondary.length > 0 ? LINE_EN_H : HIDDEN_H
   }
 
   /**
@@ -95,11 +109,11 @@ export class BriefingPanel extends BaseScriptComponent {
     return this.shownTexts.map((t) => t.text)
   }
 
-  private addLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {
+  private addLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
-    t.text = text
+    t.text = ""
     t.size = INSTRUCTION_EM_CM * SIZE_PER_CM * scale
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
@@ -111,6 +125,8 @@ export class BriefingPanel extends BaseScriptComponent {
     t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -height / 2, height / 2)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
     item.alignSelf = FlexAlignSelf.Stretch
+    item.overrideHeight = height
     this.shownTexts.push(t)
+    return {text: t, item}
   }
 }

@@ -4,7 +4,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {ScoreBreakdown} from "./ScoreCalculator"
-import {splitBilingual, STRINGS, StringKey} from "./Strings"
+import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
 import {createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5 type scale (same as SafetyPanel).
@@ -16,7 +16,7 @@ const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
 const ENGLISH_SCALE = 0.8
 
 // Panel layout (cm). Not drill tunables: they only shape the panel.
-const INNER_W = 32
+const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood);
 const PAD = 2.5
 const ROW_GAP = 1.6 // above each bilingual pair
 const LINE_ID_H = 1.8
@@ -119,10 +119,10 @@ export class ResultPanel extends BaseScriptComponent {
    */
   showResult(b: ScoreBreakdown): void {
     this._mode = "result"
-    this.setPair(this.title, STRINGS["result.title"], false)
+    this.setPair(this.title, lines("result.title"), false)
     const score = fill("result.score", "{score}", "" + b.score)
     if (b.tSafe === null) {
-      this.setPair(this.details[0], STRINGS["result.never"], true)
+      this.setPair(this.details[0], lines("result.never"), true)
       this.setPair(this.details[1], score, true)
       this.setPair(this.details[2], null, true)
     } else {
@@ -136,8 +136,8 @@ export class ResultPanel extends BaseScriptComponent {
   /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
   showGameOver(reason: StringKey): void {
     this._mode = "gameOver"
-    this.setPair(this.title, STRINGS["over.title"], false)
-    this.setPair(this.details[0], STRINGS[reason], true)
+    this.setPair(this.title, lines("over.title"), false)
+    this.setPair(this.details[0], lines(reason), true)
     this.setPair(this.details[1], null, true)
     this.setPair(this.details[2], null, true)
     this.sceneObject.enabled = true
@@ -162,11 +162,9 @@ export class ResultPanel extends BaseScriptComponent {
   }
 
   /** Fills a line pair from a bilingual string, or collapses it when text is null. */
-  private setPair(pair: LinePair, text: string | null, gapAbove: boolean): void {
+  private setPair(pair: LinePair, text: ReturnType<typeof lines> | null, gapAbove: boolean): void {
     const shown = text !== null
-    const parts = shown ? splitBilingual(text) : {id: "", en: ""}
-    pair.id.text = parts.id
-    pair.en.text = parts.en
+    setLinePair(pair.id, pair.en, shown ? text : {primary: "", secondary: ""})
     pair.idItem.overrideHeight = shown ? LINE_ID_H : HIDDEN_H
     pair.enItem.overrideHeight = shown ? LINE_EN_H : HIDDEN_H
     pair.idItem.marginTop = shown && gapAbove ? ROW_GAP : 0
@@ -214,9 +212,14 @@ export class ResultPanel extends BaseScriptComponent {
     labelFlex.justifyContent = FlexJustify.Center
     labelFlex.rowGap = 0.2
 
-    const parts = splitBilingual(STRINGS["btn.restart"])
-    this.addButtonLine(label, "btn.restart.id", parts.id, LINE_ID_H, 1)
-    this.addButtonLine(label, "btn.restart.en", parts.en, LINE_EN_H, ENGLISH_SCALE)
+    this.addButtonLine(label, "btn.restart.id", "", LINE_ID_H, 1)
+    this.addButtonLine(label, "btn.restart.en", "", LINE_EN_H, ENGLISH_SCALE)
+    // Slice 5L: the button label follows the selected language (child 0 = primary, 1 = English).
+    const restartPrimary = label.getChild(0).getComponent("Component.Text") as Text
+    const restartSecondary = label.getChild(1).getComponent("Component.Text") as Text
+    const refreshRestart = (): void => setLinePair(restartPrimary, restartSecondary, lines("btn.restart"))
+    refreshRestart()
+    onLanguageChanged.add(refreshRestart)
 
     btn.onTriggerUp.add(() => this.restartEvent.invoke())
   }
@@ -246,7 +249,7 @@ export class ResultPanel extends BaseScriptComponent {
   }
 }
 
-/** A Strings.ts entry with its placeholder filled in. */
-function fill(key: StringKey, placeholder: string, value: string): string {
-  return STRINGS[key].replace(placeholder, value)
+/** A Strings.ts entry (selected language + English) with its placeholder filled in. */
+function fill(key: StringKey, placeholder: string, value: string): ReturnType<typeof lines> {
+  return lines(key, {[placeholder]: value})
 }

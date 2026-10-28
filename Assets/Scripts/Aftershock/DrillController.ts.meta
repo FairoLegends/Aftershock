@@ -36,6 +36,7 @@
     glassLabel: false
     headPose: false
     hud: false
+    languagePanel: false
     offscreenArrow: false
     quakeShaker: false
     resultPanel: false
@@ -57,20 +58,21 @@
     - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
       headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
       safetyPanel: !<MappingBased.AssignableType_3> 00000000-0000-0000-0000-000000000000
+      languagePanel: !<MappingBased.AssignableType_4> 00000000-0000-0000-0000-000000000000
       room: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
-      safeZone: !<MappingBased.AssignableType_4> 00000000-0000-0000-0000-000000000000
-      cabinetLabel: !<MappingBased.AssignableType_5> 00000000-0000-0000-0000-000000000000
-      shelfLabel: !<MappingBased.AssignableType_6> 00000000-0000-0000-0000-000000000000
-      glassLabel: !<MappingBased.AssignableType_7> 00000000-0000-0000-0000-000000000000
-      cabinetDanger: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
-      shelfDanger: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
-      glassDanger: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
-      briefingPanel: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
-      quakeShaker: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
-      hud: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
-      offscreenArrow: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
+      safeZone: !<MappingBased.AssignableType_5> 00000000-0000-0000-0000-000000000000
+      cabinetLabel: !<MappingBased.AssignableType_6> 00000000-0000-0000-0000-000000000000
+      shelfLabel: !<MappingBased.AssignableType_7> 00000000-0000-0000-0000-000000000000
+      glassLabel: !<MappingBased.AssignableType_8> 00000000-0000-0000-0000-000000000000
+      cabinetDanger: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
+      shelfDanger: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
+      glassDanger: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
+      briefingPanel: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
+      quakeShaker: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
+      hud: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
+      offscreenArrow: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
       rumbleAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
-      resultPanel: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
+      resultPanel: !<MappingBased.AssignableType_16> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -80,17 +82,18 @@
     - '// @input AssignableType_1 config {"hint":"DrillConfig component with every tunable"}'
     - '// @input AssignableType_2 headPose {"hint":"HeadPose component (camera position and look direction)"}'
     - '// @input AssignableType_3 safetyPanel {"hint":"SafetyPanel component (reminder + Continue)"}'
+    - '// @input AssignableType_4 languagePanel {"hint":"LanguagePanel component (picker before SAFETY, Slice 5L; under AftershockRoot, not the Room)"}'
     - "// @input SceneObject room {\"hint\":\"Room root. At start its floor is placed eyeHeight below the head; every BRIEFING moves it to the wearer's spot and heading.\"}"
-    - "// @input AssignableType_4 safeZone {\"hint\":\"SafeZone component on the table's marker. Its table and marker are moved by the layout.\"}"
-    - '// @input AssignableType_5 cabinetLabel {"hint":"Hazard label on the cabinet"}'
-    - '// @input AssignableType_6 shelfLabel {"hint":"Hazard label on the shelf"}'
-    - '// @input AssignableType_7 glassLabel {"hint":"Hazard label on the glass window"}'
-    - '// @input AssignableType_8 cabinetDanger {"hint":"DangerZone (kind Cabinet) on a child of the Cabinet"}'
-    - '// @input AssignableType_9 shelfDanger {"hint":"DangerZone (kind Shelf) on a child of the Shelf"}'
-    - '// @input AssignableType_10 glassDanger {"hint":"DangerZone (kind Glass) on a child of the GlassWindow"}'
-    - '// @input AssignableType_11 briefingPanel {"hint":"BriefingPanel component (instr.brief)"}'
-    - '// @input AssignableType_12 quakeShaker {"hint":"QuakeShaker component on the Room"}'
-    - '// @input AssignableType_13 hud {"hint":"Hud component (under AftershockRoot, not the Room, so it never shakes)"}'
-    - '// @input AssignableType_14 offscreenArrow {"hint":"OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)"}'
+    - "// @input AssignableType_5 safeZone {\"hint\":\"SafeZone component on the table's marker. Its table and marker are moved by the layout.\"}"
+    - '// @input AssignableType_6 cabinetLabel {"hint":"Hazard label on the cabinet"}'
+    - '// @input AssignableType_7 shelfLabel {"hint":"Hazard label on the shelf"}'
+    - '// @input AssignableType_8 glassLabel {"hint":"Hazard label on the glass window"}'
+    - '// @input AssignableType_9 cabinetDanger {"hint":"DangerZone (kind Cabinet) on a child of the Cabinet"}'
+    - '// @input AssignableType_10 shelfDanger {"hint":"DangerZone (kind Shelf) on a child of the Shelf"}'
+    - '// @input AssignableType_11 glassDanger {"hint":"DangerZone (kind Glass) on a child of the GlassWindow"}'
+    - '// @input AssignableType_12 briefingPanel {"hint":"BriefingPanel component (instr.brief)"}'
+    - '// @input AssignableType_13 quakeShaker {"hint":"QuakeShaker component on the Room"}'
+    - '// @input AssignableType_14 hud {"hint":"Hud component (under AftershockRoot, not the Room, so it never shakes)"}'
+    - '// @input AssignableType_15 offscreenArrow {"hint":"OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)"}'
     - '// @input Component.AudioComponent rumbleAudio {"hint":"AudioComponent with the looping rumble track"}'
-    - '// @input AssignableType_15 resultPanel {"hint":"ResultPanel component (result / game-over + Restart, under AftershockRoot)"}'
+    - '// @input AssignableType_16 resultPanel {"hint":"ResultPanel component (result / game-over + Restart, under AftershockRoot)"}'

@@ -114,6 +114,16 @@ export class DrillConfig extends BaseScriptComponent {
   eyeHeight: number = 160
   @ui.group_end
 
+  @ui.group_start("Fonts")
+  @input
+  @hint("Japanese font for every ja line (Fonts/NotoSansJP-Aftershock.ttf). The default font has no CJK glyphs.")
+  fontJa: Font
+
+  @input
+  @hint("Simplified Chinese font for every zh line (Fonts/NotoSansSC-Aftershock.ttf)")
+  fontZh: Font
+  @ui.group_end
+
   @ui.group_start("Layout and danger zones")
   @input
   @hint("Closest the table center may be to the start spot (cm)")

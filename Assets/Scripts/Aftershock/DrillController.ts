@@ -1,9 +1,10 @@
 import {BriefingPanel} from "./BriefingPanel"
-import {DangerZone} from "./DangerZone"
+import {DANGER_LABEL_HALF_H, DangerZone} from "./DangerZone"
 import {DrillConfig} from "./DrillConfig"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
+import {LanguagePanel} from "./LanguagePanel"
 import {generateLayout, HAZARDS, Layout, LayoutItem, Placement} from "./LayoutGenerator"
 import {OffscreenArrow} from "./OffscreenArrow"
 import {QuakeShaker} from "./QuakeShaker"
@@ -11,12 +12,13 @@ import {ResultPanel} from "./ResultPanel"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
 import {computeScore, ScoreBreakdown} from "./ScoreCalculator"
-import {StringKey} from "./Strings"
+import {getLanguage, Lang, setLanguage, setLanguageFonts, StringKey} from "./Strings"
 
-export type DrillState = "SAFETY" | "BRIEFING" | "QUAKE" | "POST_QUAKE" | "RESULT" | "GAME_OVER"
+export type DrillState = "LANGUAGE" | "SAFETY" | "BRIEFING" | "QUAKE" | "POST_QUAKE" | "RESULT" | "GAME_OVER"
 
 // USER_FLOW_DIAGRAM §2. Any transition not listed here is refused.
 const ALLOWED: Record<DrillState, DrillState[]> = {
+  LANGUAGE: ["SAFETY"],
   SAFETY: ["BRIEFING"],
   BRIEFING: ["QUAKE"],
   QUAKE: ["GAME_OVER", "POST_QUAKE"],
@@ -28,7 +30,8 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
 const LOG = "[Aftershock]"
 
 /**
- * The only owner of drill state (TDD §4). SAFETY → BRIEFING → QUAKE →
+ * The only owner of drill state (TDD §4). LANGUAGE (picker, Slice 5L; Restart
+ * keeps the language) → SAFETY → BRIEFING → QUAKE →
  * POST_QUAKE work. The room floor height (floorY) is fixed once at start;
  * every BRIEFING places the Room at the wearer's spot and heading, applies a
  * new procedural layout (Slice 5P) and captures the safe and danger zones at
@@ -53,6 +56,10 @@ export class DrillController extends BaseScriptComponent {
   @input
   @hint("SafetyPanel component (reminder + Continue)")
   safetyPanel: SafetyPanel
+
+  @input
+  @hint("LanguagePanel component (picker before SAFETY, Slice 5L; under AftershockRoot, not the Room)")
+  languagePanel: LanguagePanel
 
   @input
   @hint("Room root. At start its floor is placed eyeHeight below the head; every BRIEFING moves it to the wearer's spot and heading.")
@@ -143,6 +150,10 @@ export class DrillController extends BaseScriptComponent {
   get state(): DrillState | null {
     return this._state
   }
+  /** The selected language (Slice 5L); Restart keeps it. */
+  get language(): Lang {
+    return getLanguage()
+  }
   get health(): number {
     return this._health
   }
@@ -227,6 +238,7 @@ export class DrillController extends BaseScriptComponent {
       ["config", this.config],
       ["headPose", this.headPose],
       ["safetyPanel", this.safetyPanel],
+      ["languagePanel", this.languagePanel],
       ["room", this.room],
       ["safeZone", this.safeZone],
       ["cabinetLabel", this.cabinetLabel],
@@ -277,11 +289,32 @@ export class DrillController extends BaseScriptComponent {
     // Labels follow their hazard: same pose relative to it as authored (Slice 2).
     for (const h of HAZARDS) {
       this.labels[h].sceneObject.setParentPreserveWorldTransform(this.zones[h].hazard)
+      // ENGINEERING_PLAN 5g: the danger label hangs just below the hazard label, with its facing.
+      const dangerLabel = this.zones[h].label
+      if (dangerLabel) {
+        this.labels[h].attachBelow(dangerLabel, DANGER_LABEL_HALF_H)
+      }
     }
     this.placeRoom()
 
+    // Slice 5L: ja and zh lines need their own fonts; the default font has no CJK glyphs.
+    if (!this.config.fontJa || !this.config.fontZh) {
+      console.warn(`${LOG} DrillController: config.fontJa or config.fontZh is not assigned; Japanese or Chinese lines will miss glyphs`)
+    }
+    setLanguageFonts(this.config.fontJa, this.config.fontZh)
+    this.languagePanel.onPick.add((lang) => this.onLanguagePicked(lang))
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())
+    this.transitionTo("LANGUAGE")
+  }
+
+  /** A picker button: set the language (every panel refreshes), then SAFETY. */
+  private onLanguagePicked(lang: Lang): void {
+    if (this._state !== "LANGUAGE") {
+      return
+    }
+    setLanguage(lang)
+    console.log(`${LOG} language: ${lang}`)
     this.transitionTo("SAFETY")
   }
 
@@ -336,6 +369,9 @@ export class DrillController extends BaseScriptComponent {
     this._state = next
     console.log(`${LOG} state ${prev === null ? "[start]" : prev} -> ${next}`)
     switch (next) {
+      case "LANGUAGE":
+        this.enterLanguage()
+        break
       case "SAFETY":
         this.enterSafety()
         break
@@ -357,7 +393,27 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
+  /** Picker placed once in front of the head (hudDistance ahead, hudBelowEye down); nothing else shows. */
+  private enterLanguage(): void {
+    this._instructionKey = null
+    this.hideArrow()
+    this.setRoomLabelsShown(false)
+    this.setDangerZonesShown(false)
+    this.briefingPanel.hide()
+    this.hud.hide()
+    this.resultPanel.hide()
+    this.safetyPanel.hide()
+    this.languagePanel.placeInFront(
+      this.headPose.position,
+      this.headPose.forward,
+      this.config.hudDistance,
+      this.config.hudBelowEye
+    )
+    this.languagePanel.show()
+  }
+
   private enterSafety(): void {
+    this.languagePanel.hide()
     this._instructionKey = null
     this.hideArrow()
     this.setRoomLabelsShown(false)

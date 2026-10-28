@@ -3,8 +3,17 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {splitBilingual, STRINGS, StringKey} from "./Strings"
+import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
 import {createLightBacking} from "./UiBacking"
+
+/** One string's two lines: selected language on top, English below at 80%. */
+interface LinePair {
+  key: StringKey
+  primary: Text
+  secondary: Text
+  secondaryItem: FlexItem
+  height: number // secondary line height when shown (cm)
+}
 
 // Snap Specs type scale (em-square size at 110 cm). size / 43.886 = em-square in cm.
 type TextRole = "Headline2" | "Caption"
@@ -22,11 +31,12 @@ function applyTextRole(t: Text, role: TextRole): void {
 const ENGLISH_SCALE = 0.8
 
 // Panel layout (cm). Not drill tunables: they only shape this panel.
-const INNER_W = 32
+const INNER_W = 40 // Slice 5L: widened from 32 so the longest German line (safety.room, ~34 cm) fits
 const PAD = 2.5
 const ROW_GAP = 1.6
 const LINE_ID_H = 1.8
 const LINE_EN_H = 1.5
+const HIDDEN_H = 0.001 // the English line collapses to this when English is selected
 const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
 const BUTTON_H = 5
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
@@ -53,6 +63,7 @@ export class SafetyPanel extends BaseScriptComponent {
   readonly onContinue: PublicApi<void> = this.continueEvent.publicApi()
 
   private readonly shownTexts: Text[] = []
+  private readonly pairs: LinePair[] = []
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -81,6 +92,8 @@ export class SafetyPanel extends BaseScriptComponent {
     this.addBilingual(content, "safety.drill")
     this.addBilingual(content, "safety.room")
     this.addContinueButton(content)
+    this.refresh()
+    onLanguageChanged.add(() => this.refresh())
   }
 
   /**
@@ -114,21 +127,32 @@ export class SafetyPanel extends BaseScriptComponent {
   }
 
   private addBilingual(parent: SceneObject, key: StringKey): void {
-    const parts = splitBilingual(STRINGS[key])
-    this.addLine(parent, key + ".id", parts.id, LINE_ID_H, 1)
-    this.addLine(parent, key + ".en", parts.en, LINE_EN_H, ENGLISH_SCALE)
+    const primary = this.addLine(parent, key + ".id", LINE_ID_H, 1)
+    const secondary = this.addLine(parent, key + ".en", LINE_EN_H, ENGLISH_SCALE)
+    this.pairs.push({key, primary: primary.text, secondary: secondary.text, secondaryItem: secondary.item, height: LINE_EN_H})
   }
 
-  private addLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {
+  /** Re-renders every line in the selected language (Slice 5L); English only collapses the second line. */
+  private refresh(): void {
+    for (const p of this.pairs) {
+      const l = lines(p.key)
+      setLinePair(p.primary, p.secondary, l)
+      p.secondaryItem.overrideHeight = l.secondary.length > 0 ? p.height : HIDDEN_H
+    }
+  }
+
+  private addLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
-    t.text = text
+    t.text = ""
     this.styleText(t, "Headline2", scale)
     t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -height / 2, height / 2)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
     item.alignSelf = FlexAlignSelf.Stretch
+    item.overrideHeight = height
     this.shownTexts.push(t)
+    return {text: t, item}
   }
 
   private addContinueButton(parent: SceneObject): void {
@@ -152,23 +176,25 @@ export class SafetyPanel extends BaseScriptComponent {
     labelFlex.justifyContent = FlexJustify.Center
     labelFlex.rowGap = 0.2
 
-    const parts = splitBilingual(STRINGS["btn.continue"])
-    this.addButtonLine(label, "btn.continue.id", parts.id, LINE_ID_H, 1)
-    this.addButtonLine(label, "btn.continue.en", parts.en, LINE_EN_H, ENGLISH_SCALE)
+    const primary = this.addButtonLine(label, "btn.continue.id", LINE_ID_H, 1)
+    const secondary = this.addButtonLine(label, "btn.continue.en", LINE_EN_H, ENGLISH_SCALE)
+    this.pairs.push({key: "btn.continue", primary: primary.text, secondary: secondary.text, secondaryItem: secondary.item, height: LINE_EN_H})
 
     btn.onTriggerUp.add(() => this.continueEvent.invoke())
   }
 
-  private addButtonLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {
+  private addButtonLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
-    t.text = text
+    t.text = ""
     this.styleText(t, "Headline2", scale)
     const w = BUTTON_W - 0.5
     t.layoutRect = Rect.create(-w / 2, w / 2, -height / 2, height / 2)
-    so.createComponent(FlexItem.getTypeName())
+    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+    item.overrideHeight = height
     this.shownTexts.push(t)
+    return {text: t, item}
   }
 
   private styleText(t: Text, role: TextRole, scale: number): void {

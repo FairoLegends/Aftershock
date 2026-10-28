@@ -1,6 +1,6 @@
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, insideRect, LayoutItem} from "./LayoutGenerator"
-import {splitBilingual, STRINGS} from "./Strings"
+import {lines, onLanguageChanged, setLinePair} from "./Strings"
 import {createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5.2: labels use 2.5 cm type. size / 43.886 = em-square in cm.
@@ -12,8 +12,9 @@ const ENGLISH_SCALE = 0.8
 const FILL_LIFT = 0.3 // fill just above the floor
 const OUTLINE_LIFT = 0.6 // outline above the fill (z-fighting)
 const OUTLINE_W = 1.5
-const LABEL_LIFT = 8 // label center above the floor, at the zone's front edge
-const LINE_GAP = 3 // Indonesian line center to English line center
+const LINE_GAP = 3 // primary line center to English line center
+/** Half the danger label's height (cm), for HazardLabel.attachBelow (ENGINEERING_PLAN 5g). */
+export const DANGER_LABEL_HALF_H = LINE_GAP
 const LABEL_W = 30
 const FLAT = quat.angleAxis(-Math.PI / 2, vec3.right()) // a UI rectangle's +Z (its face) turned to +Y
 
@@ -57,6 +58,9 @@ export class DangerZone extends BaseScriptComponent {
   @ui.group_end
 
   private visual: SceneObject | null = null
+  private _label: SceneObject | null = null
+  private labelPrimary: Text
+  private labelSecondary: Text
   private halfX = 0 // cm, zone half-size along the hazard's local X
   private halfZ = 0 // cm, along its local Z
   private restX = 0 // cm, world
@@ -76,7 +80,16 @@ export class DangerZone extends BaseScriptComponent {
     }
     this.halfX = f.halfX + this.config.dangerMargin
     this.halfZ = f.halfZ + this.config.dangerMargin
-    this.buildVisual(f.front)
+    this.buildVisual()
+    this.buildLabel()
+  }
+
+  /**
+   * The upright label.danger label (Slice 5L, 5g). DrillController hangs it
+   * under the hazard's HazardLabel; this zone still shows and hides it.
+   */
+  get label(): SceneObject | null {
+    return this._label
   }
 
   /** The layout item this zone guards. */
@@ -113,14 +126,19 @@ export class DangerZone extends BaseScriptComponent {
   }
 
   show(): void {
-    if (this.visual) {
-      this.visual.enabled = true
-    }
+    this.setShown(true)
   }
 
   hide(): void {
+    this.setShown(false)
+  }
+
+  private setShown(shown: boolean): void {
     if (this.visual) {
-      this.visual.enabled = false
+      this.visual.enabled = shown
+    }
+    if (this._label) {
+      this._label.enabled = shown
     }
   }
 
@@ -129,7 +147,7 @@ export class DangerZone extends BaseScriptComponent {
     return this.visual !== null && this.visual.isEnabledInHierarchy
   }
 
-  private buildVisual(front: number): void {
+  private buildVisual(): void {
     const visual = global.scene.createSceneObject("DangerZoneVisual")
     visual.setParent(this.sceneObject)
     const w = this.halfX * 2
@@ -139,7 +157,6 @@ export class DangerZone extends BaseScriptComponent {
     this.addRect(visual, "EdgeFar", 0, OUTLINE_LIFT, -this.halfZ, w + OUTLINE_W, OUTLINE_W, this.lineColor)
     this.addRect(visual, "EdgeLeft", -this.halfX, OUTLINE_LIFT, 0, OUTLINE_W, d + OUTLINE_W, this.lineColor)
     this.addRect(visual, "EdgeRight", this.halfX, OUTLINE_LIFT, 0, OUTLINE_W, d + OUTLINE_W, this.lineColor)
-    this.addLabel(visual, front)
     visual.enabled = false
     this.visual = visual
   }
@@ -155,28 +172,33 @@ export class DangerZone extends BaseScriptComponent {
     rect.size = new vec2(sizeX, sizeZ)
   }
 
-  /** Upright label.danger at the zone's front edge, facing out the front (toward the start spot). */
-  private addLabel(parent: SceneObject, front: number): void {
-    const fx = Math.sin(front)
-    const fz = Math.cos(front)
-    const edge = Math.abs(fx) * this.halfX + Math.abs(fz) * this.halfZ
+  /** Upright label.danger, hidden until show(); placed by DrillController under the HazardLabel. */
+  private buildLabel(): void {
     const so = global.scene.createSceneObject("DangerLabel")
-    so.setParent(parent)
+    so.setParent(this.sceneObject)
     so.createComponent("Component.Canvas")
-    const t = so.getTransform()
-    t.setLocalPosition(new vec3(fx * edge, LABEL_LIFT, fz * edge))
-    t.setLocalRotation(quat.angleAxis(front, vec3.up()))
-    const parts = splitBilingual(STRINGS["label.danger"])
-    this.addLine(so, "label.danger.id", parts.id, LINE_GAP / 2, 1)
-    this.addLine(so, "label.danger.en", parts.en, -LINE_GAP / 2, ENGLISH_SCALE)
+    this.labelPrimary = this.addLine(so, "label.danger.id", 1)
+    this.labelSecondary = this.addLine(so, "label.danger.en", ENGLISH_SCALE)
+    so.enabled = false
+    this._label = so
+    this.refreshLabel()
+    onLanguageChanged.add(() => this.refreshLabel())
   }
 
-  private addLine(parent: SceneObject, name: string, text: string, y: number, scale: number): void {
+  /** Selected language on top, English below; with English selected one centered line. */
+  private refreshLabel(): void {
+    const l = lines("label.danger")
+    setLinePair(this.labelPrimary, this.labelSecondary, l)
+    const two = l.secondary.length > 0
+    this.labelPrimary.getSceneObject().getTransform().setLocalPosition(new vec3(0, two ? LINE_GAP / 2 : 0, 0))
+    this.labelSecondary.getSceneObject().getTransform().setLocalPosition(new vec3(0, -LINE_GAP / 2, 0))
+  }
+
+  private addLine(parent: SceneObject, name: string, scale: number): Text {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
-    so.getTransform().setLocalPosition(new vec3(0, y, 0))
     const t = so.createComponent("Component.Text") as Text
-    t.text = text
+    t.text = ""
     t.size = LABEL_EM_CM * SIZE_PER_CM * scale
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
@@ -186,5 +208,6 @@ export class DangerZone extends BaseScriptComponent {
     t.horizontalOverflow = HorizontalOverflow.Overflow
     t.verticalOverflow = VerticalOverflow.Overflow
     t.layoutRect = Rect.create(-LABEL_W / 2, LABEL_W / 2, -LINE_GAP / 2, LINE_GAP / 2)
+    return t
   }
 }
