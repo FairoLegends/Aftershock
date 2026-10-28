@@ -18,14 +18,14 @@ const LINE_ID_H = 3.0
 const LINE_ID_WRAP_H = 6.0 // Slice 5L: long German lines wrap to two lines instead of clipping
 const LINE_EN_H = 2.4
 const HIDDEN_H = 0.001 // the English line collapses to this when English is selected
-const BELOW_GAP = 1.0 // gap between the label's backing and an attached line below it (danger label)
+const ABOVE_GAP = 1.0 // gap between the label's backing and an attached line above it (danger label)
 const CONTENT_Z = 0.6 // keeps content off the back plate (z-fighting)
 
 /**
  * A world-space label on a hazard or on the safe zone (R3, R4): the selected
  * language on top, English below at 80% (Slice 5L). Its scene rotation makes
  * it face the start spot; DrillController shows it in BRIEFING and hides it
- * in SAFETY. attachBelow() hangs another label (the danger label) under it.
+ * in SAFETY. attachAbove() sets another label (the danger label) on top of it.
  */
 @component
 export class HazardLabel extends BaseScriptComponent {
@@ -61,8 +61,8 @@ export class HazardLabel extends BaseScriptComponent {
   private secondary: Text
   private secondaryItem: FlexItem
   private height = PAD * 2 + LINE_ID_H + ROW_GAP + LINE_EN_H // cm, backing height (until the first layout)
-  private below: SceneObject | null = null
-  private belowHalfH = 0 // cm
+  private above: SceneObject | null = null
+  private aboveHalfH = 0 // cm
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -87,7 +87,7 @@ export class HazardLabel extends BaseScriptComponent {
     flex.onLayoutComplete.add((r) => {
       backing.size = new vec2(r.containerWidth, r.containerHeight)
       this.height = r.containerHeight
-      this.placeBelow()
+      this.placeAbove()
     })
 
     const key = this.key as StringKey
@@ -120,22 +120,23 @@ export class HazardLabel extends BaseScriptComponent {
   }
 
   /**
-   * Parents `so` to this label, centered just below its backing with the same
-   * facing (ENGINEERING_PLAN 5g). `halfHeight` is half of `so`'s height (cm).
-   * It follows the backing when the label's height changes.
+   * Parents `so` to this label, centered just above its backing with the same
+   * facing (ENGINEERING_PLAN 5i item 1, replaces 5g's below), so the briefing
+   * panel and the HUD never cover it. `halfHeight` is half of `so`'s height
+   * (cm). It follows the backing when the label's height changes.
    */
-  attachBelow(so: SceneObject, halfHeight: number): void {
+  attachAbove(so: SceneObject, halfHeight: number): void {
     so.setParent(this.sceneObject)
     so.getTransform().setLocalRotation(quat.quatIdentity())
-    this.below = so
-    this.belowHalfH = halfHeight
-    this.placeBelow()
+    this.above = so
+    this.aboveHalfH = halfHeight
+    this.placeAbove()
   }
 
-  private placeBelow(): void {
-    if (this.below) {
-      const y = -(this.height / 2 + BELOW_GAP + this.belowHalfH)
-      this.below.getTransform().setLocalPosition(new vec3(0, y, CONTENT_Z))
+  private placeAbove(): void {
+    if (this.above) {
+      const y = this.height / 2 + ABOVE_GAP + this.aboveHalfH
+      this.above.getTransform().setLocalPosition(new vec3(0, y, CONTENT_Z))
     }
   }
 

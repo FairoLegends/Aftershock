@@ -13,7 +13,7 @@ const FILL_LIFT = 0.3 // fill just above the floor
 const OUTLINE_LIFT = 0.6 // outline above the fill (z-fighting)
 const OUTLINE_W = 1.5
 const LINE_GAP = 3 // primary line center to English line center
-/** Half the danger label's height (cm), for HazardLabel.attachBelow (ENGINEERING_PLAN 5g). */
+/** Half the danger label's height (cm), for HazardLabel.attachAbove (ENGINEERING_PLAN 5i item 1). */
 export const DANGER_LABEL_HALF_H = LINE_GAP
 const LABEL_W = 30
 const FLAT = quat.angleAxis(-Math.PI / 2, vec3.right()) // a UI rectangle's +Z (its face) turned to +Y
@@ -85,8 +85,8 @@ export class DangerZone extends BaseScriptComponent {
   }
 
   /**
-   * The upright label.danger label (Slice 5L, 5g). DrillController hangs it
-   * under the hazard's HazardLabel; this zone still shows and hides it.
+   * The upright label.danger label (Slice 5L, 5i item 1). DrillController sets it
+   * above the hazard's HazardLabel; this zone still shows and hides it.
    */
   get label(): SceneObject | null {
     return this._label

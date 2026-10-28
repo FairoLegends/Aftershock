@@ -51,9 +51,9 @@ export class ResultPanel extends BaseScriptComponent {
   @ui.separator
   @ui.group_start("Settings")
   @input
-  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
+  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive. 50% white (ENGINEERING_PLAN 5i item 3).")
   @widget(new ColorWidget())
-  backingColor: vec4 = new vec4(1, 1, 1, 0.25)
+  backingColor: vec4 = new vec4(1, 1, 1, 0.5)
 
   @input
   @hint("Thin outline around every panel text, so white text reads over light furniture seen through the backing (same as the HUD)")

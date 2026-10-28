@@ -289,10 +289,10 @@ export class DrillController extends BaseScriptComponent {
     // Labels follow their hazard: same pose relative to it as authored (Slice 2).
     for (const h of HAZARDS) {
       this.labels[h].sceneObject.setParentPreserveWorldTransform(this.zones[h].hazard)
-      // ENGINEERING_PLAN 5g: the danger label hangs just below the hazard label, with its facing.
+      // ENGINEERING_PLAN 5i item 1 (replaces 5g): the danger label sits just above the hazard label, with its facing.
       const dangerLabel = this.zones[h].label
       if (dangerLabel) {
-        this.labels[h].attachBelow(dangerLabel, DANGER_LABEL_HALF_H)
+        this.labels[h].attachAbove(dangerLabel, DANGER_LABEL_HALF_H)
       }
     }
     this.placeRoom()
@@ -502,6 +502,7 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setHealth(this._health)
     this.hud.setElapsed(0)
     this.hud.showWarning()
+    this.hideHazardLabels()
     this.safeZone.startBlink()
 
     this.quakeStartTime = getTime()
@@ -707,6 +708,22 @@ export class DrillController extends BaseScriptComponent {
       this.safeZone.showMarker()
     } else {
       this.safeZone.hideMarker()
+    }
+  }
+
+  /**
+   * ENGINEERING_PLAN 5i item 2: the three hazard labels hide when the quake
+   * starts and stay hidden through POST_QUAKE; the next BRIEFING shows them
+   * again (setRoomLabelsShown(true)). Their danger labels are children and hide
+   * with them. The safe-zone marker and the danger-zone floor stay.
+   */
+  private hideHazardLabels(): void {
+    for (const h of HAZARDS) {
+      this.labels[h].hide()
+      const dangerLabel = this.zones[h].label
+      if (dangerLabel && dangerLabel.isEnabledInHierarchy) {
+        dangerLabel.enabled = false // no longer under its hazard label: hide it on its own (the zone shows it again)
+      }
     }
   }
 

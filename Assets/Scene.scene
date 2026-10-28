@@ -4249,14 +4249,13 @@
   Enabled: true
   ScriptAsset: !<reference> 634121c6-c913-47fc-9203-1368fce577a5
   ScriptInputsDefault:
-    backingColor: true
     textOutlineColor: true
     textOutlineSize: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.500000}
       textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
       textOutlineSize: 0.200000
   ScriptTypes:
