@@ -76,6 +76,12 @@ Importance: **Must** = in a done criterion; **Should** = in the brief but outsid
 | R14 | All in-Lens text is bilingual Indonesian / English until R16 is built; then the selected language plus English. | Must | 1–5 | Strings live in one file (TDD §6, `STRINGS_I18N.md`). |
 | R16 | As a user, the first screen lets me pick the language (Bahasa Indonesia, English, Deutsch, 日本語, 简体中文) with five big buttons; the rest of the Lens then shows my language on top and English smaller below (English only when I pick English). | Must | — | Learner, 27 Oct. Strings and fonts in `STRINGS_I18N.md`. Built in Slice 5L. Replaces the fixed Indonesian / English pair of R14 once built. |
 | R17 | As a user, every drill (and every Restart) puts the table and the hazards in new places, the table always within 200 cm of me, and a red floor area around each hazard drains my health if I stand in it during the quake. | Must | — | Learner, 27 Oct. Built in Slice 5P. Changes R3's fixed layout. |
+| R18 | As a user, after Continue the glasses seem to scan the room: a sweep passes and each hazard is outlined and labeled in turn. | Should | 7 | Visual effect over the virtual room, not detection (learner, 29 Oct). |
+| R19 | As a user, a glowing path on the floor leads me to the table, brighter during the quake. | Should | 7 | Hidden on the hard level. |
+| R20 | As a user, the edge of my view pulses red while I am losing health. | Should | 7 | Never covers the center of view. |
+| R21 | As a user, after the main quake an aftershock can come, and I have to take cover again. | Should | 7 | Chance by level; the result shows after it (learner: the name of the Lens). |
+| R22 | As a user, items fall from the shelf and cabinet during the quake, and one landing near my head costs health. | Should | 7 | Animation, not physics; random items each drill. |
+| R23 | As a user, I pick a level (easy, normal, hard) before the drill, and Restart keeps it. | Should | 7 | Values (default) in ENGINEERING_PLAN 5j. |
 | R15 | Text is light and readable from where the user stands; no dark UI (the display is additive, black is transparent). | Should | — | Checked in the learner's comfort review. |
 | S1 | As a user, objects fall from the shelf or cabinet during the quake. | Stretch | — | Only after R1–R15 pass. |
 | S2 | As a user, I mark dangerous objects and the safe spot myself with a pinch. | Stretch | — | Only after S1, or if the learner reprioritizes. |

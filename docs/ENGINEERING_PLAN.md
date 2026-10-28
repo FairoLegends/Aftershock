@@ -37,6 +37,7 @@ A slice that fails its gate twice goes back to the learner with options, rather 
 | Tue 3 Nov | Slice 5P: procedural layout and danger zones ✋ | New layout on every start; danger zones drain health |
 | Wed 4 Nov | Slice 5L: language picker and five languages ✋ | Picker works; all five languages render |
 | Thu 5 Nov (morning) | Slice 6: full LEAF run, comfort pass, learner's "judge it" review ✋ | All DC pass |
+| Thu 29 Oct – Wed 4 Nov | Slice 7A–7D: Brutal AR style, scan, floor path, edge warning, aftershock, levels, falling objects ✋ | DC1–DC10 pass |
 | **Thu 5 Nov** | **Feature freeze: whole drill works end to end** | Full run, no errors |
 | Fri 6 Nov, 00:00 | **Live Project Review** (Snap) | — |
 | Fri 6 – Sat 7 Nov | Review fixes; stretch S1 (falling objects) only if every DC passes | No regressions |
@@ -107,7 +108,11 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - Learner does the brief's "After the build: judge it" steps and marks each item "logic proven" or "feel unproven".
 - Gate: every DC passes or has an explained manual check; the Logger is clean on a full drill.
 
-### Stretch S1: Falling objects (only after the 5 Nov gate passes)
+### Slice 7: Immersion and variety ✋ (learner request, 29 Oct; ENGINEERING_PLAN 5j)
+- 7A Brutal AR style, Syne/Manrope, numbered steps. 7B scan intro, floor path, edge warning. 7C aftershock, levels. 7D falling objects.
+- Gate: DC1–DC10 pass in the LEAF auto-run; screenshots of each new element checked; Logger clean.
+
+### Stretch S1: Falling objects (moved into Slice 7D, 29 Oct)
 - Items on the shelf and the cabinet tip or fall during the quake, as animation, not physics, unless the learner asks otherwise.
 - Must not break any DC scenario. Re-run all five after.
 
@@ -155,6 +160,21 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 2. Restart places the room again from the wearer's current spot and heading (floor height unchanged), together with the new procedural layout.
 3. The room stays visible behind the result and game-over panels (learner: 1a).
 4. Health drain rule after 5P: drain while exposed after first cover (Q5) OR while inside a danger zone during the quake (from the quake start). One drain at a time, never doubled. Game-over reason: `over.why.danger` if the user was in a danger zone when health hit 0, else `over.why.stood`.
+
+## 5j. Learner request: Slice 7, immersion and variety (29 Oct)
+
+Chosen: 2A room scan, 2B floor path, 2C edge warning, 3A aftershock, 3B falling objects, 3D levels; style from uupm.cc/demo/creative-agency, relevant parts only. Values marked (default) are open to the learner's veto.
+1. Style "Brutal AR" (mockup `docs/design/Aftershock Brutal AR.html`): thick light borders (0.4 cm at 110 cm), square corners, a hard offset plate (white, 1 cm down-right) behind panels, buttons and labels; yellow `#FFFF00` for the focused button, the active step and the floor path; red `#FF0000` for hazard labels, danger zones, banners and the edge pulse; green `#3DDC84` stays for the safe zone; no blue. Black from the reference becomes white (the display is additive). Panels stay light and see-through (12–25% white) (default).
+2. Type: Syne ExtraBold uppercase for titles, banners, buttons and step names; Manrope SemiBold for English lines; Noto Sans JP/SC stay for ja/zh (Syne has no CJK). Both are SIL OFL 1.1, subset to the Lens strings, licence files beside them.
+3. Instructions become three numbered steps 01 Go under the table, 02 Duck, 03 Hold on, all visible in the HUD; the active one is yellow, done ones are struck through (replaces the single-line instruction).
+4. Scan intro (2A): after Continue, a light sweep crosses the room for about 3 s (default); each hazard gets corner brackets and its label appears in turn; a "Memindai ruangan 3/3 / Scanning room" chip counts them. It is a visual effect on the virtual room, not detection; the Devpost copy must say so.
+5. Floor path (2B): yellow chevrons on the floor from the user to the table: faint in BRIEFING, bright and marching during QUAKE until the user is in the zone. Hidden on the hard level.
+6. Edge warning (2C): a red vignette at the view edge pulses while health drains (standing after cover, or in a danger zone). Never covers the center.
+7. Aftershock (3A): after POST_QUAKE, once the user has left the zone, an aftershock starts with chance by level (easy 0, normal 50%, hard 100%) (default), 2–6 s after leaving (default), lasting 10–20 s (default), at 60% of the main shake (default); banner "Gempa susulan! / Aftershock!"; the staged instructions run again; RESULT shows only after it. The score adds "time to cover in the aftershock" (scoring in TDD §7, to be written).
+8. Falling objects (3B): during each quake, 1–3 random items (default) fall from the shelf and the cabinet top as animation (not physics), landing inside that hazard's danger zone. An item that lands within 40 cm (default) of the head costs 15 health (default) and shows "−15 Kamu kejatuhan barang / Something fell on you".
+9. Levels (3D): a picker after the safety panel (three cards). Easy: labels stay through the quake, table within 150 cm, no aftershock. Normal: today's rules, aftershock 50%. Hard: no arrow or floor path, health drains 1.5× faster, aftershock always (default). Restart keeps the level.
+10. New strings in five languages go into `docs/STRINGS_I18N.md` before Slice 7A.
+11. Order inside Slice 7: 7A style + type + numbered steps; 7B scan + floor path + edge warning; 7C aftershock + levels; 7D falling objects. LEAF: DC1–DC7 must keep passing; add DC8 aftershock, DC9 levels, DC10 falling item hit.
 
 ## 5i. Learner decisions after Slice 6B (28 Oct)
 
