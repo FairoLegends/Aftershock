@@ -6,6 +6,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {DrillController} from "../DrillController"
 import {SafeZone} from "../SafeZone"
 import {lines, StringKey} from "../Strings"
+import {CLASSIC} from "./DrillTestKit"
 
 const FURNITURE = ["Table", "Cabinet", "Shelf", "GlassWindow"]
 const HAZARD_LABELS = ["CabinetLabel", "ShelfLabel", "GlassLabel"]
@@ -23,6 +24,9 @@ export class DC1_SafetyThenRoom extends Scenario {
       DrillController.getTypeName()
     ) as DrillController
     const interactor = new DefaultLeafInteractor()
+    // Slice 7R-2: the room is procedural (1–2 tables, 3–5 hazards); DC1 checks its
+    // rules on the classic item set, so the four named items must all be present.
+    controller.forceLayoutForTest(CLASSIC)
 
     // Slice 5L: the Lens opens on the language picker; Bahasa Indonesia → SAFETY.
     expect(controller.state).toBe("LANGUAGE")
@@ -64,6 +68,7 @@ export class DC1_SafetyThenRoom extends Scenario {
     const zone = marker.getComponent(SafeZone.getTypeName()) as SafeZone
     expect(zone.contains(zone.center)).toBe(true)
     expect(zone.contains(controller.headPose.position)).toBe(false)
+    controller.forceLayoutForTest(null)
   }
 
   /**

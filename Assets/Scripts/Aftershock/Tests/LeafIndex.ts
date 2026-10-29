@@ -7,6 +7,8 @@ import {DC4_StandUpDrainsAndGameOver} from "./DC4_StandUpDrainsAndGameOver"
 import {DC5_QuakeEndsScore} from "./DC5_QuakeEndsScore"
 import {DC6_DangerZoneDrains} from "./DC6_DangerZoneDrains"
 import {DC7_LanguagesAndRestart} from "./DC7_LanguagesAndRestart"
+import {DC8_BedTrap} from "./DC8_BedTrap"
+import {DC9_TwoTables} from "./DC9_TwoTables"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -18,6 +20,8 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc4-stand-up-drains-and-game-over", typename: DC4_StandUpDrainsAndGameOver.getTypeName()},
     {id: "dc5-quake-ends-score", typename: DC5_QuakeEndsScore.getTypeName()},
     {id: "dc6-danger-zone-drains", typename: DC6_DangerZoneDrains.getTypeName()},
-    {id: "dc7-languages-and-restart", typename: DC7_LanguagesAndRestart.getTypeName()}
+    {id: "dc7-languages-and-restart", typename: DC7_LanguagesAndRestart.getTypeName()},
+    {id: "dc8-bed-trap", typename: DC8_BedTrap.getTypeName()},
+    {id: "dc9-two-tables", typename: DC9_TwoTables.getTypeName()}
   ]
 }
