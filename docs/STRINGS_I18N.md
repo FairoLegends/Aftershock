@@ -69,13 +69,14 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `level.easy.1` | Label tetap terlihat | Labels stay visible | Hinweise bleiben sichtbar | ラベルが表示されたまま | 标签一直显示 |
 | `level.easy.2` | Meja dekat, maks 150 cm | Table close, max 150 cm | Tisch nah, max. 150 cm | 机は近く、最大150 cm | 桌子很近，最远150 cm |
 | `level.easy.3` | Tanpa gempa susulan | No aftershock | Kein Nachbeben | 余震なし | 没有余震 |
-| `level.normal.1` | Meja sampai 200 cm | Table up to 200 cm | Tisch bis 200 cm | 机は最大200 cm | 桌子最远200 cm |
+| `level.normal.1` | Meja sampai 250 cm | Table up to 250 cm | Tisch bis 250 cm | 机は最大250 cm | 桌子最远250 cm |
 | `level.normal.2` | Kadang ada gempa susulan | Sometimes an aftershock | Manchmal ein Nachbeben | ときどき余震 | 有时有余震 |
 | `level.normal.3` | Benda bisa jatuh | Items can fall | Gegenstände können fallen | 物が落ちることも | 物品可能掉落 |
-| `level.hard.1` | Tanpa panah dan jalur | No arrow, no path | Kein Pfeil, kein Pfad | 矢印と道しるべなし | 没有箭头和路线 |
+| `level.hard.1` | Cari sendiri: tanpa label, zona, panah | Find it yourself: no labels, zones, arrow | Selbst finden: keine Hinweise, Zonen, Pfeile | 自分で探す：ラベル・ゾーン・矢印なし | 自己找：没有标签、区域和箭头 |
 | `level.hard.2` | Nyawa turun lebih cepat | Health drops faster | Leben sinkt schneller | 体力が早く減る | 生命值下降更快 |
 | `level.hard.3` | Selalu ada gempa susulan | Always an aftershock | Immer ein Nachbeben | 必ず余震あり | 一定有余震 |
 | `result.aftershock` | Gempa susulan: {s} s | Aftershock cover: {s} s | Nachbeben-Deckung: {s} s | 余震で身を守るまで：{s} 秒 | 余震躲避用时：{s} 秒 |
+| `result.reveal` | Lihat ruangan: merah berbahaya, hijau aman | Look around: red is dangerous, green is safe | Sieh dich um: Rot ist gefährlich, Grün ist sicher | 見回そう：赤は危険、緑は安全 | 看看四周：红色危险，绿色安全 |
 | `result.level` | Tingkat: {level} | Level: {level} | Stufe: {level} | レベル：{level} | 难度：{level} |
 | `label.lamp` | Lampu bisa roboh | Lamp can fall over | Die Lampe kann umfallen | ランプが倒れるかも | 落地灯可能倒下 |
 | `label.tv` | TV bisa jatuh | TV can fall | Der Fernseher kann herunterfallen | テレビが落ちるかも | 电视可能掉落 |
