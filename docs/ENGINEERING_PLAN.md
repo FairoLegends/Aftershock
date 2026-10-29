@@ -174,6 +174,7 @@ Chosen: 2A room scan, 2B floor path, 2C edge warning, 3A aftershock, 3B falling 
 8. Falling objects (3B): during each quake, 1–3 random items (default) fall from the shelf and the cabinet top as animation (not physics), landing inside that hazard's danger zone. An item that lands within 40 cm (default) of the head costs 15 health (default) and shows "−15 Kamu kejatuhan barang / Something fell on you".
 9. Levels (3D): a picker after the safety panel (three cards). Easy: labels stay through the quake, table within 150 cm, no aftershock. Normal: today's rules, aftershock 50%. Hard: no arrow or floor path, health drains 1.5× faster, aftershock always (default). Restart keeps the level.
 10. New strings in five languages go into `docs/STRINGS_I18N.md` before Slice 7A.
+12. Learner, 29 Oct after 7A (Syne is much wider than the old font): (a) the numbered steps stay in three columns, the step names in Manrope at 2 cm, the numbers in Syne above them; (b) long sentences (briefing, safety lines, result details, hazard and danger label body) use Manrope; Syne only for titles, buttons, numbers, the timer, banners and marquees; (c) the unused Hud inputs `alarmColor` and `trackColor` are removed.
 11. Order inside Slice 7: 7A style + type + numbered steps; 7B scan + floor path + edge warning; 7C aftershock + levels; 7D falling objects. LEAF: DC1–DC7 must keep passing; add DC8 aftershock, DC9 levels, DC10 falling item hit.
 
 ## 5i. Learner decisions after Slice 6B (28 Oct)
