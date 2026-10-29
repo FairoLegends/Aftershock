@@ -50,7 +50,7 @@
     - '// @ui {"widget":"label", "label":"World label on a hazard or the safe zone (R3, R4)"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - '// @input string key = "label.cabinet" {"hint":"Strings.ts key this label shows", "widget":"combobox", "values":[{"label":"Cabinet", "value":"label.cabinet"}, {"label":"Shelf", "value":"label.shelf"}, {"label":"Glass", "value":"label.glass"}, {"label":"Safe zone", "value":"label.safe"}]}'
+    - '// @input string key = "label.cabinet" {"hint":"Strings.ts key this label shows", "widget":"combobox", "values":[{"label":"Cabinet", "value":"label.cabinet"}, {"label":"Shelf", "value":"label.shelf"}, {"label":"Glass", "value":"label.glass"}, {"label":"Lamp", "value":"label.lamp"}, {"label":"TV", "value":"label.tv"}, {"label":"Safe zone", "value":"label.safe"}]}'
     - '// @input vec4 textColor = {0.851,0.282,0.059,1} {"hint":"Safe zone text and dot color: green #3DDC84. Hazards always use white text and a red #FF5A4F dot (Slice 7A-soft).", "widget":"color"}'
     - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

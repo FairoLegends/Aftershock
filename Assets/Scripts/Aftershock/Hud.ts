@@ -126,6 +126,8 @@ export class Hud extends BaseScriptComponent {
   private transform: Transform | null = null
   private banner: SceneObject | null = null
   private warningTimer: DelayedCallbackEvent | null = null
+  private notice: SceneObject | null = null
+  private noticeTimer: DelayedCallbackEvent | null = null
   private instructionId: Text | null = null
   private instructionEn: Text | null = null
   private timerLabel: Text | null = null
@@ -150,9 +152,12 @@ export class Hud extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
     this.buildPanel()
     this.buildBanner()
+    this.buildNotice()
 
     this.warningTimer = this.createEvent("DelayedCallbackEvent")
     this.warningTimer.bind(() => this.hideWarning())
+    this.noticeTimer = this.createEvent("DelayedCallbackEvent")
+    this.noticeTimer.bind(() => this.hideNotice())
 
     this.createEvent("UpdateEvent").bind(() => this.follow())
   }
@@ -171,16 +176,25 @@ export class Hud extends BaseScriptComponent {
     drawOnTop(this.sceneObject) // 5h item 3: panel and warning banner draw over the room
   }
 
-  /** Hides the HUD and the warning banner. */
+  /** Hides the HUD, the warning banner and the notice. */
   hide(): void {
     this.hideWarning()
+    this.hideNotice()
     this.sceneObject.enabled = false
   }
 
   /** warn.quake banner at the center of view for warningShowSeconds. */
   showWarning(): void {
+    this.hideNotice()
     this.banner.enabled = true
     this.warningTimer.reset(this.config.warningShowSeconds)
+  }
+
+  /** warn.bed notice (§5j-15 bed trap) in the banner spot for `seconds`; it replaces the warning banner. */
+  showNotice(seconds: number): void {
+    this.hideWarning()
+    this.notice.enabled = true
+    this.noticeTimer.reset(seconds)
   }
 
   private readonly pairs: {key: StringKey; primary: Text; secondary: Text}[] = []
@@ -303,6 +317,9 @@ export class Hud extends BaseScriptComponent {
   get isWarningShown(): boolean {
     return this.banner !== null && this.banner.isEnabledInHierarchy
   }
+  get isNoticeShown(): boolean {
+    return this.notice !== null && this.notice.isEnabledInHierarchy
+  }
   get instructionKey(): StringKey | null {
     return this._instructionKey
   }
@@ -316,6 +333,15 @@ export class Hud extends BaseScriptComponent {
     }
     if (this.banner) {
       this.banner.enabled = false
+    }
+  }
+
+  private hideNotice(): void {
+    if (this.noticeTimer) {
+      this.noticeTimer.cancel()
+    }
+    if (this.notice) {
+      this.notice.enabled = false
     }
   }
 
@@ -464,6 +490,27 @@ export class Hud extends BaseScriptComponent {
     onLanguageChanged.add(() => this.refreshTexts())
     banner.enabled = false
     this.banner = banner
+  }
+
+  /** §5j-15 bed trap: warn.bed in the same spot and style as the warning banner. */
+  private buildNotice(): void {
+    const notice = this.child(this.sceneObject, "NoticeBanner")
+    notice.getTransform().setLocalPosition(new vec3(0, (this.config ? this.config.hudBelowEye : 0) + WARN_RAISE, 0))
+    const backing = new SoftFrame(notice, WARN_FILL, SOFT_PANEL_RADIUS_CM, null)
+    const content = this.child(notice, "Content")
+    content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
+    const flex = this.column(content, 0, PAD)
+    flex.width = WARN_W + PAD * 2
+    flex.onLayoutComplete.add((r) => {
+      backing.setSize(r.containerWidth, r.containerHeight)
+    })
+    this.addPair(
+      "warn.bed",
+      this.addText(content, "Notice.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, SOFT_WHITE, false),
+      this.addText(content, "Notice.en", "", WARNING_EM_CM, WARN_W, HIDDEN_H, SOFT_WHITE, false)
+    )
+    notice.enabled = false
+    this.notice = notice
   }
 
   /** Small dimmed label (hud.health, hud.time); its English line is collapsed. */

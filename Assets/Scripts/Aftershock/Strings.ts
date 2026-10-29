@@ -23,6 +23,9 @@ export type StringKey =
   | "label.cabinet"
   | "label.shelf"
   | "label.glass"
+  | "label.lamp"
+  | "label.tv"
+  | "warn.bed"
   | "label.safe"
   | "hud.health"
   | "hud.time"
@@ -129,6 +132,27 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "Glas kann zerbrechen",
     ja: "ガラスが割れるおそれ",
     zh: "玻璃可能碎裂"
+  },
+  "label.lamp": {
+    id: "Lampu bisa roboh",
+    en: "Lamp can fall over",
+    de: "Die Lampe kann umfallen",
+    ja: "ランプが倒れるかも",
+    zh: "落地灯可能倒下"
+  },
+  "label.tv": {
+    id: "TV bisa jatuh",
+    en: "TV can fall",
+    de: "Der Fernseher kann herunterfallen",
+    ja: "テレビが落ちるかも",
+    zh: "电视可能掉落"
+  },
+  "warn.bed": {
+    id: "Kasur bukan tempat berlindung",
+    en: "A bed is not a safe place",
+    de: "Ein Bett ist kein sicherer Ort",
+    ja: "ベッドは安全な場所ではありません",
+    zh: "床不是安全的地方"
   },
   "label.safe": {
     id: "Safe zone: bawah meja",

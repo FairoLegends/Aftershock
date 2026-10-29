@@ -46,7 +46,9 @@ export class DangerZone extends BaseScriptComponent {
     new ComboBoxWidget([
       new ComboBoxItem("Cabinet", "cabinet"),
       new ComboBoxItem("Shelf", "shelf"),
-      new ComboBoxItem("Glass", "glass")
+      new ComboBoxItem("Glass", "glass"),
+      new ComboBoxItem("Lamp", "lamp"),
+      new ComboBoxItem("TV", "tv")
     ])
   )
   kind: string = "cabinet"

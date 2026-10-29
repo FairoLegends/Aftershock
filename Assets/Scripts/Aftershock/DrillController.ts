@@ -5,7 +5,7 @@ import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
 import {LanguagePanel} from "./LanguagePanel"
-import {generateLayout, HAZARDS, Layout, LayoutItem, Placement} from "./LayoutGenerator"
+import {ALL_ITEMS, FOOTPRINTS, generateLayout, HAZARDS, insideRect, Layout, LayoutForce, LayoutItem, Placement, TABLES} from "./LayoutGenerator"
 import {OffscreenArrow} from "./OffscreenArrow"
 import {QuakeShaker} from "./QuakeShaker"
 import {ResultPanel} from "./ResultPanel"
@@ -94,6 +94,34 @@ export class DrillController extends BaseScriptComponent {
   glassDanger: DangerZone
 
   @input
+  @hint("SafeZone component on the second table's marker (SafeZoneMarker2); used when the layout has two tables")
+  safeZone2: SafeZone
+
+  @input
+  @hint("Hazard label on the floor lamp")
+  lampLabel: HazardLabel
+
+  @input
+  @hint("Hazard label on the TV stand")
+  tvLabel: HazardLabel
+
+  @input
+  @hint("DangerZone (kind Lamp) on a child of the FloorLamp")
+  lampDanger: DangerZone
+
+  @input
+  @hint("DangerZone (kind TV) on a child of the TvStand")
+  tvDanger: DangerZone
+
+  @input
+  @hint("Bed anchor under the Room, at the floor. Always in the layout; never cover (bed trap, 5j-15).")
+  bed: SceneObject
+
+  @input
+  @hint("Chair anchor under the Room, at the floor. Always in the layout.")
+  chair: SceneObject
+
+  @input
   @hint("BriefingPanel component (instr.brief)")
   briefingPanel: BriefingPanel
 
@@ -117,7 +145,47 @@ export class DrillController extends BaseScriptComponent {
   @hint("ResultPanel component (result / game-over + Restart, under AftershockRoot)")
   resultPanel: ResultPanel
 
-  private hazardLabels: HazardLabel[] = []
+  @ui.group_start("Furniture models (Slice 7R)")
+  @input
+  @hint("Table model (both tables): root at bottom center, cm, front +Z")
+  tablePrefab: ObjectPrefab
+
+  @input
+  cabinetPrefab: ObjectPrefab
+
+  @input
+  shelfPrefab: ObjectPrefab
+
+  @input
+  glassPrefab: ObjectPrefab
+
+  @input
+  lampPrefab: ObjectPrefab
+
+  @input
+  tvPrefab: ObjectPrefab
+
+  @input
+  bedPrefab: ObjectPrefab
+
+  @input
+  chairPrefab: ObjectPrefab
+  @ui.group_end
+
+  private safeZones: SafeZone[] = [] // one per TABLES entry
+  private activeTables: SafeZone[] = [] // this drill's tables
+  private activeHazards: LayoutItem[] = [] // this drill's hazards
+  private prefabs: Partial<Record<LayoutItem, ObjectPrefab>> = {}
+  private instances: SceneObject[] = [] // this drill's furniture models
+  private testForce: LayoutForce | null = null
+  private _target = 0 // index into activeTables: the table the arrow points to
+  private _nearestTableDistance = 0 // cm, head to the nearest safe-zone edge at QUAKE start
+  private _walkAllowance = 0 // s (5j-15c fair score)
+  private _guidesVisible = true
+  private _nearBed = false
+  private _bedWarnCount = 0
+  private roomX = 0 // cm, world; the Room's rest position
+  private roomZ = 0
   private postQuakeUpdate: UpdateEvent | null = null
   private quakeStartTimer: DelayedCallbackEvent | null = null
   private quakeEndTimer: DelayedCallbackEvent | null = null
@@ -218,6 +286,33 @@ export class DrillController extends BaseScriptComponent {
   get tSafe(): number | null {
     return this._tSafe
   }
+  /** This drill's tables (their SafeZones); cover under any of them counts. */
+  get activeSafeZones(): SafeZone[] {
+    return this.activeTables.slice()
+  }
+  /** The table the arrow points to: the nearest to the head, with tableSwitchHysteresis. */
+  get targetSafeZone(): SafeZone | null {
+    return this.activeTables.length > 0 ? this.activeTables[this._target] : null
+  }
+  /** Head to the nearest table's safe-zone edge at QUAKE start (cm, floor plane). */
+  get nearestTableDistance(): number {
+    return this._nearestTableDistance
+  }
+  /** Seconds forgiven from tSafe for the walk to the nearest table (nearestTableDistance ÷ walkSpeed). */
+  get walkAllowance(): number {
+    return this._walkAllowance
+  }
+  /** Ducked on or next to the bed (QUAKE). */
+  get nearBed(): boolean {
+    return this._nearBed
+  }
+  /** How often warn.bed was shown this drill. */
+  get bedWarnCount(): number {
+    return this._bedWarnCount
+  }
+  get guidesVisible(): boolean {
+    return this._guidesVisible
+  }
 
   onAwake(): void {
     this.quakeStartTimer = this.createEvent("DelayedCallbackEvent")
@@ -247,6 +342,13 @@ export class DrillController extends BaseScriptComponent {
       ["cabinetDanger", this.cabinetDanger],
       ["shelfDanger", this.shelfDanger],
       ["glassDanger", this.glassDanger],
+      ["safeZone2", this.safeZone2],
+      ["lampLabel", this.lampLabel],
+      ["tvLabel", this.tvLabel],
+      ["lampDanger", this.lampDanger],
+      ["tvDanger", this.tvDanger],
+      ["bed", this.bed],
+      ["chair", this.chair],
       ["briefingPanel", this.briefingPanel],
       ["quakeShaker", this.quakeShaker],
       ["hud", this.hud],
@@ -259,15 +361,36 @@ export class DrillController extends BaseScriptComponent {
       console.error(`${LOG} DrillController: missing input(s): ${missing.join(", ")}`)
       return
     }
-    this.zones = {cabinet: this.cabinetDanger, shelf: this.shelfDanger, glass: this.glassDanger}
-    this.labels = {cabinet: this.cabinetLabel, shelf: this.shelfLabel, glass: this.glassLabel}
+    this.zones = {cabinet: this.cabinetDanger, shelf: this.shelfDanger, glass: this.glassDanger, lamp: this.lampDanger, tv: this.tvDanger}
+    this.labels = {cabinet: this.cabinetLabel, shelf: this.shelfLabel, glass: this.glassLabel, lamp: this.lampLabel, tv: this.tvLabel}
+    this.safeZones = [this.safeZone, this.safeZone2]
     const wrong = HAZARDS.filter((h) => this.zones[h].item !== h || !this.zones[h].hazard).map((h) => h + "Danger")
-    if (!this.safeZone.table || !this.safeZone.marker) {
-      wrong.push("safeZone.table/marker")
+    this.safeZones.forEach((z, i) => {
+      if (!z.table || !z.marker) {
+        wrong.push(`safeZone${i === 0 ? "" : i + 1}.table/marker`)
+      }
+    })
+    if (this.safeZone.table === this.safeZone2.table) {
+      wrong.push("safeZone2.table is the first table")
     }
     if (wrong.length > 0) {
       console.error(`${LOG} DrillController: wrong kind or no hazard parent: ${wrong.join(", ")}`)
       return
+    }
+    this.prefabs = {
+      table: this.tablePrefab,
+      table2: this.tablePrefab,
+      cabinet: this.cabinetPrefab,
+      shelf: this.shelfPrefab,
+      glass: this.glassPrefab,
+      lamp: this.lampPrefab,
+      tv: this.tvPrefab,
+      bed: this.bedPrefab,
+      chair: this.chairPrefab
+    }
+    const noModel = ALL_ITEMS.filter((item) => !this.prefabs[item])
+    if (noModel.length > 0) {
+      console.warn(`${LOG} DrillController: no prefab for ${noModel.join(", ")}; those items have no model (re-enable their box children as a fallback)`)
     }
     // Ambient loop: latency is fine (specs-audio).
     this.rumbleAudio.playbackMode = Audio.PlaybackMode.LowPower
@@ -276,7 +399,6 @@ export class DrillController extends BaseScriptComponent {
       console.warn(`${LOG} DrillController: rumbleAudio has no audio track; the quake will be silent`)
     }
     this._health = this.config.healthStart
-    this.hazardLabels = [this.cabinetLabel, this.shelfLabel, this.glassLabel]
 
     const p = this.headPose.position
     const f = this.headPose.forward
@@ -363,6 +485,37 @@ export class DrillController extends BaseScriptComponent {
     this._quakeDuration = 0
     this.resultPanel.hide()
     this.transitionTo("BRIEFING")
+  }
+
+  /**
+   * LEAF test hook only (TDD §8); the drill never calls it. Every following
+   * BRIEFING uses these tables and hazards (positions stay procedural) until
+   * it is called with null.
+   */
+  forceLayoutForTest(force: LayoutForce | null): void {
+    this.testForce = force
+    console.log(`${LOG} forceLayoutForTest: ${force ? JSON.stringify(force) : "off"}`)
+  }
+
+  /**
+   * The one switch for every guide (5j-17): danger-zone floors, safe-zone
+   * markers, hazard labels and the arrow. Off hides them at once; on shows
+   * them again where the current state shows them.
+   */
+  setGuidesVisible(visible: boolean): void {
+    this._guidesVisible = visible
+    console.log(`${LOG} guides ${visible ? "shown" : "hidden"}`)
+    if (!visible) {
+      this.hideArrow()
+      this.setRoomLabelsShown(false)
+      this.setDangerZonesShown(false)
+    } else if (this._state === "BRIEFING") {
+      this.setRoomLabelsShown(true)
+      this.setDangerZonesShown(true)
+    } else if (this._state === "QUAKE" || this._state === "POST_QUAKE") {
+      this.setMarkersShown(true)
+      this.setDangerZonesShown(true)
+    }
   }
 
   /**
@@ -456,6 +609,10 @@ export class DrillController extends BaseScriptComponent {
     this._secondsInDanger = 0
     this._inDanger = false
     this._gameOverReason = null
+    this._nearBed = false
+    this._bedWarnCount = 0
+    this._walkAllowance = 0
+    this._nearestTableDistance = 0
     this.resetCover()
     this._instructionKey = "instr.brief"
     // ENGINEERING_PLAN 5f item 1: never the current head height (restarting while ducked broke ducking).
@@ -463,11 +620,14 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} BRIEFING: duck baseline = floorY ${fmt(this._floorY)} + eyeHeight ${fmt(this.config.eyeHeight)} = ${fmt(this.baselineHeadY)} cm (ducked at <= ${fmt(this.baselineHeadY - this.config.duckDrop)} cm)`)
     this.placeRoom() // 5f item 2: wearer's current spot and heading, floor height unchanged
     this.applyLayout()
-    // Room is at rest here, so the zones never shake; the arrow aims at the new safeZone.aimPoint.
-    this.safeZone.captureRest()
-    for (const h of HAZARDS) {
+    // Room is at rest here, so the zones never shake; the arrow aims at the target table's aimPoint.
+    for (const z of this.activeTables) {
+      z.captureRest()
+    }
+    for (const h of this.activeHazards) {
       this.zones[h].captureRest()
     }
+    this.updateTarget(true)
     this.setRoomLabelsShown(true)
     this.setDangerZonesShown(true)
     this.briefingPanel.placeInFront(
@@ -504,9 +664,17 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setElapsed(0)
     this.hud.showWarning()
     this.hideHazardLabels()
-    this.safeZone.startBlink()
+    for (const z of this.activeTables) {
+      z.startBlink() // a hidden marker (guides off) stays hidden: its parts are under it
+    }
 
     this.quakeStartTime = getTime()
+    // 5j-15c fair score: the walk to the nearest table is forgiven from tSafe.
+    this.updateTarget(true)
+    const target = this.targetSafeZone
+    this._nearestTableDistance = target ? target.distanceTo(this.headPose.position) : 0
+    this._walkAllowance = this._nearestTableDistance / Math.max(1, this.config.walkSpeed)
+    console.log(`${LOG} QUAKE: ${this.activeTables.length} table(s), nearest ${fmt(this._nearestTableDistance)} cm away; walk allowance ${fmt(this._walkAllowance)} s at ${fmt(this.config.walkSpeed)} cm/s`)
     this.updateCover(this.quakeStartTime) // first instruction (goUnder unless already under cover)
     this.quakeEndTimer.reset(this._quakeDuration)
     this.quakeUpdate.enabled = true
@@ -518,6 +686,7 @@ export class DrillController extends BaseScriptComponent {
     this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
     this.updateCover(now)
     this.updateDanger()
+    this.updateBedTrap()
 
     // ENGINEERING_PLAN 5f item 4: drain while exposed once safe (hasBeenSafe && !(inZone && ducked),
     // TDD §4.1, §7) OR inside a danger zone; one drain, never doubled.
@@ -544,7 +713,7 @@ export class DrillController extends BaseScriptComponent {
   private updateDanger(): void {
     const head = this.headPose.position
     let inDanger = false
-    for (const h of HAZARDS) {
+    for (const h of this.activeHazards) {
       if (this.zones[h].contains(head)) {
         inDanger = true
         break
@@ -556,9 +725,77 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
-  /** POST_QUAKE: wait for the head to leave the safe zone (USER_FLOW_DIAGRAM §2). */
+  /**
+   * Bed trap (5j-15): ducked within the bed footprint + bedWarnMargin shows
+   * warn.bed for bedWarnSeconds, once per entry. Never cover, no extra drain.
+   */
+  private updateBedTrap(): void {
+    const at = this._layout ? this._layout.items.bed : undefined
+    if (!at) {
+      return
+    }
+    const local = this.toRoomLocal(this.headPose.position)
+    const f = FOOTPRINTS.bed
+    const m = this.config.bedWarnMargin
+    const near = this._ducked && insideRect(local.x, local.y, at.x, at.z, at.yaw, f.halfX + m, f.halfZ + m)
+    if (near && !this._nearBed) {
+      this._bedWarnCount++
+      this.hud.showNotice(this.config.bedWarnSeconds)
+      console.log(`${LOG} QUAKE: ducked on the bed: warn.bed (${this._bedWarnCount}x); a bed is not cover`)
+    }
+    this._nearBed = near
+  }
+
+  /** True when the head is in any of this drill's safe zones. */
+  private inAnySafeZone(head: vec3): boolean {
+    for (const z of this.activeTables) {
+      if (z.contains(head)) {
+        return true
+      }
+    }
+    return false
+  }
+
+  /**
+   * The arrow's table (5j-14): the nearest to the head. Another table takes
+   * over only when it is tableSwitchHysteresis nearer; `fresh` picks the nearest outright.
+   */
+  private updateTarget(fresh: boolean): void {
+    const n = this.activeTables.length
+    if (n === 0) {
+      this._target = 0
+      return
+    }
+    const head = this.headPose.position
+    let best = 0
+    let bestD = Infinity
+    for (let i = 0; i < n; i++) {
+      const d = this.activeTables[i].distanceTo(head)
+      if (d < bestD) {
+        bestD = d
+        best = i
+      }
+    }
+    if (fresh || this._target >= n) {
+      this._target = best
+    } else if (best !== this._target && bestD + this.config.tableSwitchHysteresis < this.activeTables[this._target].distanceTo(head)) {
+      this._target = best
+      console.log(`${LOG} QUAKE: arrow now points to table ${best + 1}`)
+    }
+  }
+
+  /** World position → Room-local XZ at rest (cm) as (x, y = z): the layout's frame. */
+  private toRoomLocal(p: vec3): vec2 {
+    const dx = p.x - this.roomX
+    const dz = p.z - this.roomZ
+    const c = Math.cos(this.roomYaw)
+    const s = Math.sin(this.roomYaw)
+    return new vec2(dx * c - dz * s, dx * s + dz * c)
+  }
+
+  /** POST_QUAKE: wait for the head to leave every safe zone (USER_FLOW_DIAGRAM §2). */
   private onPostQuakeUpdate(): void {
-    if (!this.safeZone.contains(this.headPose.position)) {
+    if (!this.inAnySafeZone(this.headPose.position)) {
       this.onHeadLeftSafeZone()
     }
   }
@@ -566,7 +803,7 @@ export class DrillController extends BaseScriptComponent {
   /** One QUAKE frame of take-cover logic (TDD §3.1, §4.1): zone, duck, safe hold, instruction, arrow. */
   private updateCover(now: number): void {
     const head = this.headPose.position
-    const inZone = this.safeZone.contains(head)
+    const inZone = this.inAnySafeZone(head) // 5j-14: cover under any table counts
     if (inZone !== this._inZone) {
       this._inZone = inZone
       console.log(`${LOG} QUAKE: ${inZone ? "entered" : "left"} the safe zone`)
@@ -574,10 +811,12 @@ export class DrillController extends BaseScriptComponent {
     this.updateDucked(head.y)
     this.updateSafeHold(now)
     this.showInstruction(!this._inZone ? "instr.goUnder" : this._ducked ? "instr.hold" : "instr.duck")
-    if (this._inZone) {
+    this.updateTarget(false)
+    const target = this.targetSafeZone
+    if (this._inZone || !this._guidesVisible || !target) {
       this.hideArrow() // inside the zone the user is on their own spot (ENGINEERING_PLAN 5a item 8)
     } else {
-      this._arrowVisible = this.offscreenArrow.track(this.safeZone.aimPoint)
+      this._arrowVisible = this.offscreenArrow.track(target.aimPoint)
     }
   }
 
@@ -643,7 +882,9 @@ export class DrillController extends BaseScriptComponent {
       this.rumbleAudio.stop(false)
     }
     this.rumbleAudio.volume = this.rumbleBaseVolume
-    this.safeZone.stopBlink()
+    for (const z of this.safeZones) {
+      z.stopBlink()
+    }
     this.hideArrow()
   }
 
@@ -651,7 +892,7 @@ export class DrillController extends BaseScriptComponent {
     this.stopQuakeEffects()
     this._instructionKey = "instr.comeOut"
     this.hud.setInstruction(this._instructionKey)
-    if (!this.safeZone.contains(this.headPose.position)) {
+    if (!this.inAnySafeZone(this.headPose.position)) {
       this.onHeadLeftSafeZone() // already outside: straight to RESULT
       return
     }
@@ -660,10 +901,10 @@ export class DrillController extends BaseScriptComponent {
 
   private enterResult(): void {
     this.postQuakeUpdate.enabled = false
-    this._lastScore = computeScore(this._tSafe, this._health, this._secondsStanding)
+    this._lastScore = computeScore(this._tSafe, this._health, this._secondsStanding, this._walkAllowance)
     const b = this._lastScore
     console.log(
-      `${LOG} RESULT: tSafe ${b.tSafe === null ? "never" : fmt(b.tSafe) + " s"}, speed ${b.speedPoints}, health ${fmt(b.healthLeft)} (${b.healthPoints}), standing ${fmt(b.secondsStanding)} s (-${b.penalty}), score ${b.score}`
+      `${LOG} RESULT: tSafe ${b.tSafe === null ? "never" : fmt(b.tSafe) + " s"}, walk allowance ${fmt(b.walkAllowance)} s, speedTime ${b.speedTime === null ? "never" : fmt(b.speedTime) + " s"}, speed ${b.speedPoints}, health ${fmt(b.healthLeft)} (${b.healthPoints}), standing ${fmt(b.secondsStanding)} s (-${b.penalty}), score ${b.score}`
     )
     this.showResultPanel()
     this.resultPanel.showResult(b)
@@ -698,17 +939,26 @@ export class DrillController extends BaseScriptComponent {
 
   /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. */
   private setRoomLabelsShown(shown: boolean): void {
-    for (const label of this.hazardLabels) {
-      if (shown) {
-        label.show()
+    const on = shown && this._guidesVisible
+    for (const h of HAZARDS) {
+      if (on && this.activeHazards.indexOf(h) >= 0) {
+        this.labels[h].show()
       } else {
-        label.hide()
+        this.labels[h].hide()
       }
     }
-    if (shown) {
-      this.safeZone.showMarker()
-    } else {
-      this.safeZone.hideMarker()
+    this.setMarkersShown(shown)
+  }
+
+  /** The safe-zone marker of every table in this drill (guides on only). */
+  private setMarkersShown(shown: boolean): void {
+    const on = shown && this._guidesVisible
+    for (const z of this.safeZones) {
+      if (on && this.activeTables.indexOf(z) >= 0) {
+        z.showMarker()
+      } else {
+        z.hideMarker()
+      }
     }
   }
 
@@ -730,8 +980,9 @@ export class DrillController extends BaseScriptComponent {
 
   /** Danger zones show from BRIEFING through POST_QUAKE (Slice 5P). */
   private setDangerZonesShown(shown: boolean): void {
+    const on = shown && this._guidesVisible
     for (const h of HAZARDS) {
-      if (shown) {
+      if (on && this.activeHazards.indexOf(h) >= 0) {
         this.zones[h].show()
       } else {
         this.zones[h].hide()
@@ -753,6 +1004,8 @@ export class DrillController extends BaseScriptComponent {
     const t = this.room.getTransform()
     t.setWorldPosition(new vec3(p.x, this._floorY, p.z))
     t.setWorldRotation(quat.angleAxis(this.roomYaw, vec3.up()))
+    this.roomX = p.x
+    this.roomZ = p.z
     console.log(`${LOG} room placed at (${fmt(p.x)}, ${fmt(this._floorY)}, ${fmt(p.z)}) cm, heading ${fmt(this.roomYaw * RAD_TO_DEG)} deg`)
   }
 
@@ -761,7 +1014,7 @@ export class DrillController extends BaseScriptComponent {
    * then each hazard; its label keeps its authored offset and turns to the start spot.
    */
   private applyLayout(): void {
-    const layout = generateLayout(this.config)
+    const layout = generateLayout(this.config, this.testForce)
     this._layout = layout
     if (layout.fallback) {
       console.warn(`${LOG} BRIEFING: no valid layout in ${layout.tries} tries (seed ${layout.seed}); using the Slice 2 fixed layout`)
@@ -769,15 +1022,64 @@ export class DrillController extends BaseScriptComponent {
       console.log(`${LOG} BRIEFING: layout seed ${layout.seed}${this.config.layoutSeed === 0 ? " (new)" : " (fixed)"}, ${layout.tries} tries`)
     }
     const items = layout.items
-    placeItem(this.safeZone.table, items.table)
-    placeItem(this.safeZone.marker, items.table)
-    this.logItem("table", items.table)
-    for (const h of HAZARDS) {
-      const at = items[h]
-      placeItem(this.zones[h].hazard, at)
-      this.aimLabel(this.labels[h], at)
-      this.logItem(h, at)
+    // Last drill's models go (5j-14); absent items are disabled, so their zone and label go with them.
+    for (const so of this.instances) {
+      so.destroy()
     }
+    this.instances = []
+    this.activeTables = []
+    for (let i = 0; i < TABLES.length; i++) {
+      const zone = this.safeZones[i]
+      const at = items[TABLES[i]]
+      zone.table.enabled = !!at
+      zone.marker.enabled = !!at
+      if (at) {
+        placeItem(zone.table, at)
+        placeItem(zone.marker, at)
+        this.activeTables.push(zone)
+        this.addModel(TABLES[i], zone.table)
+        this.logItem(TABLES[i], at)
+      }
+    }
+    this.activeHazards = layout.hazards.slice()
+    for (const h of HAZARDS) {
+      const anchor = this.zones[h].hazard
+      const at = items[h]
+      anchor.enabled = !!at
+      if (at) {
+        placeItem(anchor, at)
+        this.aimLabel(this.labels[h], at)
+        this.addModel(h, anchor)
+        this.logItem(h, at)
+      }
+    }
+    const furniture: [LayoutItem, SceneObject][] = [["bed", this.bed], ["chair", this.chair]]
+    for (const [item, anchor] of furniture) {
+      const at = items[item]
+      anchor.enabled = !!at
+      if (at) {
+        placeItem(anchor, at)
+        this.addModel(item, anchor)
+        this.logItem(item, at)
+      }
+    }
+  }
+
+  /**
+   * The item's real model (Slice 7R) as a child of its anchor: root at the
+   * anchor (bottom center), its authored scale kept, its +Z front turned to
+   * the item's front.
+   */
+  private addModel(item: LayoutItem, anchor: SceneObject): void {
+    const prefab = this.prefabs[item]
+    if (!prefab) {
+      return
+    }
+    const so = prefab.instantiate(anchor)
+    const t = so.getTransform()
+    t.setLocalPosition(vec3.zero())
+    t.setLocalRotation(quat.angleAxis(FOOTPRINTS[item].front, vec3.up()).multiply(t.getLocalRotation()))
+    this.instances.push(so)
   }
 
   /** Turns a label (a child of its hazard at `at`) so its +Z faces the start spot. */

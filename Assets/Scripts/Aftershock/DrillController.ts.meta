@@ -28,14 +28,23 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    bed: false
+    bedPrefab: false
     briefingPanel: false
     cabinetDanger: false
     cabinetLabel: false
+    cabinetPrefab: false
+    chair: false
+    chairPrefab: false
     config: false
     glassDanger: false
     glassLabel: false
+    glassPrefab: false
     headPose: false
     hud: false
+    lampDanger: false
+    lampLabel: false
+    lampPrefab: false
     languagePanel: false
     offscreenArrow: false
     quakeShaker: false
@@ -43,9 +52,15 @@
     room: false
     rumbleAudio: false
     safeZone: false
+    safeZone2: false
     safetyPanel: false
     shelfDanger: false
     shelfLabel: false
+    shelfPrefab: false
+    tablePrefab: false
+    tvDanger: false
+    tvLabel: false
+    tvPrefab: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -67,12 +82,27 @@
       cabinetDanger: !<MappingBased.AssignableType_9> 00000000-0000-0000-0000-000000000000
       shelfDanger: !<MappingBased.AssignableType_10> 00000000-0000-0000-0000-000000000000
       glassDanger: !<MappingBased.AssignableType_11> 00000000-0000-0000-0000-000000000000
-      briefingPanel: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
-      quakeShaker: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
-      hud: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
-      offscreenArrow: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
+      safeZone2: !<MappingBased.AssignableType_12> 00000000-0000-0000-0000-000000000000
+      lampLabel: !<MappingBased.AssignableType_13> 00000000-0000-0000-0000-000000000000
+      tvLabel: !<MappingBased.AssignableType_14> 00000000-0000-0000-0000-000000000000
+      lampDanger: !<MappingBased.AssignableType_15> 00000000-0000-0000-0000-000000000000
+      tvDanger: !<MappingBased.AssignableType_16> 00000000-0000-0000-0000-000000000000
+      bed: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      chair: !<reference.SceneObject> 00000000-0000-0000-0000-000000000000
+      briefingPanel: !<MappingBased.AssignableType_17> 00000000-0000-0000-0000-000000000000
+      quakeShaker: !<MappingBased.AssignableType_18> 00000000-0000-0000-0000-000000000000
+      hud: !<MappingBased.AssignableType_19> 00000000-0000-0000-0000-000000000000
+      offscreenArrow: !<MappingBased.AssignableType_20> 00000000-0000-0000-0000-000000000000
       rumbleAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
-      resultPanel: !<MappingBased.AssignableType_16> 00000000-0000-0000-0000-000000000000
+      resultPanel: !<MappingBased.AssignableType_21> 00000000-0000-0000-0000-000000000000
+      tablePrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      cabinetPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      shelfPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      glassPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      lampPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      tvPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      bedPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      chairPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -91,9 +121,26 @@
     - '// @input AssignableType_9 cabinetDanger {"hint":"DangerZone (kind Cabinet) on a child of the Cabinet"}'
     - '// @input AssignableType_10 shelfDanger {"hint":"DangerZone (kind Shelf) on a child of the Shelf"}'
     - '// @input AssignableType_11 glassDanger {"hint":"DangerZone (kind Glass) on a child of the GlassWindow"}'
-    - '// @input AssignableType_12 briefingPanel {"hint":"BriefingPanel component (instr.brief)"}'
-    - '// @input AssignableType_13 quakeShaker {"hint":"QuakeShaker component on the Room"}'
-    - '// @input AssignableType_14 hud {"hint":"Hud component (under AftershockRoot, not the Room, so it never shakes)"}'
-    - '// @input AssignableType_15 offscreenArrow {"hint":"OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)"}'
+    - "// @input AssignableType_12 safeZone2 {\"hint\":\"SafeZone component on the second table's marker (SafeZoneMarker2); used when the layout has two tables\"}"
+    - '// @input AssignableType_13 lampLabel {"hint":"Hazard label on the floor lamp"}'
+    - '// @input AssignableType_14 tvLabel {"hint":"Hazard label on the TV stand"}'
+    - '// @input AssignableType_15 lampDanger {"hint":"DangerZone (kind Lamp) on a child of the FloorLamp"}'
+    - '// @input AssignableType_16 tvDanger {"hint":"DangerZone (kind TV) on a child of the TvStand"}'
+    - '// @input SceneObject bed {"hint":"Bed anchor under the Room, at the floor. Always in the layout; never cover (bed trap, 5j-15)."}'
+    - '// @input SceneObject chair {"hint":"Chair anchor under the Room, at the floor. Always in the layout."}'
+    - '// @input AssignableType_17 briefingPanel {"hint":"BriefingPanel component (instr.brief)"}'
+    - '// @input AssignableType_18 quakeShaker {"hint":"QuakeShaker component on the Room"}'
+    - '// @input AssignableType_19 hud {"hint":"Hud component (under AftershockRoot, not the Room, so it never shakes)"}'
+    - '// @input AssignableType_20 offscreenArrow {"hint":"OffscreenArrow component (under AftershockRoot, not the Room, so it never shakes)"}'
     - '// @input Component.AudioComponent rumbleAudio {"hint":"AudioComponent with the looping rumble track"}'
-    - '// @input AssignableType_16 resultPanel {"hint":"ResultPanel component (result / game-over + Restart, under AftershockRoot)"}'
+    - '// @input AssignableType_21 resultPanel {"hint":"ResultPanel component (result / game-over + Restart, under AftershockRoot)"}'
+    - '// @ui {"widget":"group_start", "label":"Furniture models (Slice 7R)"}'
+    - '// @input Asset.ObjectPrefab tablePrefab {"hint":"Table model (both tables): root at bottom center, cm, front +Z"}'
+    - // @input Asset.ObjectPrefab cabinetPrefab
+    - // @input Asset.ObjectPrefab shelfPrefab
+    - // @input Asset.ObjectPrefab glassPrefab
+    - // @input Asset.ObjectPrefab lampPrefab
+    - // @input Asset.ObjectPrefab tvPrefab
+    - // @input Asset.ObjectPrefab bedPrefab
+    - // @input Asset.ObjectPrefab chairPrefab
+    - '// @ui {"widget":"group_end"}'

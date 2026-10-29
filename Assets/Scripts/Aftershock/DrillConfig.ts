@@ -137,20 +137,36 @@ export class DrillConfig extends BaseScriptComponent {
 
   @ui.group_start("Layout and danger zones")
   @input
-  @hint("Closest the table center may be to the start spot (cm)")
-  tableDistanceMin: number = 100
+  @hint("Closest a table center may be to the start spot (cm)")
+  tableDistanceMin: number = 120
 
   @input
-  @hint("Farthest the table center may be from the start spot (cm). ShakeOut: do not run far.")
-  tableDistanceMax: number = 200
+  @hint("Farthest a table center may be from the start spot (cm). ShakeOut: do not run far.")
+  tableDistanceMax: number = 250
 
   @input
-  @hint("Closest a hazard center may be to the start spot (cm)")
-  hazardDistanceMin: number = 120
+  @hint("Closest any other item center (hazards, bed, chair) may be to the start spot (cm)")
+  hazardDistanceMin: number = 140
 
   @input
-  @hint("Farthest a hazard center may be from the start spot (cm)")
-  hazardDistanceMax: number = 240
+  @hint("Farthest any other item center (hazards, bed, chair) may be from the start spot (cm)")
+  hazardDistanceMax: number = 300
+
+  @input
+  @hint("Fewest tables per drill (1 or 2)")
+  tableCountMin: number = 1
+
+  @input
+  @hint("Most tables per drill (1 or 2)")
+  tableCountMax: number = 2
+
+  @input
+  @hint("Fewest hazards per drill, drawn from cabinet, shelf, glass, lamp, TV")
+  hazardCountMin: number = 3
+
+  @input
+  @hint("Most hazards per drill (no kind twice, so at most 5)")
+  hazardCountMax: number = 5
 
   @input
   @hint("Danger zone = hazard footprint grown by this margin (cm)")
@@ -163,6 +179,24 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("0 = new random layout every start and Restart; any other number = the same layout every time (for filming)")
   layoutSeed: number = 0
+
+  @input
+  @hint("The arrow switches to another table only when it is this much nearer (cm)")
+  tableSwitchHysteresis: number = 30
+  @ui.group_end
+
+  @ui.group_start("Bed and fair score")
+  @input
+  @hint("Ducking within the bed footprint grown by this shows the bed warning (cm)")
+  bedWarnMargin: number = 30
+
+  @input
+  @hint("How long the bed warning stays up, in seconds")
+  bedWarnSeconds: number = 2.5
+
+  @input
+  @hint("Walking speed for the fair score: nearest table distance ÷ this is forgiven from tSafe (cm/s)")
+  walkSpeed: number = 100
   @ui.group_end
 
   @ui.group_start("Test hooks")

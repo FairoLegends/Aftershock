@@ -35,6 +35,8 @@ export class HazardLabel extends BaseScriptComponent {
       new ComboBoxItem("Cabinet", "label.cabinet"),
       new ComboBoxItem("Shelf", "label.shelf"),
       new ComboBoxItem("Glass", "label.glass"),
+      new ComboBoxItem("Lamp", "label.lamp"),
+      new ComboBoxItem("TV", "label.tv"),
       new ComboBoxItem("Safe zone", "label.safe")
     ])
   )

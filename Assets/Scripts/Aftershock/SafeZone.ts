@@ -1,6 +1,6 @@
 import {DrillConfig} from "./DrillConfig"
 import {HazardLabel} from "./HazardLabel"
-import {insideRect} from "./LayoutGenerator"
+import {distanceToRect, insideRect} from "./LayoutGenerator"
 
 /**
  * The safe zone under the table (TDD §3.1): containment test and the marker
@@ -68,6 +68,13 @@ export class SafeZone extends BaseScriptComponent {
     const c = this.center
     const m = this.config.safeZoneMargin
     return insideRect(position.x, position.z, c.x, c.z, this.restYaw, this.footprintWidth / 2 + m, this.footprintDepth / 2 + m)
+  }
+
+  /** XZ distance (cm) from the position to the safe zone's rest edge; 0 inside. */
+  distanceTo(position: vec3): number {
+    const c = this.center
+    const m = this.config.safeZoneMargin
+    return distanceToRect(position.x, position.z, c.x, c.z, this.restYaw, this.footprintWidth / 2 + m, this.footprintDepth / 2 + m)
   }
 
   /**

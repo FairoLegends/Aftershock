@@ -11,6 +11,10 @@ const SCORE_MAX = 1000
 export interface ScoreBreakdown {
   /** Seconds from quake start until first safe, or null if never (Q6). */
   tSafe: number | null
+  /** Seconds of walking forgiven (§5j-15c): nearest table distance at quake start ÷ walkSpeed. */
+  walkAllowance: number
+  /** The time the speed curve scores: max(0, tSafe − walkAllowance), or null if never safe. */
+  speedTime: number | null
   speedPoints: number
   healthLeft: number
   healthPoints: number
@@ -20,7 +24,8 @@ export interface ScoreBreakdown {
 }
 
 /**
- * speedPoints = tSafe == null ? 0 : round(600 * clamp((30 - tSafe) / 25, 0, 1))
+ * speedTime   = tSafe == null ? null : max(0, tSafe - walkAllowance)   (§5j-15c fair score)
+ * speedPoints = tSafe == null ? 0 : round(600 * clamp((30 - speedTime) / 25, 0, 1))
  * healthPts   = tSafe == null ? 0 : round(4 * healthLeft)
  * penalty     = round(10 * secondsStandingAfterFirstSafe)
  * score       = clamp(speedPoints + healthPts - penalty, 0, 1000)
@@ -28,15 +33,19 @@ export interface ScoreBreakdown {
 export function computeScore(
   tSafe: number | null,
   healthLeft: number,
-  secondsStandingAfterFirstSafe: number
+  secondsStandingAfterFirstSafe: number,
+  walkAllowance: number = 0
 ): ScoreBreakdown {
+  const speedTime = tSafe === null ? null : Math.max(0, tSafe - Math.max(0, walkAllowance))
   const speedPoints =
-    tSafe === null ? 0 : Math.round(SPEED_MAX_POINTS * clamp((SPEED_ZERO_AT_S - tSafe) / SPEED_RAMP_S, 0, 1))
+    speedTime === null ? 0 : Math.round(SPEED_MAX_POINTS * clamp((SPEED_ZERO_AT_S - speedTime) / SPEED_RAMP_S, 0, 1))
   const healthPoints = tSafe === null ? 0 : Math.round(HEALTH_POINTS_PER_HP * healthLeft)
   const penalty = Math.round(PENALTY_PER_SECOND * secondsStandingAfterFirstSafe)
   const score = clamp(speedPoints + healthPoints - penalty, SCORE_MIN, SCORE_MAX)
   return {
     tSafe,
+    walkAllowance: Math.max(0, walkAllowance),
+    speedTime,
     speedPoints,
     healthLeft,
     healthPoints,
