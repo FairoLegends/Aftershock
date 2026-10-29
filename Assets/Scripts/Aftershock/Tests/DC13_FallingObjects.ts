@@ -48,15 +48,17 @@ export class DC13_FallingObjects extends Scenario {
       const landed0 = c.fallsLanded
       const hits0 = c.fallHits
       const h0 = c.health
+      const d0 = c.secondsInDanger
       expect(c.forceFallForTest("shelf", inShelf)).toBe(true)
       await waitFor(() => c.fallsLanded > landed0, 2000)
       const h1 = c.health
       expect(c.fallsLanded).toBe(landed0 + 1)
       expect(c.fallHits).toBe(hits0 + 1)
-      // The hit, plus the danger drain while the item falls (at most the 2 s wait above, plus polling).
+      // Audit: exact again. Lost = the hit + the danger drain for the seconds actually spent in the
+      // zone while the item fell (Normal level: multiplier 1).
+      const drained = (c.secondsInDanger - d0) * c.config.healthDrainPerSecond
       const lost = h0 - h1
-      expect(lost >= c.config.fallHitDamage - 0.5).toBe(true)
-      expect(lost <= c.config.fallHitDamage + c.config.healthDrainPerSecond * 2.5).toBe(true)
+      expect(Math.abs(lost - (c.config.fallHitDamage + drained))).toBeLessThan(0.5)
       expect(c.hud.isNoticeShown).toBe(true)
       expect(c.hud.noticeKey).toBe("hit.fell")
 
