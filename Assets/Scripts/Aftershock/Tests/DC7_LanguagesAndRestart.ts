@@ -12,7 +12,11 @@ export class DC7_LanguagesAndRestart extends Scenario {
     const c = getController()
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
+    const prevWait = c.config.testWaitSeconds
     try {
+      // Audit (29 Oct): BRIEFING lasts testScan + testWait; with 9 models built on
+      // Restart a 1 s wait could pass before the BRIEFING check ran. 3 s removes the race.
+      c.config.testWaitSeconds = 3
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       expect(c.config.layoutSeed).toBe(0)
       c.resetForTest(true)
@@ -51,6 +55,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
       expect(sameLayout(second, third)).toBe(false)
       await expectState(c, "RESULT", runS * 1000)
     } finally {
+      c.config.testWaitSeconds = prevWait
       restore(c, prevTestMode, prevDuration)
     }
   }

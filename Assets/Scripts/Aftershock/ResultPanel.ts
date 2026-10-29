@@ -364,7 +364,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.scoreEn = this.scoreText(so, "Score.en", SMALL_EM_CM, -x, x, HorizontalAlignment.Left)
     const number = this.scoreText(so, "Score.number", SCORE_EM_CM, -x, x, HorizontalAlignment.Right)
     number.getSceneObject().getTransform().setLocalPosition(new vec3(x, 0, ROW_Z))
-    this.scoreNumber = new TabularText(number, "000", SCORE_EM_CM, 1)
+    this.scoreNumber = new TabularText(number, "0000", SCORE_EM_CM, 1) // four cells: the score runs 0–1000
   }
 
   private scoreText(parent: SceneObject, name: string, emCm: number, left: number, right: number, align: HorizontalAlignment): Text {

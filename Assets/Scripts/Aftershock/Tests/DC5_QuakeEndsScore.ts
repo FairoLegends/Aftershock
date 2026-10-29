@@ -52,6 +52,14 @@ export class DC5_QuakeEndsScore extends Scenario {
 
       expect(c.resultPanel.isShown).toBe(true)
       expect(c.resultPanel.mode).toBe("result")
+      // Audit (29 Oct): the shown score is the whole number (1000 once showed as "000").
+      const scoreSo = findSceneObjectByName("Score.number")
+      let shown = ""
+      for (let i = 0; i < scoreSo.getChildrenCount(); i++) {
+        const cell = scoreSo.getChild(i).getComponent("Component.Text") as Text
+        if (cell) shown += cell.text
+      }
+      expect(shown).toBe("" + got.score)
       expect(findSceneObjectByName("RestartButton").isEnabledInHierarchy).toBe(true)
     } finally {
       restore(c, prevTestMode, prevDuration)
