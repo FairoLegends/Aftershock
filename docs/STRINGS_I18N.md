@@ -4,7 +4,9 @@ Learner decision, 27 Oct 2026: the user picks the language on a first screen wit
 
 Slice 7 keys (learner, 29 Oct; ENGINEERING_PLAN 5j): `step.*`, `scan.*`, `marquee.*`, `warn.aftershock`, `hit.fell`, `level.*`, `result.aftershock`, `result.level`. id and en follow the approved mockup; de, ja and zh are translations (default). `marquee.*` stays in the chosen language only, no English second line; `marquee.dch` is the same in every language (the drill's name). `{level}` takes the `level.easy/normal/hard` string of the same language.
 
-Display rule:
+Learner, 29 Oct (ENGINEERING_PLAN 5j-13): every screen now shows ONE language, the one picked; the English second line is dropped for id, de, ja and zh. Only the picker title keeps all five. The display rule below is superseded.
+
+Display rule (superseded 29 Oct):
 - Indonesian, German, Japanese or Chinese selected: that line on top, English below at 80% size (DESIGN_BRIEF §5.2).
 - English selected: English only, one line (default).
 - `{s}`, `{h}`, `{score}` are filled in at runtime.
