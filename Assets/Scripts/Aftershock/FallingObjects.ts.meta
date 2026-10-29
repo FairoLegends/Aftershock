@@ -30,6 +30,7 @@
   ScriptInputsHidden:
     boxMesh: false
     config: false
+    holdForReview: false
     itemMaterial: false
   ScriptTypesHidden:
     {}
@@ -43,10 +44,12 @@
     - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
       boxMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
       itemMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+      holdForReview: false
   ScriptTypes:
     -
       {}
   InputLines:
     - // @input AssignableType_1 config
     - '// @input Asset.RenderMesh boxMesh {"hint":"Unit cube mesh for the items (Aftershock/Meshes/AS_Box.mesh)"}'
-    - '// @input Asset.Material itemMaterial {"hint":"Item material to clone; its baseColor is set to light oak or off-white (Aftershock/Materials/AS_ItemA.mat)"}'
+    - '// @input Asset.Material itemMaterial {"hint":"Item material, used as authored (Aftershock/Materials/AS_ItemA.mat)"}'
+    - '// @input bool holdForReview {"hint":"Review only: landed items stay on the floor until the next BRIEFING instead of shrinking after 4 s, so a screenshot can catch one. Keep off."}'

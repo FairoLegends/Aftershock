@@ -81,6 +81,7 @@ export class DC1_SafetyThenRoom extends Scenario {
     expect(zone.contains(controller.headPose.position)).toBe(false)
     controller.forceLayoutForTest(null)
     controller.forceAftershockForTest(null)
+    controller.disableFallsForTest(false) // audit: put random falls back like restore() does
   }
 
   /**

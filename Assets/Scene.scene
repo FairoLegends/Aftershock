@@ -4309,7 +4309,7 @@
   Enabled: true
   ScriptAsset: !<reference> c6e8377a-1077-4079-81fc-a833de3dbd8e
   ScriptInputsDefault:
-    {}
+    holdForReview: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -4317,6 +4317,7 @@
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       boxMesh: !<reference.RenderMesh> f27ea527-2119-4880-ad06-453f0e7daaf3
       itemMaterial: !<reference.Material> 2659a21e-7a1c-4a22-ac88-59885cb7afc8
+      holdForReview: false
   ScriptTypes:
     "":
       {}

@@ -31,8 +31,6 @@ const SIDE_INSET = 10 // stay this far inside the hazard's sides (cm)
 const SPIN_MAX = 3 // rad/s, Y spin while falling
 const BOOK = new vec3(20, 4, 15)
 const BOX = new vec3(25, 15, 20)
-const LIGHT_OAK = new vec4(0.851, 0.725, 0.549, 1) // #D9B98C
-const OFF_WHITE = new vec4(0.929, 0.91, 0.875, 1) // #EDE8DF
 const LOG = "[Aftershock]"
 
 type Phase = "fall" | "hop" | "rest" | "shrink"
@@ -67,8 +65,12 @@ export class FallingObjects extends BaseScriptComponent {
   boxMesh: RenderMesh
 
   @input
-  @hint("Item material to clone; its baseColor is set to light oak or off-white (Aftershock/Materials/AS_ItemA.mat)")
+  @hint("Item material, used as authored (Aftershock/Materials/AS_ItemA.mat)")
   itemMaterial: Material
+
+  @input
+  @hint("Review only: landed items stay on the floor until the next BRIEFING instead of shrinking after 4 s, so a screenshot can catch one. Keep off.")
+  holdForReview: boolean = false
 
   /** Set by DrillController: an item touched the floor at Room-local (x, z). */
   onLanded: ((source: FallSource, x: number, z: number) => void) | null = null
@@ -94,11 +96,9 @@ export class FallingObjects extends BaseScriptComponent {
   }
 
   onAwake(): void {
-    const colors = [LIGHT_OAK, OFF_WHITE].map((c) => {
-      const m = this.itemMaterial.clone()
-      m.mainPass.baseColor = c
-      return m
-    })
+    // Audit (29 Oct): a runtime clone with mainPass.baseColor drew dark grey in the
+    // preview (near invisible on the floor); the material as authored draws light oak.
+    const colors = [this.itemMaterial, this.itemMaterial]
     for (let i = 0; i < POOL_SIZE; i++) {
       const size = i % 2 === 0 ? BOOK : BOX
       const so = global.scene.createSceneObject((i % 2 === 0 ? "FallBook" : "FallBox") + i)
@@ -265,7 +265,9 @@ export class FallingObjects extends BaseScriptComponent {
         item.t0 = now
       }
     } else if (item.phase === "rest") {
-      if (e >= REST_SECONDS) {
+      // An item is on the floor only ~4.7 s (rest + shrink), shorter than one
+      // query-aim-screenshot round trip; holdForReview keeps it there.
+      if (e >= REST_SECONDS && !this.holdForReview) {
         item.phase = "shrink"
         item.t0 = now
       }
