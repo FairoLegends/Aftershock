@@ -49,12 +49,12 @@ export class DangerZone extends BaseScriptComponent {
   @input
   @hint("Floor fill: alarm red #FF5A4F, faint (DESIGN_BRIEF §5.1). Light colors only: the display is additive.")
   @widget(new ColorWidget())
-  fillColor: vec4 = new vec4(1, 0.353, 0.31, 0.25)
+  fillColor: vec4 = new vec4(1, 0, 0, 0.25)
 
   @input
   @hint("Outline and label: alarm red #FF5A4F")
   @widget(new ColorWidget())
-  lineColor: vec4 = new vec4(1, 0.353, 0.31, 1)
+  lineColor: vec4 = new vec4(1, 0, 0, 1)
   @ui.group_end
 
   private visual: SceneObject | null = null

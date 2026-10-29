@@ -4,7 +4,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking, drawOnTop, PinchGuard} from "./UiBacking"
+import {BrutalFrame, drawOnTop, makeBrutalButton, PinchGuard, resetBrutalButton} from "./UiBacking"
 
 /** One string's two lines: selected language on top, English below at 80%. */
 interface LinePair {
@@ -41,6 +41,7 @@ const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
 const BUTTON_H = 5
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
+const BUTTON_FILL = new vec4(1, 1, 1, 0.12)
 
 const WHITE = new vec4(1, 1, 1, 1)
 
@@ -66,11 +67,13 @@ export class SafetyPanel extends BaseScriptComponent {
 
   private readonly shownTexts: Text[] = []
   private readonly pairs: LinePair[] = []
+  private continueButton: Button
+  private continueFrame: BrutalFrame
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = createLightBacking(this.sceneObject, this.backingColor)
+    const backing = new BrutalFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -88,7 +91,7 @@ export class SafetyPanel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backing.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.setSize(r.containerWidth, r.containerHeight)
     })
 
     this.addBilingual(content, "safety.drill")
@@ -113,6 +116,7 @@ export class SafetyPanel extends BaseScriptComponent {
 
   show(): void {
     this.sceneObject.enabled = true
+    if (this.continueButton) resetBrutalButton(this.continueButton, this.continueFrame)
     drawOnTop(this.sceneObject)
     this.pinchGuard.arm()
   }
@@ -168,9 +172,15 @@ export class SafetyPanel extends BaseScriptComponent {
     item.alignSelf = FlexAlignSelf.Center
     item.marginTop = ROW_GAP
 
+    // Slice 7A: brutal button; the label rides on the face so it moves on press.
+    this.continueButton = btn
+    this.continueFrame = makeBrutalButton(btn, BUTTON_W, BUTTON_H, BUTTON_FILL, () => {
+      if (this.pinchGuard.open) this.continueEvent.invoke()
+    })
+
     // Bilingual label: Indonesian on top, English below at 80%.
     const label = global.scene.createSceneObject("ContinueLabel")
-    label.setParent(so)
+    label.setParent(this.continueFrame.face)
     label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
     const labelFlex = label.createComponent(FlexLayout.getTypeName()) as FlexLayout
     labelFlex.width = BUTTON_W - 0.5
@@ -183,10 +193,7 @@ export class SafetyPanel extends BaseScriptComponent {
     const primary = this.addButtonLine(label, "btn.continue.id", LINE_ID_H, 1)
     const secondary = this.addButtonLine(label, "btn.continue.en", LINE_EN_H, ENGLISH_SCALE)
     this.pairs.push({key: "btn.continue", primary: primary.text, secondary: secondary.text, secondaryItem: secondary.item, height: LINE_EN_H})
-
-    btn.onTriggerUp.add(() => {
-      if (this.pinchGuard.open) this.continueEvent.invoke()
-    })
+    primary.text.capitilizationOverride = CapitilizationOverride.AllUpper
   }
 
   private addButtonLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {

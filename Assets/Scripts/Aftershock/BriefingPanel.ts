@@ -2,7 +2,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {createLightBacking, drawOnTop} from "./UiBacking"
+import {BrutalFrame, drawOnTop} from "./UiBacking"
 
 // DESIGN_BRIEF §5: instruction type is 3.5 cm at 110 cm. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -43,7 +43,7 @@ export class BriefingPanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = createLightBacking(this.sceneObject, this.backingColor)
+    const backing = new BrutalFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -61,7 +61,7 @@ export class BriefingPanel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backing.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.setSize(r.containerWidth, r.containerHeight)
     })
 
     this.primary = this.addLine(content, "instr.brief.id", LINE_ID_H, 1).text

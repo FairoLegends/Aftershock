@@ -4,8 +4,8 @@ import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUI
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
-import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking, drawOnTop} from "./UiBacking"
+import {fontFor, getLanguage, latinFont, lines, onLanguageChanged, primaryLine, setLinePair, StringKey} from "./Strings"
+import {BrutalFrame, BRUTAL_BORDER_CM, BRUTAL_RED, BRUTAL_WHITE, BRUTAL_YELLOW, createSquareRect, drawOnTop, Marquee} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -32,8 +32,36 @@ const WARN_ID_H = 9
 const WARN_EN_H = 7.2
 const WARN_RAISE = 2 // banner sits this far above eye level so it clears the HUD panel (learner, 27 Oct)
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
-const FILL_Z = 0.05 // health fill just in front of its track
-const MIN_FILL_W = 0.001
+
+// Slice 7A numbered steps (01 goUnder, 02 duck, 03 hold): three cells over the instruction area.
+const STEP_KEYS: StringKey[] = ["step.goUnder", "step.duck", "step.hold"]
+const STEP_W = 14
+const STEP_H = 13
+const STEP_GAP = 2 // 3 x 14 + 2 x 2 = INNER_W
+const STEP_TEXT_W = 12.5
+const STEP_NUMBER_EM = 3.5
+const STEP_NAME_EM = 2.5 // label size: the name wraps inside a 14 cm cell
+const STEP_THIN_CM = 0.15 // upcoming-step border
+const STEP_DONE_ALPHA = 0.4
+const STEP_TEXT_Z = 0.1
+const STRIKE_H = 0.25
+const STEP_WHITE = new vec4(1, 1, 1, 1)
+const STEP_DIM = new vec4(1, 1, 1, STEP_DONE_ALPHA)
+
+// Slice 7A health bar: 10 square segments, filled white, empty as thin outlined cells.
+const SEGMENTS = 10
+const SEG_GAP = 0.35
+const SEG_BORDER = 0.15
+const SEG_EMPTY_FILL = new vec4(1, 1, 1, 0)
+const SEG_EMPTY_BORDER = new vec4(1, 1, 1, 0.35)
+
+// Slice 7A marquee.dch strip, with the banner for its first warningShowSeconds.
+const DCH_W = 70
+const DCH_H = 2.6
+const DCH_EM = 1.4
+const DCH_GAP = 1.5
+const DCH_SPEED = 5 // cm/s
+const DCH_PERIOD = 45 // cm between copies
 
 /** Height of the HUD panel backing (cm): two instruction lines and the health/timer row (buildPanel). */
 export const HUD_PANEL_HEIGHT = PAD * 2 + INSTR_ID_H + INSTR_EN_H + ROW_H + ROW_GAP * 2
@@ -104,12 +132,16 @@ export class Hud extends BaseScriptComponent {
   private instructionId: Text | null = null
   private instructionEn: Text | null = null
   private timerLabel: Text | null = null
-  private fill: RoundedRectangle | null = null
-  private fillTransform: Transform | null = null
+  private readonly segments: RoundedRectangle[] = []
+  private stepsRoot: SceneObject | null = null
+  private readonly stepFrames: BrutalFrame[] = []
+  private readonly stepNumbers: Text[] = []
+  private readonly stepNames: Text[] = []
+  private readonly stepEnglish: Text[] = []
+  private readonly stepStrikes: SceneObject[] = []
+  private marquee: Marquee | null = null
   private readonly followPos = new vec3(0, 0, 0)
   private readonly followRot = quat.quatIdentity()
-  private readonly fillSize = new vec2(BAR_W, BAR_H)
-  private readonly fillPos = new vec3(0, 0, FILL_Z)
   private snapNext = true
   private lastWholeSecond = -1
   private lastFraction = -1
@@ -125,11 +157,23 @@ export class Hud extends BaseScriptComponent {
     this.warningTimer = this.createEvent("DelayedCallbackEvent")
     this.warningTimer.bind(() => this.hideWarning())
 
-    this.createEvent("UpdateEvent").bind(() => this.follow())
+    this.createEvent("UpdateEvent").bind(() => {
+      if (this.marquee && this.banner && this.banner.enabled) {
+        this.marquee.tick(getDeltaTime())
+      }
+      this.follow()
+    })
   }
 
-  /** Shows the HUD and snaps it in front of the head. */
+  /** Shows the HUD and snaps it in front of the head. Latin fonts go on here, after DrillController registered them. */
   show(): void {
+    const title = latinFont("title")
+    if (title) {
+      this.timerLabel.font = title
+      for (const t of this.stepNumbers) {
+        t.font = title
+      }
+    }
     this.snapNext = true
     this.sceneObject.enabled = true
     drawOnTop(this.sceneObject) // 5h item 3: panel and warning banner draw over the room
@@ -143,6 +187,7 @@ export class Hud extends BaseScriptComponent {
 
   /** warn.quake banner at the center of view for warningShowSeconds. */
   showWarning(): void {
+    this.marquee.setText(primaryLine("marquee.dch"), fontFor(getLanguage(), "title"))
     this.banner.enabled = true
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
@@ -164,12 +209,43 @@ export class Hud extends BaseScriptComponent {
     setLinePair(primary, secondary, lines(key))
   }
 
+  /**
+   * goUnder / duck / hold show the numbered steps (that step active, earlier
+   * ones done); any other key (instr.brief, instr.comeOut) the single line.
+   */
   setInstruction(key: StringKey): void {
-    setLinePair(this.instructionId, this.instructionEn, lines(key))
+    const step = key === "instr.goUnder" ? 0 : key === "instr.duck" ? 1 : key === "instr.hold" ? 2 : -1
+    this.stepsRoot.enabled = step >= 0
+    this.instructionId.enabled = step < 0
+    this.instructionEn.enabled = step < 0
+    if (step < 0) {
+      setLinePair(this.instructionId, this.instructionEn, lines(key))
+    } else {
+      this.setSteps(step)
+    }
     this._instructionKey = key
   }
 
-  /** Health in 0..healthStart. The bar turns alarm red below healthAlarmBelow. */
+  /** Active: yellow border, plate and number. Done: 40% and struck through. Upcoming: thin border, no plate. */
+  private setSteps(active: number): void {
+    for (let i = 0; i < STEP_KEYS.length; i++) {
+      const frame = this.stepFrames[i]
+      const done = i < active
+      const on = i === active
+      setLinePair(this.stepNames[i], this.stepEnglish[i], lines(STEP_KEYS[i]))
+      frame.setAccent(on ? BRUTAL_YELLOW : BRUTAL_WHITE)
+      frame.setBorderSize(i > active ? STEP_THIN_CM : BRUTAL_BORDER_CM)
+      frame.setPlateVisible(i <= active)
+      frame.setOpacity(done ? STEP_DONE_ALPHA : 1)
+      const color = done ? STEP_DIM : STEP_WHITE
+      this.stepNumbers[i].textFill.color = on ? BRUTAL_YELLOW : color
+      this.stepNames[i].textFill.color = color
+      this.stepEnglish[i].textFill.color = color
+      this.stepStrikes[i].enabled = done
+    }
+  }
+
+  /** Health in 0..healthStart, as 10 segments. Filled segments turn red below healthAlarmBelow. */
   setHealth(value: number): void {
     const max = this.config.healthStart
     const fraction = max > 0 ? Math.min(1, Math.max(0, value / max)) : 0
@@ -179,12 +255,13 @@ export class Hud extends BaseScriptComponent {
     }
     this.lastFraction = fraction
     this.lastAlarm = alarm
-    const w = Math.max(MIN_FILL_W, BAR_W * fraction)
-    this.fillSize.x = w
-    this.fill.size = this.fillSize
-    this.fillPos.x = -BAR_W / 2 + w / 2
-    this.fillTransform.setLocalPosition(this.fillPos)
-    this.fill.backgroundColor = alarm ? this.alarmColor : this.barColor
+    const filled = Math.ceil(fraction * SEGMENTS - 1e-6) // any health left shows one segment
+    for (let i = 0; i < SEGMENTS; i++) {
+      const seg = this.segments[i]
+      const on = i < filled
+      seg.backgroundColor = on ? (alarm ? BRUTAL_RED : this.barColor) : SEG_EMPTY_FILL
+      seg.border = !on
+    }
   }
 
   /** Elapsed quake time as mm:ss. The text only changes once per second. */
@@ -255,17 +332,18 @@ export class Hud extends BaseScriptComponent {
 
   private buildPanel(): void {
     const panel = this.child(this.sceneObject, "Panel")
-    const backing = createLightBacking(panel, this.backingColor)
+    const backing = new BrutalFrame(panel, this.backingColor)
     const content = this.child(panel, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
     const flex = this.column(content, ROW_GAP, PAD)
     flex.width = INNER_W + PAD * 2
     flex.onLayoutComplete.add((r) => {
-      backing.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.setSize(r.containerWidth, r.containerHeight)
     })
 
     this.instructionId = this.addText(content, "InstructionText.id", "", INSTRUCTION_EM_CM, INNER_W, INSTR_ID_H, this.textColor, true)
     this.instructionEn = this.addText(content, "InstructionText.en", "", INSTRUCTION_EM_CM * ENGLISH_SCALE, INNER_W, INSTR_EN_H, this.textColor, true)
+    this.buildSteps(panel)
 
     const row = this.child(content, "Row")
     const rowItem = row.createComponent(FlexItem.getTypeName()) as FlexItem
@@ -284,36 +362,93 @@ export class Hud extends BaseScriptComponent {
     const barItem = bar.createComponent(FlexItem.getTypeName()) as FlexItem
     barItem.overrideWidth = BAR_W
     barItem.overrideHeight = BAR_H
-    const track = createLightBacking(bar, this.trackColor)
-    track.size = new vec2(BAR_W, BAR_H)
-    track.cornerRadius = BAR_H / 2
-    const fillObject = this.child(bar, "Fill")
-    this.fillTransform = fillObject.getTransform()
-    this.fill = createLightBacking(fillObject, this.barColor)
-    this.fill.cornerRadius = BAR_H / 2
-    this.fill.size = this.fillSize
-    this.fillTransform.setLocalPosition(this.fillPos)
+    const segW = (BAR_W - SEG_GAP * (SEGMENTS - 1)) / SEGMENTS
+    for (let i = 0; i < SEGMENTS; i++) {
+      const so = this.child(bar, "Segment")
+      so.getTransform().setLocalPosition(new vec3(-BAR_W / 2 + segW / 2 + i * (segW + SEG_GAP), 0, 0))
+      const seg = createSquareRect(so, this.barColor, segW, BAR_H)
+      seg.borderSize = SEG_BORDER
+      seg.borderSoftness = 0
+      seg.borderColor = SEG_EMPTY_BORDER
+      seg.border = false
+      this.segments.push(seg)
+    }
 
     this.addLabel(row, "TimerLabel", "hud.time")
     this.timerLabel = this.addText(row, "TimerText", "00:00", INSTRUCTION_EM_CM, TIMER_W, ROW_H, this.textColor, false)
   }
 
-  /** Created after Panel so it draws on top; WARN_RAISE above eye level (center of view). */
+  /**
+   * Three numbered cells over the instruction lines (not flex items, so the
+   * panel keeps HUD_PANEL_HEIGHT). Shown for goUnder / duck / hold only.
+   */
+  private buildSteps(panel: SceneObject): void {
+    const root = this.child(panel, "Steps")
+    const areaTop = HUD_PANEL_HEIGHT / 2 - PAD
+    const areaH = INSTR_ID_H + ROW_GAP + INSTR_EN_H
+    root.getTransform().setLocalPosition(new vec3(0, areaTop - areaH / 2, CONTENT_Z))
+    for (let i = 0; i < STEP_KEYS.length; i++) {
+      const cell = this.child(root, "Step" + (i + 1))
+      cell.getTransform().setLocalPosition(new vec3(-INNER_W / 2 + STEP_W / 2 + i * (STEP_W + STEP_GAP), 0.5, 0))
+      const frame = new BrutalFrame(cell, new vec4(1, 1, 1, 0.12))
+      frame.setSize(STEP_W, STEP_H)
+      this.stepFrames.push(frame)
+      const n = this.stepText(cell, "Step" + (i + 1) + ".number", STEP_NUMBER_EM, 3.8, 4)
+      n.text = "0" + (i + 1)
+      this.stepNumbers.push(n)
+      const name = this.stepText(cell, "Step" + (i + 1) + ".name", STEP_NAME_EM, -0.4, 4.2)
+      name.capitilizationOverride = CapitilizationOverride.AllUpper
+      this.stepNames.push(name)
+      this.stepEnglish.push(this.stepText(cell, "Step" + (i + 1) + ".en", SMALL_EM_CM, -4.4, 3.4))
+      const strike = this.child(cell, "Step" + (i + 1) + ".strike")
+      strike.getTransform().setLocalPosition(new vec3(0, -0.4, STEP_TEXT_Z * 2))
+      createSquareRect(strike, STEP_WHITE, STEP_TEXT_W, STRIKE_H)
+      strike.enabled = false
+      this.stepStrikes.push(strike)
+    }
+    root.enabled = false
+    this.stepsRoot = root
+  }
+
+  private stepText(cell: SceneObject, name: string, emCm: number, y: number, height: number): Text {
+    const so = this.child(cell, name)
+    so.getTransform().setLocalPosition(new vec3(0, y, STEP_TEXT_Z))
+    const t = so.createComponent("Component.Text") as Text
+    t.size = emCm * SIZE_PER_CM
+    ;(t as Text & {weight?: number}).weight = 700
+    t.depthTest = true
+    t.textFill.color = STEP_WHITE
+    if (this.textOutlineSize > 0) {
+      t.outlineSettings.enabled = true
+      t.outlineSettings.size = this.textOutlineSize
+      t.outlineSettings.fill.color = this.textOutlineColor
+    }
+    t.horizontalAlignment = HorizontalAlignment.Center
+    t.verticalAlignment = VerticalAlignment.Center
+    t.horizontalOverflow = HorizontalOverflow.Wrap
+    t.verticalOverflow = VerticalOverflow.Overflow
+    t.layoutRect = Rect.create(-STEP_TEXT_W / 2, STEP_TEXT_W / 2, -height / 2, height / 2)
+    return t
+  }
+
+  /** Created after Panel so it draws on top; WARN_RAISE above eye level (center of view). Slice 7A: red block, white plate. */
   private buildBanner(): void {
     const banner = this.child(this.sceneObject, "WarningBanner")
     banner.getTransform().setLocalPosition(new vec3(0, (this.config ? this.config.hudBelowEye : 0) + WARN_RAISE, 0))
-    const backing = createLightBacking(banner, this.backingColor)
+    const backing = new BrutalFrame(banner, BRUTAL_RED)
     const content = this.child(banner, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
+    this.marquee = new Marquee(banner, "MarqueeDch", DCH_W, DCH_H, DCH_EM, BRUTAL_YELLOW, DCH_SPEED, DCH_PERIOD)
     const flex = this.column(content, ROW_GAP, PAD)
     flex.width = WARN_W + PAD * 2
     flex.onLayoutComplete.add((r) => {
-      backing.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.setSize(r.containerWidth, r.containerHeight)
+      this.marquee.root.getTransform().setLocalPosition(new vec3(0, r.containerHeight / 2 + DCH_GAP + DCH_H / 2, CONTENT_Z))
     })
     this.addPair(
       "warn.quake",
-      this.addText(content, "Warning.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, this.alarmColor, false),
-      this.addText(content, "Warning.en", "", WARNING_EM_CM * ENGLISH_SCALE, WARN_W, WARN_EN_H, this.alarmColor, false)
+      this.addText(content, "Warning.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, BRUTAL_WHITE, false),
+      this.addText(content, "Warning.en", "", WARNING_EM_CM * ENGLISH_SCALE, WARN_W, WARN_EN_H, BRUTAL_WHITE, false)
     )
     onLanguageChanged.add(() => this.refreshTexts())
     banner.enabled = false

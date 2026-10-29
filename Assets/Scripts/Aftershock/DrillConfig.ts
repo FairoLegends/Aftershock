@@ -130,6 +130,12 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Simplified Chinese font for every zh line (Fonts/NotoSansSC-Aftershock.ttf)")
   fontZh: Font
+  @input
+  @hint("Title font for id/en/de primary lines, titles and numbers (Fonts/Syne-Aftershock.ttf, 800)")
+  fontTitle: Font
+  @input
+  @hint("Body font for English secondary lines and small text (Fonts/Manrope-Aftershock.ttf, 600)")
+  fontBody: Font
   @ui.group_end
 
   @ui.group_start("Layout and danger zones")

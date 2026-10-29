@@ -38,6 +38,30 @@ export type StringKey =
   | "label.danger"
   | "picker.title"
   | "lang.name"
+  | "step.goUnder"
+  | "step.duck"
+  | "step.hold"
+  | "scan.title"
+  | "marquee.drill"
+  | "marquee.dch"
+  | "warn.aftershock"
+  | "hit.fell"
+  | "level.title"
+  | "level.easy"
+  | "level.normal"
+  | "level.hard"
+  | "level.recommended"
+  | "level.easy.1"
+  | "level.easy.2"
+  | "level.easy.3"
+  | "level.normal.1"
+  | "level.normal.2"
+  | "level.normal.3"
+  | "level.hard.1"
+  | "level.hard.2"
+  | "level.hard.3"
+  | "result.aftershock"
+  | "result.level"
 
 export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "safety.drill": {
@@ -187,6 +211,127 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "Deutsch",
     ja: "日本語",
     zh: "简体中文"
+  },
+  // Slice 7 (ENGINEERING_PLAN 5j). marquee.* is shown in the selected language only.
+  "step.goUnder": {
+    id: "Ke bawah meja",
+    en: "Go under the table",
+    de: "Unter den Tisch",
+    ja: "机の下へ",
+    zh: "躲到桌下"
+  },
+  "step.duck": {id: "Merunduk", en: "Duck down", de: "Ducken", ja: "身を低く", zh: "蹲下"},
+  "step.hold": {id: "Tahan", en: "Hold on", de: "Festhalten", ja: "そのまま待つ", zh: "坚持住"},
+  "scan.title": {
+    id: "Memindai ruangan",
+    en: "Scanning room",
+    de: "Raum wird gescannt",
+    ja: "部屋をスキャン中",
+    zh: "正在扫描房间"
+  },
+  "marquee.drill": {
+    id: "AFTERSHOCK · LATIHAN GEMPA",
+    en: "AFTERSHOCK · EARTHQUAKE DRILL",
+    de: "AFTERSHOCK · ERDBEBENÜBUNG",
+    ja: "AFTERSHOCK · 地震訓練",
+    zh: "AFTERSHOCK · 地震演练"
+  },
+  "marquee.dch": {
+    id: "DROP · COVER · HOLD ON",
+    en: "DROP · COVER · HOLD ON",
+    de: "DROP · COVER · HOLD ON",
+    ja: "DROP · COVER · HOLD ON",
+    zh: "DROP · COVER · HOLD ON"
+  },
+  "warn.aftershock": {id: "GEMPA SUSULAN!", en: "AFTERSHOCK!", de: "NACHBEBEN!", ja: "余震！", zh: "余震！"},
+  "hit.fell": {
+    id: "Kamu kejatuhan barang",
+    en: "Something fell on you",
+    de: "Etwas ist auf dich gefallen",
+    ja: "物が落ちてきました",
+    zh: "有东西砸到了你"
+  },
+  "level.title": {
+    id: "Pilih tingkat",
+    en: "Choose level",
+    de: "Schwierigkeit wählen",
+    ja: "レベルを選択",
+    zh: "选择难度"
+  },
+  "level.easy": {id: "Mudah", en: "Easy", de: "Leicht", ja: "かんたん", zh: "简单"},
+  "level.normal": {id: "Normal", en: "Normal", de: "Normal", ja: "ふつう", zh: "普通"},
+  "level.hard": {id: "Sulit", en: "Hard", de: "Schwer", ja: "むずかしい", zh: "困难"},
+  "level.recommended": {id: "DISARANKAN", en: "RECOMMENDED", de: "EMPFOHLEN", ja: "おすすめ", zh: "推荐"},
+  "level.easy.1": {
+    id: "Label tetap terlihat",
+    en: "Labels stay visible",
+    de: "Hinweise bleiben sichtbar",
+    ja: "ラベルが表示されたまま",
+    zh: "标签一直显示"
+  },
+  "level.easy.2": {
+    id: "Meja dekat, maks 150 cm",
+    en: "Table close, max 150 cm",
+    de: "Tisch nah, max. 150 cm",
+    ja: "机は近く、最大150 cm",
+    zh: "桌子很近，最远150 cm"
+  },
+  "level.easy.3": {id: "Tanpa gempa susulan", en: "No aftershock", de: "Kein Nachbeben", ja: "余震なし", zh: "没有余震"},
+  "level.normal.1": {
+    id: "Meja sampai 200 cm",
+    en: "Table up to 200 cm",
+    de: "Tisch bis 200 cm",
+    ja: "机は最大200 cm",
+    zh: "桌子最远200 cm"
+  },
+  "level.normal.2": {
+    id: "Kadang ada gempa susulan",
+    en: "Sometimes an aftershock",
+    de: "Manchmal ein Nachbeben",
+    ja: "ときどき余震",
+    zh: "有时有余震"
+  },
+  "level.normal.3": {
+    id: "Benda bisa jatuh",
+    en: "Items can fall",
+    de: "Gegenstände können fallen",
+    ja: "物が落ちることも",
+    zh: "物品可能掉落"
+  },
+  "level.hard.1": {
+    id: "Tanpa panah dan jalur",
+    en: "No arrow, no path",
+    de: "Kein Pfeil, kein Pfad",
+    ja: "矢印と道しるべなし",
+    zh: "没有箭头和路线"
+  },
+  "level.hard.2": {
+    id: "Nyawa turun lebih cepat",
+    en: "Health drops faster",
+    de: "Leben sinkt schneller",
+    ja: "体力が早く減る",
+    zh: "生命值下降更快"
+  },
+  "level.hard.3": {
+    id: "Selalu ada gempa susulan",
+    en: "Always an aftershock",
+    de: "Immer ein Nachbeben",
+    ja: "必ず余震あり",
+    zh: "一定有余震"
+  },
+  "result.aftershock": {
+    id: "Gempa susulan: {s} s",
+    en: "Aftershock cover: {s} s",
+    de: "Nachbeben-Deckung: {s} s",
+    ja: "余震で身を守るまで：{s} 秒",
+    zh: "余震躲避用时：{s} 秒"
+  },
+  "result.level": {
+    id: "Tingkat: {level}",
+    en: "Level: {level}",
+    de: "Stufe: {level}",
+    ja: "レベル：{level}",
+    zh: "难度：{level}"
   }
 }
 
@@ -239,40 +384,73 @@ function fill(text: string, fills?: Fills): string {
   return text
 }
 
-// Fonts (Slice 5L): SpecsSans (the default) covers id, en and de; ja and zh
-// need the Noto subsets. DrillController registers them from DrillConfig.
-let fontJa: Font | null = null
-let fontZh: Font | null = null
-let defaultFont: Font | null = null
-
-export function setLanguageFonts(ja: Font | null, zh: Font | null): void {
-  fontJa = ja ? ja : null
-  fontZh = zh ? zh : null
+/** One string in the selected language only (marquee strips: no English line). */
+export function primaryLine(key: StringKey): string {
+  return STRINGS[key][current]
 }
 
-/** The font a line in this language needs, or null for the default font. */
-export function fontFor(lang: Lang): Font | null {
-  return lang === "ja" ? fontJa : lang === "zh" ? fontZh : null
+// Fonts (Slice 5L, 7A): ja and zh lines use the Noto subsets; id, en and de
+// use Syne for primary lines and titles ("title") and Manrope for English
+// secondary lines and small text ("body"). DrillController registers them
+// from DrillConfig. An unwired font falls back to the default (SpecsSans).
+export type FontRole = "title" | "body"
+
+let fontJa: Font | null = null
+let fontZh: Font | null = null
+let fontTitle: Font | null = null
+let fontBody: Font | null = null
+let defaultFont: Font | null = null
+
+export function setLanguageFonts(ja: Font | null, zh: Font | null, title: Font | null = null, body: Font | null = null): void {
+  fontJa = ja ? ja : null
+  fontZh = zh ? zh : null
+  fontTitle = title ? title : null
+  fontBody = body ? body : null
+}
+
+/** The font a line in this language and role needs, or null for the default font. */
+export function fontFor(lang: Lang, role: FontRole = "title"): Font | null {
+  if (lang === "ja") {
+    return fontJa
+  }
+  if (lang === "zh") {
+    return fontZh
+  }
+  return role === "title" ? fontTitle : fontBody
+}
+
+/** The Latin font for a role, for text that is the same in every language (numbers, timer). */
+export function latinFont(role: FontRole): Font | null {
+  return role === "title" ? fontTitle : fontBody
 }
 
 /**
- * Sets a Text's string and its font for `lang`: fontJa for ja, fontZh for zh,
- * the default font otherwise. The default is taken from the first Text that
- * still has it. An unwired CJK font leaves the default (missing glyphs).
+ * Sets a Text's string and its font for `lang` and `role`. The default font
+ * is taken from the first Text that still has it.
  */
-export function setLineText(t: Text, text: string, lang: Lang): void {
-  if (defaultFont === null && t.font && t.font !== fontJa && t.font !== fontZh) {
+export function setLineText(t: Text, text: string, lang: Lang, role: FontRole = "title"): void {
+  if (
+    defaultFont === null &&
+    t.font &&
+    t.font !== fontJa &&
+    t.font !== fontZh &&
+    t.font !== fontTitle &&
+    t.font !== fontBody
+  ) {
     defaultFont = t.font
   }
-  const want = fontFor(lang) || defaultFont
+  const want = fontFor(lang, role) || defaultFont
   if (want && t.font !== want) {
     t.font = want
   }
   t.text = text
 }
 
-/** Sets a primary / secondary Text pair from lines(): primary in the selected language's font, English in the default. */
-export function setLinePair(primary: Text, secondary: Text, l: Lines): void {
-  setLineText(primary, l.primary, current)
-  setLineText(secondary, l.secondary, "en")
+/**
+ * Sets a primary / secondary Text pair from lines(): primary in the selected
+ * language's font (Syne, or Manrope for small text), English in Manrope.
+ */
+export function setLinePair(primary: Text, secondary: Text, l: Lines, primaryRole: FontRole = "title"): void {
+  setLineText(primary, l.primary, current, primaryRole)
+  setLineText(secondary, l.secondary, "en", "body")
 }
