@@ -28,11 +28,17 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    aftershockDelayMax: false
+    aftershockDelayMin: false
+    aftershockDurationMax: false
+    aftershockDurationMin: false
+    aftershockStrength: false
     bedWarnMargin: false
     bedWarnSeconds: false
     dangerMargin: false
     duckDrop: false
     duckHysteresis: false
+    easyTableMax: false
     edgeClearFraction: false
     edgePulseHz: false
     eyeHeight: false
@@ -41,6 +47,7 @@
     fontZh: false
     fovHalfAngleHorizontal: false
     fovHalfAngleVertical: false
+    hardDrainMultiplier: false
     hazardCountMax: false
     hazardCountMin: false
     hazardDistanceMax: false
@@ -52,6 +59,7 @@
     hudDistance: false
     layoutSeed: false
     markerBlinkHz: false
+    normalAftershockChance: false
     pathFaintOpacity: false
     pathLift: false
     pathMarchSpeed: false
@@ -76,6 +84,8 @@
     tableDistanceMax: false
     tableDistanceMin: false
     tableSwitchHysteresis: false
+    testAftershockDelaySeconds: false
+    testAftershockDurationSeconds: false
     testDurationSeconds: false
     testMode: false
     testScanSeconds: false
@@ -143,10 +153,20 @@
       pathFaintOpacity: 0.350000
       edgePulseHz: 1.500000
       edgeClearFraction: 0.700000
+      easyTableMax: !<float> 150.000000
+      normalAftershockChance: 0.500000
+      hardDrainMultiplier: 1.500000
+      aftershockDelayMin: !<float> 2.000000
+      aftershockDelayMax: !<float> 6.000000
+      aftershockDurationMin: !<float> 10.000000
+      aftershockDurationMax: !<float> 20.000000
+      aftershockStrength: 0.600000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
       testScanSeconds: 0.500000
+      testAftershockDelaySeconds: 0.500000
+      testAftershockDurationSeconds: !<float> 4.000000
   ScriptTypes:
     -
       {}
@@ -224,8 +244,22 @@
     - '// @input float edgePulseHz = 1.5 {"hint":"Red edge warning pulse while health drains, in Hz"}'
     - '// @input float edgeClearFraction = 0.7 {"hint":"Share of the view, per axis, the edge warning leaves clear in the middle (0 to 1)"}'
     - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Levels (Slice 7C, ENGINEERING_PLAN 5j item 18)"}'
+    - '// @input float easyTableMax = 150 {"hint":"Easy: farthest a table center may be from the start spot (cm)"}'
+    - '// @input float normalAftershockChance = 0.5 {"hint":"Normal: chance of an aftershock after the main quake (0 to 1). Easy never, Hard always."}'
+    - '// @input float hardDrainMultiplier = 1.5 {"hint":"Hard: health drains this many times faster"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Aftershock (Slice 7C, ENGINEERING_PLAN 5j item 7)"}'
+    - '// @input float aftershockDelayMin = 2 {"hint":"Shortest quiet wait after leaving the zone before the aftershock, in seconds"}'
+    - '// @input float aftershockDelayMax = 6 {"hint":"Longest quiet wait after leaving the zone before the aftershock, in seconds"}'
+    - '// @input float aftershockDurationMin = 10 {"hint":"Shortest aftershock, in seconds"}'
+    - '// @input float aftershockDurationMax = 20 {"hint":"Longest aftershock, in seconds"}'
+    - "// @input float aftershockStrength = 0.6 {\"hint\":\"Aftershock shake as a share of the main quake's amplitude and tilt (0 to 1)\"}"
+    - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'
     - '// @input float testWaitSeconds = 1 {"hint":"Wait before the quake when testMode is on, in seconds"}'
     - '// @input float testDurationSeconds = 8 {"hint":"Quake duration when testMode is on, in seconds"}'
     - '// @input float testScanSeconds = 0.5 {"hint":"Scan intro length when testMode is on, in seconds"}'
+    - '// @input float testAftershockDelaySeconds = 0.5 {"hint":"Quiet wait before the aftershock when testMode is on, in seconds"}'
+    - '// @input float testAftershockDurationSeconds = 4 {"hint":"Aftershock duration when testMode is on, in seconds"}'

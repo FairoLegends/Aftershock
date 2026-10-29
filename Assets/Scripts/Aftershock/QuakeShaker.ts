@@ -42,12 +42,18 @@ export class QuakeShaker extends BaseScriptComponent {
   private readonly frequencies: number[] = new Array(LAYERS).fill(0) // Hz
   private startTime = 0 // s
   private duration = 0 // s; 0 = no ramp-down
+  private strength = 1 // share of the configured amplitude and tilt
   private _shaking = false
   private _envelope = 0
 
   /** True between startShake() and stopShake(). */
   get isShaking(): boolean {
     return this._shaking
+  }
+
+  /** Share of the configured amplitude this shake uses (1 = the main quake, aftershockStrength for the aftershock). */
+  get shakeStrength(): number {
+    return this.strength
   }
 
   /** Current ramp, 0..1 (0 when stopped). The rumble volume follows it. */
@@ -63,8 +69,11 @@ export class QuakeShaker extends BaseScriptComponent {
     this.updateEvent.enabled = false
   }
 
-  /** Starts shaking from the target's current (rest) transform for `durationSeconds`. */
-  startShake(durationSeconds: number): void {
+  /**
+   * Starts shaking from the target's current (rest) transform for
+   * `durationSeconds`, at `strength` × the configured amplitude and tilt.
+   */
+  startShake(durationSeconds: number, strength: number = 1): void {
     if (!this.config || !this.targetTransform) {
       console.error("[Aftershock] QuakeShaker: config is not assigned")
       return
@@ -89,6 +98,7 @@ export class QuakeShaker extends BaseScriptComponent {
       this.phases[i] = Math.random() * TWO_PI
     }
     this.duration = durationSeconds
+    this.strength = Math.max(0, strength)
     this.startTime = getTime()
     this._envelope = 0
     this._shaking = true
@@ -112,14 +122,14 @@ export class QuakeShaker extends BaseScriptComponent {
     const env = this.computeEnvelope(t)
     this._envelope = env
 
-    const amp = this.config.shakeAmplitudeCm * env
+    const amp = this.config.shakeAmplitudeCm * this.strength * env
     this.shakenPosition.x = this.restPosition.x + this.noise(AXIS_POS_X, t) * amp
     this.shakenPosition.y = this.restPosition.y + this.noise(AXIS_POS_Y, t) * amp
     this.shakenPosition.z = this.restPosition.z + this.noise(AXIS_POS_Z, t) * amp
     this.targetTransform.setLocalPosition(this.shakenPosition)
 
     // Tilt around local X then Z. Half-angles in radians for the quaternion.
-    const halfTilt = this.config.shakeTiltDeg * DEG_TO_RAD * env * 0.5
+    const halfTilt = this.config.shakeTiltDeg * DEG_TO_RAD * this.strength * env * 0.5
     const ax = this.noise(AXIS_TILT_X, t) * halfTilt
     const az = this.noise(AXIS_TILT_Z, t) * halfTilt
     const sx = Math.sin(ax)

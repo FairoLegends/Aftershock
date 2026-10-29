@@ -60,8 +60,11 @@ export async function toFreshBriefing(c: DrillController, force: LayoutForce | n
     await press("ContinueButton")
   } else if (c.state === "RESULT" || c.state === "GAME_OVER") {
     await press("RestartButton")
-  } else {
+  } else if (c.state !== "LEVEL") {
     c.resetForTest()
+  }
+  if (c.state === "LEVEL") {
+    await press("LevelButton.normal") // Slice 7C: the level picker sits between SAFETY and BRIEFING
   }
   expect(c.state).toBe("BRIEFING")
   expect(c.health).toBe(c.config.healthStart)
@@ -123,4 +126,5 @@ export function restore(c: DrillController, testMode: boolean, testDurationSecon
   c.config.testDurationSeconds = testDurationSeconds
   c.headPose.clearOverride()
   c.forceLayoutForTest(null)
+  c.forceAftershockForTest(null) // Slice 7C: back to the level's chance
 }

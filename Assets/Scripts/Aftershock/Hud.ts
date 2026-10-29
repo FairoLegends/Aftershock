@@ -183,9 +183,13 @@ export class Hud extends BaseScriptComponent {
     this.sceneObject.enabled = false
   }
 
-  /** warn.quake banner at the center of view for warningShowSeconds. */
-  showWarning(): void {
+  /** Warning banner (warn.quake, or warn.aftershock in Slice 7C) at the center of view for warningShowSeconds. */
+  showWarning(key: StringKey = "warn.quake"): void {
     this.hideNotice()
+    if (this.bannerPair && this.bannerPair.key !== key) {
+      this.bannerPair.key = key
+      setLinePair(this.bannerPair.primary, this.bannerPair.secondary, lines(key))
+    }
     this.banner.enabled = true
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
@@ -198,6 +202,7 @@ export class Hud extends BaseScriptComponent {
   }
 
   private readonly pairs: {key: StringKey; primary: Text; secondary: Text}[] = []
+  private bannerPair: {key: StringKey; primary: Text; secondary: Text} | null = null
 
   /** Re-renders the banner, the labels and the current instruction in the selected language (Slice 5L). */
   private refreshTexts(): void {
@@ -316,6 +321,10 @@ export class Hud extends BaseScriptComponent {
   }
   get isWarningShown(): boolean {
     return this.banner !== null && this.banner.isEnabledInHierarchy
+  }
+  /** String key the warning banner shows ("warn.quake" or "warn.aftershock"). */
+  get warningKey(): StringKey | null {
+    return this.bannerPair ? this.bannerPair.key : null
   }
   get isNoticeShown(): boolean {
     return this.notice !== null && this.notice.isEnabledInHierarchy
@@ -487,6 +496,7 @@ export class Hud extends BaseScriptComponent {
       this.addText(content, "Warning.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, SOFT_WHITE, false),
       this.addText(content, "Warning.en", "", WARNING_EM_CM, WARN_W, HIDDEN_H, SOFT_WHITE, false)
     )
+    this.bannerPair = this.pairs[this.pairs.length - 1]
     onLanguageChanged.add(() => this.refreshTexts())
     banner.enabled = false
     this.banner = banner

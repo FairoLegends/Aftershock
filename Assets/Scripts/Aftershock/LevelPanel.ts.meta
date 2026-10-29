@@ -1,0 +1,50 @@
+- !<AssetImportMetadata/6b3c7328-cfeb-4dd0-8cf8-c5813b924b68>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 09a282c3-71cc-41ef-8953-9b035833fe35
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 09a282c3-71cc-41ef-8953-9b035833fe35
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 3f982f9a-c250-4f9a-b50a-31bb544241f6
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/3f982f9a-c250-4f9a-b50a-31bb544241f6>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 97bb5819-4b47-4183-af99-42c5b2a89c22
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    backingColor: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Level picker (Slice 7C)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Look"}'
+    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

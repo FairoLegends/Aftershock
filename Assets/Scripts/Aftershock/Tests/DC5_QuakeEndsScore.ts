@@ -14,6 +14,7 @@ export class DC5_QuakeEndsScore extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
+      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.config.testMode = true
       await toFreshBriefing(c)
       const start = startSpot(c)

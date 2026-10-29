@@ -229,6 +229,42 @@ export class DrillConfig extends BaseScriptComponent {
   edgeClearFraction: number = 0.7
   @ui.group_end
 
+  @ui.group_start("Levels (Slice 7C, ENGINEERING_PLAN 5j item 18)")
+  @input
+  @hint("Easy: farthest a table center may be from the start spot (cm)")
+  easyTableMax: number = 150
+
+  @input
+  @hint("Normal: chance of an aftershock after the main quake (0 to 1). Easy never, Hard always.")
+  normalAftershockChance: number = 0.5
+
+  @input
+  @hint("Hard: health drains this many times faster")
+  hardDrainMultiplier: number = 1.5
+  @ui.group_end
+
+  @ui.group_start("Aftershock (Slice 7C, ENGINEERING_PLAN 5j item 7)")
+  @input
+  @hint("Shortest quiet wait after leaving the zone before the aftershock, in seconds")
+  aftershockDelayMin: number = 2
+
+  @input
+  @hint("Longest quiet wait after leaving the zone before the aftershock, in seconds")
+  aftershockDelayMax: number = 6
+
+  @input
+  @hint("Shortest aftershock, in seconds")
+  aftershockDurationMin: number = 10
+
+  @input
+  @hint("Longest aftershock, in seconds")
+  aftershockDurationMax: number = 20
+
+  @input
+  @hint("Aftershock shake as a share of the main quake's amplitude and tilt (0 to 1)")
+  aftershockStrength: number = 0.6
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")
@@ -245,4 +281,12 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Scan intro length when testMode is on, in seconds")
   testScanSeconds: number = 0.5
+
+  @input
+  @hint("Quiet wait before the aftershock when testMode is on, in seconds")
+  testAftershockDelaySeconds: number = 0.5
+
+  @input
+  @hint("Aftershock duration when testMode is on, in seconds")
+  testAftershockDurationSeconds: number = 4
 }

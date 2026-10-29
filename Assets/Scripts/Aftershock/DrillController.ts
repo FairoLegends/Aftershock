@@ -8,29 +8,54 @@ import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
 import {LanguagePanel} from "./LanguagePanel"
 import {ALL_ITEMS, FOOTPRINTS, generateLayout, HAZARDS, insideRect, Layout, LayoutForce, LayoutItem, Placement, TABLES} from "./LayoutGenerator"
+import {LevelPanel} from "./LevelPanel"
+import {
+  aftershockChance,
+  DEFAULT_LEVEL,
+  drainMultiplier,
+  guidesOn,
+  labelsStayInQuake,
+  layoutParamsFor,
+  Level,
+  levelNameKey
+} from "./Levels"
 import {OffscreenArrow} from "./OffscreenArrow"
 import {QuakeShaker} from "./QuakeShaker"
-import {ResultPanel} from "./ResultPanel"
+import {ResultLine, ResultPanel} from "./ResultPanel"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, ScoreBreakdown} from "./ScoreCalculator"
-import {getLanguage, Lang, setLanguage, setLanguageFonts, StringKey} from "./Strings"
+import {getLanguage, getString, Lang, lines, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
+import {SOFT_RED} from "./UiBacking"
 
-export type DrillState = "LANGUAGE" | "SAFETY" | "BRIEFING" | "QUAKE" | "POST_QUAKE" | "RESULT" | "GAME_OVER"
+export type DrillState =
+  | "LANGUAGE"
+  | "SAFETY"
+  | "LEVEL"
+  | "BRIEFING"
+  | "QUAKE"
+  | "POST_QUAKE"
+  | "AFTERSHOCK"
+  | "RESULT"
+  | "GAME_OVER"
 
 // USER_FLOW_DIAGRAM §2. Any transition not listed here is refused.
 const ALLOWED: Record<DrillState, DrillState[]> = {
   LANGUAGE: ["SAFETY"],
-  SAFETY: ["BRIEFING"],
+  SAFETY: ["LEVEL"],
+  LEVEL: ["BRIEFING"],
   BRIEFING: ["QUAKE"],
   QUAKE: ["GAME_OVER", "POST_QUAKE"],
-  POST_QUAKE: ["RESULT"],
+  POST_QUAKE: ["RESULT", "AFTERSHOCK"], // Slice 7C: the aftershock comes after leaving cover
+  AFTERSHOCK: ["GAME_OVER", "POST_QUAKE"],
   RESULT: ["BRIEFING"],
   GAME_OVER: ["BRIEFING"]
 }
 
 const LOG = "[Aftershock]"
+const BED_REVEAL_SIZE = 120 // Slice 7C Hard reveal: the red warn.bed over the bed (about 2.7 cm em)
+const BED_REVEAL_HEIGHT = 120 // cm above the floor, Room-local
 
 /**
  * The only owner of drill state (TDD §4). LANGUAGE (picker, Slice 5L; Restart
@@ -145,6 +170,10 @@ export class DrillController extends BaseScriptComponent {
   rumbleAudio: AudioComponent
 
   @input
+  @hint("LevelPanel component (Slice 7C level picker: Easy / Normal / Hard, under AftershockRoot)")
+  levelPanel: LevelPanel
+
+  @input
   @hint("ResultPanel component (result / game-over + Restart, under AftershockRoot)")
   resultPanel: ResultPanel
 
@@ -215,6 +244,17 @@ export class DrillController extends BaseScriptComponent {
   private _instructionKey: StringKey | null = null
   private _arrowVisible: boolean = false
   private _lastScore: ScoreBreakdown | null = null
+  // Slice 7C: level and aftershock (ENGINEERING_PLAN 5j items 7, 18).
+  private _level: Level = DEFAULT_LEVEL
+  private levelHidGuides = false // Hard turned the guides off; another level turns them back on
+  private aftershockTimer: DelayedCallbackEvent | null = null // the quiet wait before the aftershock
+  private aftershockPending = false
+  private _aftershockHappened = false
+  private _aftershockTimeToCover: number | null = null
+  private aftershockStartTime = 0 // s
+  private forcedAftershock: boolean | null = null
+  private bedRevealLabel: SceneObject | null = null
+  private _revealShown = false
   private _secondsStanding = 0 // s exposed after first safe (TDD §7 penalty)
   private baselineHeadY: number | null = null
   private _floorY = 0 // cm, world; fixed once at start
@@ -330,6 +370,34 @@ export class DrillController extends BaseScriptComponent {
   get guidesVisible(): boolean {
     return this._guidesVisible
   }
+  /** Slice 7C: the picked level ("easy" | "normal" | "hard"); it stays through Restart. */
+  get level(): Level {
+    return this._level
+  }
+  get aftershockHappened(): boolean {
+    return this._aftershockHappened
+  }
+  /** Seconds from the aftershock's start until safe for safeHoldSeconds, or null. */
+  get aftershockTimeToCover(): number | null {
+    return this._aftershockTimeToCover
+  }
+  /** True during the quiet wait between leaving cover and the aftershock. */
+  get aftershockWaiting(): boolean {
+    return this.aftershockPending
+  }
+  /** Hard: the room's guides are shown behind the result / game-over panel. */
+  get revealShown(): boolean {
+    return this._revealShown
+  }
+  /** True when any hazard label of this drill shows (Easy keeps them through the quake). */
+  get hazardLabelsShown(): boolean {
+    for (const h of this.activeHazards) {
+      if (this.labels[h].isShown) {
+        return true
+      }
+    }
+    return false
+  }
   // Slice 7B test getters (5j-4, 5, 6).
   get scanActive(): boolean {
     return this.scanIntro.scanActive
@@ -355,6 +423,8 @@ export class DrillController extends BaseScriptComponent {
     this.quakeStartTimer.bind(() => this.onRandomWaitEnded())
     this.quakeEndTimer = this.createEvent("DelayedCallbackEvent")
     this.quakeEndTimer.bind(() => this.onQuakeTimeOver())
+    this.aftershockTimer = this.createEvent("DelayedCallbackEvent")
+    this.aftershockTimer.bind(() => this.onAftershockDelayEnded())
     this.quakeUpdate = this.createEvent("UpdateEvent")
     this.quakeUpdate.bind(() => this.onQuakeUpdate())
     this.quakeUpdate.enabled = false
@@ -393,7 +463,8 @@ export class DrillController extends BaseScriptComponent {
       ["resultPanel", this.resultPanel],
       ["scanIntro", this.scanIntro],
       ["floorPath", this.floorPath],
-      ["edgeWarning", this.edgeWarning]
+      ["edgeWarning", this.edgeWarning],
+      ["levelPanel", this.levelPanel]
     ]
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
     if (missing.length > 0) {
@@ -471,6 +542,8 @@ export class DrillController extends BaseScriptComponent {
     this.languagePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.safetyPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.resultPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
+    this.levelPanel.onPick.add((level) => this.onLevelPicked(level))
+    this.levelPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.transitionTo("LANGUAGE")
   }
 
@@ -488,6 +561,15 @@ export class DrillController extends BaseScriptComponent {
     if (this._state !== "SAFETY") {
       return
     }
+    this.transitionTo("LEVEL") // Slice 7C: the level picker comes between safety and briefing
+  }
+
+  private onLevelPicked(level: Level): void {
+    if (this._state !== "LEVEL") {
+      return
+    }
+    this._level = level
+    console.log(`${LOG} LEVEL: ${level}`)
     this.transitionTo("BRIEFING")
   }
 
@@ -497,22 +579,60 @@ export class DrillController extends BaseScriptComponent {
     }
   }
   onQuakeTimeOver(): void {
-    if (this._state === "QUAKE") {
+    if (this._state === "QUAKE" || this._state === "AFTERSHOCK") {
       this.transitionTo("POST_QUAKE")
     }
   }
 
   onHealthDepleted(): void {
-    if (this._state === "QUAKE") {
+    if (this._state === "QUAKE" || this._state === "AFTERSHOCK") {
       this.transitionTo("GAME_OVER")
     }
   }
+  /**
+   * POST_QUAKE, out of cover: after the main quake, roll the level's
+   * aftershock chance (5j-7); on a hit a quiet wait, then AFTERSHOCK. Else RESULT.
+   */
   onHeadLeftSafeZone(): void {
-    if (this._state === "POST_QUAKE") {
-      this.transitionTo("RESULT")
+    if (this._state !== "POST_QUAKE" || this.aftershockPending) {
+      return
+    }
+    if (!this._aftershockHappened && this.rollAftershock()) {
+      this.postQuakeUpdate.enabled = false
+      this.aftershockPending = true
+      const delay = this.config.testMode
+        ? this.config.testAftershockDelaySeconds
+        : randomBetween(this.config.aftershockDelayMin, this.config.aftershockDelayMax)
+      console.log(`${LOG} POST_QUAKE: aftershock in ${fmt(delay)} s`)
+      this.aftershockTimer.reset(delay)
+      return
+    }
+    this.transitionTo("RESULT")
+  }
+
+  private rollAftershock(): boolean {
+    if (this.forcedAftershock !== null) {
+      return this.forcedAftershock
+    }
+    return Math.random() < aftershockChance(this._level, this.config)
+  }
+
+  private onAftershockDelayEnded(): void {
+    if (this._state === "POST_QUAKE" && this.aftershockPending) {
+      this.aftershockPending = false
+      this.transitionTo("AFTERSHOCK")
     }
   }
-  /** Restart → BRIEFING with a full reset (enterBriefing resets health, cover, standing time, arrow). */
+
+  /** Cancels a pending aftershock and clears the last drill's aftershock record. */
+  private resetAftershock(): void {
+    this.aftershockTimer.cancel()
+    this.aftershockPending = false
+    this._aftershockHappened = false
+    this._aftershockTimeToCover = null
+  }
+
+  /** Restart → BRIEFING with a full reset (enterBriefing resets health, cover, standing time, arrow); the level stays. */
   onRestartPressed(): void {
     if (this._state !== "RESULT" && this._state !== "GAME_OVER") {
       return
@@ -520,10 +640,23 @@ export class DrillController extends BaseScriptComponent {
     this.stopQuakeEffects()
     this.postQuakeUpdate.enabled = false
     this.quakeStartTimer.cancel()
+    this.resetAftershock()
     this._lastScore = null
     this._quakeDuration = 0
     this.resultPanel.hide()
     this.transitionTo("BRIEFING")
+  }
+
+  /** LEAF test hook only (TDD §8): sets the level the next BRIEFING uses (Slice 7C). */
+  setLevelForTest(level: Level): void {
+    this._level = level
+    console.log(`${LOG} setLevelForTest: ${level}`)
+  }
+
+  /** LEAF test hook only (TDD §8): true / false forces the aftershock roll; null rolls the level's chance again. */
+  forceAftershockForTest(on: boolean | null): void {
+    this.forcedAftershock = on
+    console.log(`${LOG} forceAftershockForTest: ${on === null ? "off" : on}`)
   }
 
   /**
@@ -555,7 +688,7 @@ export class DrillController extends BaseScriptComponent {
       this.setRoomLabelsShown(true) // everything at once, no second scan
       this.setDangerZonesShown(true)
       this.floorPath.setMode("faint")
-    } else if (this._state === "QUAKE" || this._state === "POST_QUAKE") {
+    } else if (this._state === "QUAKE" || this._state === "POST_QUAKE" || this._state === "AFTERSHOCK") {
       this.setMarkersShown(true)
       this.setDangerZonesShown(true)
     }
@@ -571,6 +704,7 @@ export class DrillController extends BaseScriptComponent {
     this.stopQuakeEffects()
     this.postQuakeUpdate.enabled = false
     this.quakeStartTimer.cancel()
+    this.resetAftershock()
     this._lastScore = null
     this._quakeDuration = 0
     this._health = this.config.healthStart
@@ -594,6 +728,9 @@ export class DrillController extends BaseScriptComponent {
       case "SAFETY":
         this.enterSafety()
         break
+      case "LEVEL":
+        this.enterLevel()
+        break
       case "BRIEFING":
         this.enterBriefing()
         break
@@ -602,6 +739,9 @@ export class DrillController extends BaseScriptComponent {
         break
       case "POST_QUAKE":
         this.enterPostQuake()
+        break
+      case "AFTERSHOCK":
+        this.enterAftershock()
         break
       case "RESULT":
         this.enterResult()
@@ -623,12 +763,15 @@ export class DrillController extends BaseScriptComponent {
     this.hud.hide()
     this.resultPanel.hide()
     this.safetyPanel.hide()
+    this.levelPanel.hide()
+    this.showReveal(false)
     this.languagePanel.placeInFront(this.headPose.position, this.headPose.forward, this.config.hudDistance, 0)
     this.languagePanel.show()
   }
 
   private enterSafety(): void {
     this.languagePanel.hide()
+    this.levelPanel.hide()
     this._instructionKey = null
     this.hideArrow()
     this.hideScanPathEdge()
@@ -646,9 +789,27 @@ export class DrillController extends BaseScriptComponent {
     this.safetyPanel.show()
   }
 
+  /** Slice 7C level picker, placed like the language picker (eye level, hudDistance ahead); the current level is marked. */
+  private enterLevel(): void {
+    this.safetyPanel.hide()
+    this._instructionKey = null
+    this.hideArrow()
+    this.hideScanPathEdge()
+    this.setRoomLabelsShown(false)
+    this.setDangerZonesShown(false)
+    this.briefingPanel.hide()
+    this.hud.hide()
+    this.resultPanel.hide()
+    this.levelPanel.placeInFront(this.headPose.position, this.headPose.forward, this.config.hudDistance, 0)
+    this.levelPanel.show(this._level)
+  }
+
   private enterBriefing(): void {
     this.safetyPanel.hide()
+    this.levelPanel.hide()
     this.resultPanel.hide()
+    this.resetAftershock()
+    this.showReveal(false)
     this._health = this.config.healthStart
     this._secondsStanding = 0
     this._secondsInDanger = 0
@@ -674,6 +835,7 @@ export class DrillController extends BaseScriptComponent {
     }
     this.updateTarget(true)
     // 5j-4/17d: labels and markers appear as the scan sweep reaches them; with guides off, no scan.
+    this.applyLevelGuides()
     this.setRoomLabelsShown(false)
     this.setDangerZonesShown(true)
     const scanSeconds = this.startScan()
@@ -746,7 +908,7 @@ export class DrillController extends BaseScriptComponent {
     this.hud.showWarning()
     this.scanIntro.stop()
     this.scanIntro.hideBrackets()
-    this.hideHazardLabels()
+    if (!labelsStayInQuake(this._level)) this.hideHazardLabels() // Slice 7C: Easy keeps them
     for (const z of this.activeTables) {
       z.startBlink() // a hidden marker (guides off) stays hidden: its parts are under it
     }
@@ -765,17 +927,21 @@ export class DrillController extends BaseScriptComponent {
 
   private onQuakeUpdate(): void {
     const now = getTime()
-    this.hud.setElapsed(now - this.quakeStartTime)
+    const aftershock = this._state === "AFTERSHOCK"
+    this.hud.setElapsed(now - (aftershock ? this.aftershockStartTime : this.quakeStartTime))
     this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
     this.updateCover(now)
     this.updateDanger()
     this.updateBedTrap()
 
     // ENGINEERING_PLAN 5f item 4: drain while exposed once safe (hasBeenSafe && !(inZone && ducked),
-    // TDD §4.1, §7) OR inside a danger zone; one drain, never doubled.
-    const exposed = this._hasBeenSafe && !this.isSafe
-    this.edgeWarning.setActive(this._state === "QUAKE" && (exposed || this._inDanger)) // 5j-6
-    if (this._state === "QUAKE" && (exposed || this._inDanger)) {
+    // TDD §4.1, §7) OR inside a danger zone; one drain, never doubled. Slice 7C: in the
+    // aftershock, "once safe" means once under cover again in the aftershock.
+    const shaking = this._state === "QUAKE" || aftershock
+    const covered = aftershock ? this._aftershockTimeToCover !== null : this._hasBeenSafe
+    const exposed = covered && !this.isSafe
+    this.edgeWarning.setActive(shaking && (exposed || this._inDanger)) // 5j-6
+    if (shaking && (exposed || this._inDanger)) {
       const dt = getDeltaTime()
       if (exposed) {
         this._secondsStanding += dt
@@ -783,7 +949,7 @@ export class DrillController extends BaseScriptComponent {
       if (this._inDanger) {
         this._secondsInDanger += dt
       }
-      this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * dt)
+      this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * drainMultiplier(this._level, this.config) * dt)
       this.hud.setHealth(this._health)
       if (this._health <= 0) {
         this._gameOverReason = this._inDanger ? "over.why.danger" : "over.why.stood"
@@ -929,6 +1095,14 @@ export class DrillController extends BaseScriptComponent {
     if (this.safeSince < 0) {
       this.safeSince = now
     }
+    if (this._state === "AFTERSHOCK") {
+      // Slice 7C: its own time to cover; the main quake's tSafe (and the score) stay as they were.
+      if (this._aftershockTimeToCover === null && now - this.safeSince >= this.config.safeHoldSeconds) {
+        this._aftershockTimeToCover = now - this.aftershockStartTime
+        console.log(`${LOG} AFTERSHOCK: safe after ${fmt(this._aftershockTimeToCover)} s`)
+      }
+      return
+    }
     if (!this._hasBeenSafe && now - this.safeSince >= this.config.safeHoldSeconds) {
       this._hasBeenSafe = true
       this._tSafe = now - this.quakeStartTime
@@ -1003,15 +1177,132 @@ export class DrillController extends BaseScriptComponent {
       `${LOG} RESULT: tSafe ${b.tSafe === null ? "never" : fmt(b.tSafe) + " s"}, walk allowance ${fmt(b.walkAllowance)} s, speedTime ${b.speedTime === null ? "never" : fmt(b.speedTime) + " s"}, speed ${b.speedPoints}, health ${fmt(b.healthLeft)} (${b.healthPoints}), standing ${fmt(b.secondsStanding)} s (-${b.penalty}), score ${b.score}`
     )
     this.showResultPanel()
-    this.resultPanel.showResult(b)
+    this.showReveal(true)
+    this.resultPanel.showResult(b, this.resultExtras())
   }
 
   private enterGameOver(): void {
     this.stopQuakeEffects()
+    this.aftershockTimer.cancel()
+    this.aftershockPending = false
     this._lastScore = null
     const reason = this._gameOverReason ? this._gameOverReason : "over.why.stood"
     this.showResultPanel()
-    this.resultPanel.showGameOver(reason)
+    this.showReveal(true)
+    this.resultPanel.showGameOver(reason, this.resultExtras())
+  }
+
+  /** Slice 7C AFTERSHOCK: a second, weaker shake with the same staged instructions, cover and drain rules. Health carries over. */
+  private enterAftershock(): void {
+    this.postQuakeUpdate.enabled = false
+    this._aftershockHappened = true
+    this._aftershockTimeToCover = null
+    this.aftershockStartTime = getTime()
+    this.safeSince = -1
+    this._instructionKey = null
+    this._nearBed = false
+    const c = this.config
+    const d = c.testMode ? c.testAftershockDurationSeconds : randomBetween(c.aftershockDurationMin, c.aftershockDurationMax)
+    this.quakeShaker.startShake(d, c.aftershockStrength)
+    this.rumbleAudio.volume = 0
+    if (this.rumbleAudio.audioTrack) {
+      this.rumbleAudio.play(-1)
+    }
+    this.hud.show()
+    this.hud.setHealth(this._health)
+    this.hud.setElapsed(0)
+    this.hud.showWarning("warn.aftershock")
+    for (const z of this.activeTables) {
+      z.startBlink()
+    }
+    this.updateTarget(true)
+    this.updateCover(this.aftershockStartTime)
+    this.quakeEndTimer.reset(d)
+    this.quakeUpdate.enabled = true
+    console.log(`${LOG} AFTERSHOCK: ${fmt(d)} s at strength ${fmt(c.aftershockStrength)}, health ${fmt(this._health)}`)
+  }
+
+  /** The result rows Slice 7C adds: the aftershock's time to cover (if one happened), the level, and on Hard the reveal note. */
+  private resultExtras(): ResultLine[] {
+    const extra: ResultLine[] = []
+    if (this._aftershockHappened) {
+      const t = this._aftershockTimeToCover
+      extra.push({text: lines("result.aftershock", {"{s}": t === null ? "–" : t.toFixed(1)}), split: true})
+    }
+    extra.push({text: lines("result.level", {"{level}": getString(levelNameKey(this._level))}), split: true})
+    if (!guidesOn(this._level)) {
+      extra.push({text: lines("result.reveal"), split: false})
+    }
+    return extra
+  }
+
+  /**
+   * Hard has no guides during the drill (5j-18); everything else keeps whatever
+   * guides were set (DC10 turns them off by hand on Normal).
+   */
+  private applyLevelGuides(): void {
+    if (!guidesOn(this._level)) {
+      if (this._guidesVisible) this.setGuidesVisible(false)
+      this.levelHidGuides = true
+    } else if (this.levelHidGuides) {
+      this.levelHidGuides = false
+      this.setGuidesVisible(true)
+    }
+  }
+
+  /**
+   * Hard reveal (Slice 7C), on RESULT and GAME_OVER: guides back on, hazard
+   * labels, danger zones and table markers shown, and a red warn.bed over the
+   * bed. `on` false hides the bed label (Restart, language change).
+   */
+  private showReveal(on: boolean): void {
+    if (!on) {
+      if (this.bedRevealLabel) this.bedRevealLabel.enabled = false
+      this._revealShown = false
+      return
+    }
+    if (guidesOn(this._level)) {
+      return
+    }
+    this.setGuidesVisible(true)
+    this.setRoomLabelsShown(true)
+    this.setDangerZonesShown(true)
+    this.showBedRevealLabel()
+    this._revealShown = true
+  }
+
+  private showBedRevealLabel(): void {
+    const at = this._layout ? this._layout.items.bed : null
+    if (!at) {
+      return
+    }
+    if (!this.bedRevealLabel) {
+      const so = global.scene.createSceneObject("BedRevealLabel")
+      so.setParent(this.room)
+      const t = so.createComponent("Component.Text") as Text
+      t.size = BED_REVEAL_SIZE
+      ;(t as Text & {weight?: number}).weight = 700
+      t.depthTest = true
+      t.textFill.color = SOFT_RED
+      t.outlineSettings.enabled = true
+      t.outlineSettings.size = 0.2
+      t.outlineSettings.fill.color = new vec4(0.2, 0.2, 0.2, 1)
+      t.horizontalAlignment = HorizontalAlignment.Center
+      t.verticalAlignment = VerticalAlignment.Center
+      t.horizontalOverflow = HorizontalOverflow.Overflow
+      t.verticalOverflow = VerticalOverflow.Overflow
+      this.bedRevealLabel = so
+    }
+    const so = this.bedRevealLabel
+    const t = so.getComponent("Component.Text") as Text
+    setLineText(t, getString("warn.bed"), getLanguage())
+    const tr = so.getTransform()
+    tr.setLocalPosition(new vec3(at.x, BED_REVEAL_HEIGHT, at.z))
+    let dir = this.headPose.position.sub(tr.getWorldPosition())
+    dir = new vec3(dir.x, 0, dir.z)
+    dir = dir.length > 0.0001 ? dir.normalize() : new vec3(0, 0, 1)
+    tr.setWorldRotation(quat.lookAt(dir, vec3.up()))
+    so.enabled = true
   }
 
   /**
@@ -1111,7 +1402,7 @@ export class DrillController extends BaseScriptComponent {
    * then each hazard; its label keeps its authored offset and turns to the start spot.
    */
   private applyLayout(): void {
-    const layout = generateLayout(this.config, this.testForce)
+    const layout = generateLayout(layoutParamsFor(this._level, this.config), this.testForce)
     this._layout = layout
     if (layout.fallback) {
       console.warn(`${LOG} BRIEFING: no valid layout in ${layout.tries} tries (seed ${layout.seed}); using the Slice 2 fixed layout`)

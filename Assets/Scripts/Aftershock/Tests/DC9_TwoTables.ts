@@ -13,6 +13,7 @@ export class DC9_TwoTables extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
+      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.config.testMode = true
       c.config.testDurationSeconds = 12
       await toFreshBriefing(c, {tables: 2, hazards: ["cabinet", "shelf", "glass"]})

@@ -12,6 +12,7 @@ export class DC8_BedTrap extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
+      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.config.testMode = true
       c.config.testDurationSeconds = 30
       await toFreshBriefing(c)

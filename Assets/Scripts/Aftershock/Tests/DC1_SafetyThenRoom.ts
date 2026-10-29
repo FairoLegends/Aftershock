@@ -27,6 +27,7 @@ export class DC1_SafetyThenRoom extends Scenario {
     // Slice 7R-2: the room is procedural (1–2 tables, 3–5 hazards); DC1 checks its
     // rules on the classic item set, so the four named items must all be present.
     controller.forceLayoutForTest(CLASSIC)
+    controller.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
 
     // Slice 5L: the Lens opens on the language picker; Bahasa Indonesia → SAFETY.
     expect(controller.state).toBe("LANGUAGE")
@@ -46,6 +47,12 @@ export class DC1_SafetyThenRoom extends Scenario {
     }
 
     await interactor.trigger(findInteractableByName("ContinueButton"))
+    await sleep(500)
+
+    // Slice 7C: Continue opens the level picker; Normal → BRIEFING (after its 0.5 s pinch guard).
+    expect(controller.state).toBe("LEVEL")
+    await sleep(800)
+    await interactor.trigger(findInteractableByName("LevelButton.normal"))
     await sleep(500)
 
     expect(controller.state).toBe("BRIEFING")
@@ -72,6 +79,7 @@ export class DC1_SafetyThenRoom extends Scenario {
     expect(zone.contains(zone.center)).toBe(true)
     expect(zone.contains(controller.headPose.position)).toBe(false)
     controller.forceLayoutForTest(null)
+    controller.forceAftershockForTest(null)
   }
 
   /**

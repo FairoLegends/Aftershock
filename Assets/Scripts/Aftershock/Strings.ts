@@ -65,6 +65,7 @@ export type StringKey =
   | "level.hard.3"
   | "result.aftershock"
   | "result.level"
+  | "result.reveal"
 
 export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "safety.drill": {
@@ -302,11 +303,11 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   },
   "level.easy.3": {id: "Tanpa gempa susulan", en: "No aftershock", de: "Kein Nachbeben", ja: "余震なし", zh: "没有余震"},
   "level.normal.1": {
-    id: "Meja sampai 200 cm",
-    en: "Table up to 200 cm",
-    de: "Tisch bis 200 cm",
-    ja: "机は最大200 cm",
-    zh: "桌子最远200 cm"
+    id: "Meja sampai 250 cm",
+    en: "Table up to 250 cm",
+    de: "Tisch bis 250 cm",
+    ja: "机は最大250 cm",
+    zh: "桌子最远250 cm"
   },
   "level.normal.2": {
     id: "Kadang ada gempa susulan",
@@ -323,11 +324,11 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     zh: "物品可能掉落"
   },
   "level.hard.1": {
-    id: "Tanpa panah dan jalur",
-    en: "No arrow, no path",
-    de: "Kein Pfeil, kein Pfad",
-    ja: "矢印と道しるべなし",
-    zh: "没有箭头和路线"
+    id: "Cari sendiri: tanpa label, zona, panah",
+    en: "Find it yourself: no labels, zones, arrow",
+    de: "Selbst finden: keine Hinweise, Zonen, Pfeile",
+    ja: "自分で探す：ラベル・ゾーン・矢印なし",
+    zh: "自己找：没有标签、区域和箭头"
   },
   "level.hard.2": {
     id: "Nyawa turun lebih cepat",
@@ -356,6 +357,13 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "Stufe: {level}",
     ja: "レベル：{level}",
     zh: "难度：{level}"
+  },
+  "result.reveal": {
+    id: "Lihat ruangan: merah berbahaya, hijau aman",
+    en: "Look around: red is dangerous, green is safe",
+    de: "Sieh dich um: Rot ist gefährlich, Grün ist sicher",
+    ja: "見回そう：赤は危険、緑は安全",
+    zh: "看看四周：红色危险，绿色安全"
   }
 }
 

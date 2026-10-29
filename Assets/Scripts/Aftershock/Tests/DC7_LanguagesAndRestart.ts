@@ -13,6 +13,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
+      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       expect(c.config.layoutSeed).toBe(0)
       c.resetForTest(true)
       expect(c.state).toBe("LANGUAGE")
@@ -27,6 +28,8 @@ export class DC7_LanguagesAndRestart extends Scenario {
 
       c.config.testMode = true
       await press("ContinueButton")
+      expect(c.state).toBe("LEVEL") // Slice 7C: the level picker
+      await press("LevelButton.normal")
       expect(c.state).toBe("BRIEFING")
       const runS = c.config.testWaitSeconds + c.config.testScanSeconds + c.config.testDurationSeconds + 3
       // Head untouched at the start spot: the quake ends outside the zone, straight to RESULT.

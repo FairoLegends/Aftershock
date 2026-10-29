@@ -16,6 +16,7 @@ export class DC2_QuakeStarts extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
+      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.config.testMode = true
       await toFreshBriefing(c)
       const rest = c.room.getTransform().getWorldPosition()

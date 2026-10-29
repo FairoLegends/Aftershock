@@ -130,6 +130,7 @@ export class SoftButton {
   private readonly primary: boolean
   private readonly anim: SceneEvent
   private releasedAt = -1 // getTime() of the last release, -1 when not easing back
+  private selected = false
 
   constructor(owner: BaseScriptComponent, btn: Button, w: number, h: number, primary: boolean, action: () => void) {
     this.buttonObject = btn.getSceneObject()
@@ -167,6 +168,12 @@ export class SoftButton {
     hideKitVisual(this.buttonObject)
   }
 
+  /** Keeps the hover/focus look on while `on` (Slice 7C: the level picker's current level). */
+  setSelected(on: boolean): void {
+    this.selected = on
+    this.setFocus(false)
+  }
+
   private get restFill(): vec4 {
     return this.primary ? SOFT_GREEN : SOFT_BUTTON_FILL
   }
@@ -175,7 +182,8 @@ export class SoftButton {
     return this.primary ? null : SOFT_LINE
   }
 
-  private setFocus(on: boolean): void {
+  private setFocus(hover: boolean): void {
+    const on = hover || this.selected
     if (this.glow) {
       this.glow.face.enabled = on
     } else {

@@ -30,7 +30,7 @@ const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the pane
 const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood); longer lines wrap
 const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
-const DETAIL_LINES = 2
+const DETAIL_LINES = 5 // Slice 7C: two base rows plus aftershock, level and reveal
 const DETAIL_PAD = 0.5 // above and below a detail row's text
 const DETAIL_GAP = 1.0 // above the first detail row
 const VALUE_W = 12 // detail value column, right
@@ -53,6 +53,12 @@ const ROW_Z = 0.05 // row text above the score row's backing
 const WHITE = new vec4(1, 1, 1, 1)
 
 export type ResultMode = "result" | "gameOver"
+
+/** An extra detail row (Slice 7C): `split` false keeps a sentence with ":" centered (result.reveal). */
+export interface ResultLine {
+  text: Lines
+  split: boolean
+}
 
 /** One row: the selected language (`id`), the collapsed English line (`en`) and, when split at ":", a value on the right. */
 interface Row {
@@ -161,30 +167,42 @@ export class ResultPanel extends BaseScriptComponent {
    * Drill complete: time to take cover, health left and score (TDD §7).
    * Never took cover (tSafe null): result.never and score 0 (Q6).
    */
-  showResult(b: ScoreBreakdown): void {
+  showResult(b: ScoreBreakdown, extra: ResultLine[] = []): void {
     this._mode = "result"
     this.sceneObject.enabled = true // measure the rows in the real font
     this.setRow(this.title, lines("result.title"), BIG_EM_CM)
     this.setScore(b.score)
     if (b.tSafe === null) {
-      this.setRow(this.details[0], lines("result.never"), SMALL_EM_CM)
-      this.setRow(this.details[1], null, SMALL_EM_CM)
+      this.setDetails([{text: lines("result.never"), split: true}], extra)
     } else {
-      this.setRow(this.details[0], fill("result.speed", "{s}", b.tSafe.toFixed(1)), SMALL_EM_CM)
-      this.setRow(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), SMALL_EM_CM)
+      this.setDetails(
+        [
+          {text: fill("result.speed", "{s}", b.tSafe.toFixed(1)), split: true},
+          {text: fill("result.health", "{h}", "" + Math.round(b.healthLeft)), split: true}
+        ],
+        extra
+      )
     }
     this.showPanel()
   }
 
   /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
-  showGameOver(reason: StringKey): void {
+  showGameOver(reason: StringKey, extra: ResultLine[] = []): void {
     this._mode = "gameOver"
     this.sceneObject.enabled = true
     this.setRow(this.title, lines("over.title"), BIG_EM_CM)
     this.setScore(null)
-    this.setRow(this.details[0], lines(reason), SMALL_EM_CM)
-    this.setRow(this.details[1], null, SMALL_EM_CM)
+    this.setDetails([{text: lines(reason), split: true}], extra)
     this.showPanel()
+  }
+
+  /** Fills the detail rows with `base` then `extra` and collapses the rest. */
+  private setDetails(base: ResultLine[], extra: ResultLine[]): void {
+    const all = base.concat(extra)
+    for (let i = 0; i < this.details.length; i++) {
+      const l = i < all.length ? all[i] : null
+      this.setRow(this.details[i], l ? l.text : null, SMALL_EM_CM, l ? l.split : true)
+    }
   }
 
   private showPanel(): void {
@@ -217,11 +235,11 @@ export class ResultPanel extends BaseScriptComponent {
    * splits at the first ":" into a dimmed label (left) and a bold value
    * (right); a line without one is centered and wraps (5i-4 readability).
    */
-  private setRow(row: Row, text: Lines | null, emCm: number): void {
+  private setRow(row: Row, text: Lines | null, emCm: number, split: boolean = true): void {
     const shown = text !== null
     const l = shown ? text : {primary: "", secondary: ""}
     const lineH = emCm * LINE_H_PER_EM
-    const m = row.value ? /^(.*?)\s*[:：]\s*(.+)$/.exec(l.primary) : null
+    const m = row.value && split ? /^(.*?)\s*[:：]\s*(.+)$/.exec(l.primary) : null
     const label = m ? m[1] : l.primary
     setLinePair(row.id, row.en, {primary: label, secondary: l.secondary})
     row.id.size = emCm * SIZE_PER_CM
