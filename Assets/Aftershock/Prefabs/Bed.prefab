@@ -1,0 +1,111 @@
+- !<ObjectPrefab/12b24cdf-171d-4717-ad0c-4586819a58ff>
+  PackagePath: ""
+  objects:
+    - !<own> 8ba3d903-069d-4066-9c5d-8de3bd4fa148
+  LazyLoading: false
+  RetainAssets: true
+  PreviewEnvironment: !<reference> 00000000-0000-0000-0000-000000000000
+- !<SceneObject/2a54f247-9636-4795-b2ac-602d06dbf017>
+  PrefabRemaps:
+    - 2a54f247-9636-4795-b2ac-602d06dbf017: 7eb5747b-544f-4e6e-50ac-bd613e121c43
+    - 4f49f44d-39cf-4c57-8c1a-c34c84dd74d9: 0a309853-906f-4d3e-798d-48e16b7479c8
+    - 758c6a65-4f84-4142-80cd-bb6497f00aa4: 472d51f2-c0c1-472b-536c-a1d30118f203
+    - f3f684e1-1e71-417b-abed-bd824ba1678d: 62e85186-4f3d-4dd7-662a-c13707719b14
+    - fb04d047-9db1-4a94-b6d3-ee8b1b39ef72: b572fbb9-3897-4ce6-45b9-a3e9209443a8
+  Name: Bed
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> f3f684e1-1e71-417b-abed-bd824ba1678d
+  Components:
+    []
+- !<SceneObject/4f49f44d-39cf-4c57-8c1a-c34c84dd74d9>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 758c6a65-4f84-4142-80cd-bb6497f00aa4
+  Components:
+    []
+- !<SceneObject/758c6a65-4f84-4142-80cd-bb6497f00aa4>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.250000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 90.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> fb04d047-9db1-4a94-b6d3-ee8b1b39ef72
+- !<SceneObject/8ba3d903-069d-4066-9c5d-8de3bd4fa148>
+  PrefabRemaps:
+    - 2a54f247-9636-4795-b2ac-602d06dbf017: 2a54f247-9636-4795-4d53-9fd2f9240fe8
+    - 4f49f44d-39cf-4c57-8c1a-c34c84dd74d9: 4f49f44d-39cf-4c57-73e5-3cb37b228b26
+    - 758c6a65-4f84-4142-80cd-bb6497f00aa4: 758c6a65-4f84-4142-7f32-449b680ff55b
+    - 8ba3d903-069d-4066-9c5d-8de3bd4fa148: 8ba3d903-069d-4066-63a2-721c42b05eb7
+    - f3f684e1-1e71-417b-abed-bd824ba1678d: f3f684e1-1e71-417b-5412-427db45e9872
+    - fb04d047-9db1-4a94-b6d3-ee8b1b39ef72: fb04d047-9db1-4a94-492c-1174e4c6108d
+  Name: Bed
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 2a54f247-9636-4795-b2ac-602d06dbf017
+  Components:
+    []
+- !<SceneObject/f3f684e1-1e71-417b-abed-bd824ba1678d>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 4f49f44d-39cf-4c57-8c1a-c34c84dd74d9
+  Components:
+    []
+- !<RenderMeshVisual/fb04d047-9db1-4a94-b6d3-ee8b1b39ef72>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 9757ae54-845d-469a-849d-bf7f44d76d86
+  Mesh: !<reference> fa29ce92-73ea-4b48-8bf4-f3277f1afee1
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}

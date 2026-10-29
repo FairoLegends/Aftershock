@@ -1,0 +1,111 @@
+- !<ObjectPrefab/b5313633-df9f-4973-a8ba-2becdfbebf0e>
+  PackagePath: ""
+  objects:
+    - !<own> 296e755e-8edb-498a-9381-cab824f536ce
+  LazyLoading: false
+  RetainAssets: true
+  PreviewEnvironment: !<reference> 00000000-0000-0000-0000-000000000000
+- !<SceneObject/296e755e-8edb-498a-9381-cab824f536ce>
+  PrefabRemaps:
+    - 296e755e-8edb-498a-9381-cab824f536ce: 296e755e-8edb-498a-6c7e-3547db0ac931
+    - 354bbdaf-32f4-44ec-a3a0-1e619591640d: 354bbdaf-32f4-44ec-5c5f-e19e6a6e9bf2
+    - 93f93a84-65d5-4d1b-a21c-304de5689af2: 93f93a84-65d5-4d1b-5de3-cfb21a97650d
+    - 9b55c58b-4cc7-4452-909a-1df7e1f81665: 9b55c58b-4cc7-4452-6f65-e2081e07e99a
+    - a05d5bef-12ad-41cb-98bb-20163e26eeab: a05d5bef-12ad-41cb-6744-dfe9c1d91154
+    - e38294f5-191b-4b73-8368-7eff6c92a603: e38294f5-191b-4b73-7c97-8100936d59fc
+  Name: FloorLamp
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 354bbdaf-32f4-44ec-a3a0-1e619591640d
+  Components:
+    []
+- !<SceneObject/354bbdaf-32f4-44ec-a3a0-1e619591640d>
+  PrefabRemaps:
+    - 354bbdaf-32f4-44ec-a3a0-1e619591640d: 145b5559-6e9e-4c70-6da6-5777096810f6
+    - 93f93a84-65d5-4d1b-a21c-304de5689af2: ff844f85-74a8-4abc-7025-e68a173452b7
+    - 9b55c58b-4cc7-4452-909a-1df7e1f81665: 41b8705d-6350-4d90-7132-83e01e661d9e
+    - a05d5bef-12ad-41cb-98bb-20163e26eeab: 2b535710-55ee-417b-4e41-e3a087be3caa
+    - e38294f5-191b-4b73-8368-7eff6c92a603: d680e1b0-5912-4a26-755f-3ece33dc95ab
+  Name: FloorLamp
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> e38294f5-191b-4b73-8368-7eff6c92a603
+  Components:
+    []
+- !<SceneObject/93f93a84-65d5-4d1b-a21c-304de5689af2>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.825000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> a05d5bef-12ad-41cb-98bb-20163e26eeab
+- !<SceneObject/9b55c58b-4cc7-4452-909a-1df7e1f81665>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 93f93a84-65d5-4d1b-a21c-304de5689af2
+  Components:
+    []
+- !<RenderMeshVisual/a05d5bef-12ad-41cb-98bb-20163e26eeab>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> a5c91f05-cf23-4e1b-8313-fb2abfd62fad
+  Mesh: !<reference> f118e05d-4c2e-458a-94c0-b415dbd32498
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/e38294f5-191b-4b73-8368-7eff6c92a603>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 9b55c58b-4cc7-4452-909a-1df7e1f81665
+  Components:
+    []

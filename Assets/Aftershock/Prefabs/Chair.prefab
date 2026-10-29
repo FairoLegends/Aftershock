@@ -1,0 +1,111 @@
+- !<ObjectPrefab/a38470f0-e8ab-4e7e-bc07-48995a700152>
+  PackagePath: ""
+  objects:
+    - !<own> c704c003-9520-43c9-8539-7153f7ae2384
+  LazyLoading: false
+  RetainAssets: true
+  PreviewEnvironment: !<reference> 00000000-0000-0000-0000-000000000000
+- !<SceneObject/0f1c3832-6246-485f-bb27-cfaa6d1476c4>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> c71e36fa-3caf-4267-8ec3-d4c95e258672
+  Components:
+    []
+- !<SceneObject/584692af-4b28-40e8-8b08-f69b118fa84a>
+  PrefabRemaps:
+    - 0f1c3832-6246-485f-bb27-cfaa6d1476c4: c7ac1311-3719-4ae9-513a-b292cd0c6602
+    - 584692af-4b28-40e8-8b08-f69b118fa84a: 4690d300-6d51-44f0-6a69-260c9c7b2c42
+    - 74a2e504-c8ed-4994-aa93-b9f48fad9c5e: 6a7e3d1d-82dd-464e-7d68-8b43594c79f6
+    - acb8a675-793c-4303-8913-3bcc3e12fb27: c91e115d-0dcc-4162-66b1-802f0d970012
+    - c71e36fa-3caf-4267-8ec3-d4c95e258672: 33f1eba3-0561-4470-4eb5-579399869bd2
+  Name: Chair
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 0f1c3832-6246-485f-bb27-cfaa6d1476c4
+  Components:
+    []
+- !<RenderMeshVisual/74a2e504-c8ed-4994-aa93-b9f48fad9c5e>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 11d215a8-b3c5-4d62-a4b5-5aa16fb5f148
+  Mesh: !<reference> e6c30335-7385-4d0b-8845-b07affeac626
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/acb8a675-793c-4303-8913-3bcc3e12fb27>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.450000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 74a2e504-c8ed-4994-aa93-b9f48fad9c5e
+- !<SceneObject/c704c003-9520-43c9-8539-7153f7ae2384>
+  PrefabRemaps:
+    - 0f1c3832-6246-485f-bb27-cfaa6d1476c4: 0f1c3832-6246-485f-44d8-305592eb893b
+    - 584692af-4b28-40e8-8b08-f69b118fa84a: 584692af-4b28-40e8-74f7-0964ee7057b5
+    - 74a2e504-c8ed-4994-aa93-b9f48fad9c5e: 74a2e504-c8ed-4994-556c-460b705263a1
+    - acb8a675-793c-4303-8913-3bcc3e12fb27: acb8a675-793c-4303-76ec-c433c1ed04d8
+    - c704c003-9520-43c9-8539-7153f7ae2384: c704c003-9520-43c9-7ac6-8eac0851dc7b
+    - c71e36fa-3caf-4267-8ec3-d4c95e258672: c71e36fa-3caf-4267-713c-2b36a1da798d
+  Name: Chair
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 584692af-4b28-40e8-8b08-f69b118fa84a
+  Components:
+    []
+- !<SceneObject/c71e36fa-3caf-4267-8ec3-d4c95e258672>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> acb8a675-793c-4303-8913-3bcc3e12fb27
+  Components:
+    []

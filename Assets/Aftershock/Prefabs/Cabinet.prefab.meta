@@ -1,0 +1,120 @@
+- !<AssetImportMetadata/6625f861-5d68-4148-8a55-5e533b474bf0>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> 1c8bc680-a962-43dc-8449-ab4fe5c708b5
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> 1c8bc680-a962-43dc-8449-ab4fe5c708b5
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 8c68eff4-c529-420a-a122-5a540635a067
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<SceneObject/206ab83b-b95e-415a-4719-e76065d0005c>
+  PrefabRemaps:
+    []
+  Name: Cabinet
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> b866b56d-c963-46cb-435f-2b43a92ba3a3
+  Components:
+    []
+- !<SceneObject/50d6534e-5990-4a3a-6e01-457f08e0d5d1>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 658f7dac-dad4-44f0-5fef-6aeafc10f645
+  Components:
+    []
+- !<SceneObject/658f7dac-dad4-44f0-5fef-6aeafc10f645>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.950000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> fee6faa8-78ce-4f1d-42ef-6efc3a335c9f
+- !<ObjectPrefabAssetData/8c68eff4-c529-420a-a122-5a540635a067>
+  Prototype: !<ObjectOwner/2ac0150e-9a6f-452d-af10-82e85845564b>
+    PackagePath: ""
+    objects:
+      - !<own> 206ab83b-b95e-415a-4719-e76065d0005c
+- !<SceneObject/b866b56d-c963-46cb-435f-2b43a92ba3a3>
+  PrefabRemaps:
+    - 50d6534e-5990-4a3a-6e01-457f08e0d5d1: 595ee2af-df96-48e5-5ffd-6d92d9807673
+    - 658f7dac-dad4-44f0-5fef-6aeafc10f645: 9d38145a-21da-4b25-4065-849cc6486f48
+    - b866b56d-c963-46cb-435f-2b43a92ba3a3: 1abdcdb8-ef50-4619-4a74-17f87cb8f35e
+    - f2af65e8-1b6b-482f-6a51-9504b1ce4b35: 44d9b931-812b-4ced-693e-9d7158704a7b
+    - fee6faa8-78ce-4f1d-42ef-6efc3a335c9f: bc27f5a7-dca3-4142-5d2d-824b0bb2eef3
+  Name: Cabinet
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> f2af65e8-1b6b-482f-6a51-9504b1ce4b35
+  Components:
+    []
+- !<SceneObject/f2af65e8-1b6b-482f-6a51-9504b1ce4b35>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 50d6534e-5990-4a3a-6e01-457f08e0d5d1
+  Components:
+    []
+- !<RenderMeshVisual/fee6faa8-78ce-4f1d-42ef-6efc3a335c9f>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> b79fd89d-084e-40e6-be21-0daaa97ea40f
+  Mesh: !<reference> 3c63df77-9ca0-445e-983b-3f2bc4168027
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
