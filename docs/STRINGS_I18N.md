@@ -2,6 +2,8 @@
 
 Learner decision, 27 Oct 2026: the user picks the language on a first screen with five big buttons. In-Lens text shows the selected language on top and English smaller below, so judges can always read it. Chinese uses Simplified characters. The German, Japanese and Chinese drafts were written by the orchestrator and approved by the learner for direct use.
 
+Slice 7 keys (learner, 29 Oct; ENGINEERING_PLAN 5j): `step.*`, `scan.*`, `marquee.*`, `warn.aftershock`, `hit.fell`, `level.*`, `result.aftershock`, `result.level`. id and en follow the approved mockup; de, ja and zh are translations (default). `marquee.*` stays in the chosen language only, no English second line; `marquee.dch` is the same in every language (the drill's name). `{level}` takes the `level.easy/normal/hard` string of the same language.
+
 Display rule:
 - Indonesian, German, Japanese or Chinese selected: that line on top, English below at 80% size (DESIGN_BRIEF §5.2).
 - English selected: English only, one line (default).
@@ -49,6 +51,30 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `label.danger` | Zona bahaya | Danger zone | Gefahrenzone | 危険区域 | 危险区 |
 | `result.never` | Kamu tidak berlindung di bawah meja | You never took cover under the table | Du hast keinen Schutz unter dem Tisch gesucht | 机の下に避難しませんでした | 你没有躲到桌子下面 |
 | `btn.restart` | Ulangi | Restart | Neu starten | もう一度 | 重新开始 |
+| `step.goUnder` | Ke bawah meja | Go under the table | Unter den Tisch | 机の下へ | 躲到桌下 |
+| `step.duck` | Merunduk | Duck down | Ducken | 身を低く | 蹲下 |
+| `step.hold` | Tahan | Hold on | Festhalten | そのまま待つ | 坚持住 |
+| `scan.title` | Memindai ruangan | Scanning room | Raum wird gescannt | 部屋をスキャン中 | 正在扫描房间 |
+| `marquee.drill` | AFTERSHOCK · LATIHAN GEMPA | AFTERSHOCK · EARTHQUAKE DRILL | AFTERSHOCK · ERDBEBENÜBUNG | AFTERSHOCK · 地震訓練 | AFTERSHOCK · 地震演练 |
+| `marquee.dch` | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON |
+| `warn.aftershock` | GEMPA SUSULAN! | AFTERSHOCK! | NACHBEBEN! | 余震！ | 余震！ |
+| `hit.fell` | Kamu kejatuhan barang | Something fell on you | Etwas ist auf dich gefallen | 物が落ちてきました | 有东西砸到了你 |
+| `level.title` | Pilih tingkat | Choose level | Schwierigkeit wählen | レベルを選択 | 选择难度 |
+| `level.easy` | Mudah | Easy | Leicht | かんたん | 简单 |
+| `level.normal` | Normal | Normal | Normal | ふつう | 普通 |
+| `level.hard` | Sulit | Hard | Schwer | むずかしい | 困难 |
+| `level.recommended` | DISARANKAN | RECOMMENDED | EMPFOHLEN | おすすめ | 推荐 |
+| `level.easy.1` | Label tetap terlihat | Labels stay visible | Hinweise bleiben sichtbar | ラベルが表示されたまま | 标签一直显示 |
+| `level.easy.2` | Meja dekat, maks 150 cm | Table close, max 150 cm | Tisch nah, max. 150 cm | 机は近く、最大150 cm | 桌子很近，最远150 cm |
+| `level.easy.3` | Tanpa gempa susulan | No aftershock | Kein Nachbeben | 余震なし | 没有余震 |
+| `level.normal.1` | Meja sampai 200 cm | Table up to 200 cm | Tisch bis 200 cm | 机は最大200 cm | 桌子最远200 cm |
+| `level.normal.2` | Kadang ada gempa susulan | Sometimes an aftershock | Manchmal ein Nachbeben | ときどき余震 | 有时有余震 |
+| `level.normal.3` | Benda bisa jatuh | Items can fall | Gegenstände können fallen | 物が落ちることも | 物品可能掉落 |
+| `level.hard.1` | Tanpa panah dan jalur | No arrow, no path | Kein Pfeil, kein Pfad | 矢印と道しるべなし | 没有箭头和路线 |
+| `level.hard.2` | Nyawa turun lebih cepat | Health drops faster | Leben sinkt schneller | 体力が早く減る | 生命值下降更快 |
+| `level.hard.3` | Selalu ada gempa susulan | Always an aftershock | Immer ein Nachbeben | 必ず余震あり | 一定有余震 |
+| `result.aftershock` | Gempa susulan: {s} s | Aftershock cover: {s} s | Nachbeben-Deckung: {s} s | 余震で身を守るまで：{s} 秒 | 余震躲避用时：{s} 秒 |
+| `result.level` | Tingkat: {level} | Level: {level} | Stufe: {level} | レベル：{level} | 难度：{level} |
 
 ## Fonts
 
