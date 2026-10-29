@@ -9,7 +9,7 @@ const STANDING_HEAD_CM = 160 // well above the stand-up line at floorY + 80
 
 // DC4: after taking cover, standing up in the zone drains health and grows
 // the standing penalty; at health 0 the drill is GAME_OVER (over.why.stood),
-// and Restart starts a fresh BRIEFING.
+// and Restart opens the level picker for a fresh BRIEFING (5j-19a).
 @component
 export class DC4_StandUpDrainsAndGameOver extends Scenario {
   async run(): Promise<void> {
@@ -56,6 +56,8 @@ export class DC4_StandUpDrainsAndGameOver extends Scenario {
       expect(findSceneObjectByName("RestartButton").isEnabledInHierarchy).toBe(true)
 
       await press("RestartButton")
+      expect(c.state).toBe("LEVEL")
+      await press("LevelButton." + c.level)
       expect(c.state).toBe("BRIEFING")
       expect(c.health).toBe(c.config.healthStart)
       expect(c.resultPanel.isShown).toBe(false)

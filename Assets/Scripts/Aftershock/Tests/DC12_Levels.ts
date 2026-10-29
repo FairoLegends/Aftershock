@@ -6,8 +6,9 @@ import {CLASSIC, expectState, getController, levelLook, pinDucked, press, restor
 
 // DC12 (Slice 7C, ENGINEERING_PLAN 5j item 18): SAFETY Continue opens the
 // level picker. Hard: no guides (no scan, arrow or path), drain x1.5, and the
-// reveal on RESULT; Restart keeps Hard with guides hidden again. Easy: a table
-// within easyTableMax and the hazard labels stay through the quake.
+// reveal on RESULT; Restart opens the picker with Hard preselected (5j-19a),
+// and Hard again hides the guides. Easy: a table within easyTableMax and the
+// hazard labels stay through the quake.
 @component
 export class DC12_Levels extends Scenario {
   async run(): Promise<void> {
@@ -15,10 +16,10 @@ export class DC12_Levels extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
+      c.resetForTest(true) // clears every test hook (5j-19f), so the hooks come after it
       c.forceAftershockForTest(false) // Hard always rolls one; this scenario goes straight to RESULT
       c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.forceLayoutForTest(CLASSIC)
-      c.resetForTest(true)
       expect(c.state).toBe("LANGUAGE")
       await press("LangButton.id")
       expect(c.state).toBe("SAFETY")
@@ -67,8 +68,12 @@ export class DC12_Levels extends Scenario {
       expect(c.hazardLabelsShown).toBe(true)
       expect(c.resultPanel.texts.indexOf(lines("result.reveal").primary) >= 0).toBe(true)
 
-      // Restart keeps Hard and hides the guides again.
+      // Restart opens the level picker (5j-19a); Hard again hides the guides.
       await press("RestartButton")
+      expect(c.state).toBe("LEVEL")
+      expect(c.levelPanel.isShown).toBe(true)
+      expect(c.revealShown).toBe(false)
+      await press("LevelButton.hard")
       expect(c.state).toBe("BRIEFING")
       expect(c.level).toBe("hard")
       expect(c.guidesVisible).toBe(false)

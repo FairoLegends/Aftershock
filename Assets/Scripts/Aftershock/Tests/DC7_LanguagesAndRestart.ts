@@ -5,7 +5,8 @@ import {getLanguage, getString, lines} from "../Strings"
 import {copyLayout, expectState, getController, press, restore, sameLayout} from "./DrillTestKit"
 
 // DC7: picking ja shows the safety screen in Japanese; after a drill, Restart
-// gives BRIEFING in ja, and with layoutSeed 0 two Restarts give two layouts.
+// opens the level picker in ja (5j-19a), and with layoutSeed 0 two Restarts
+// give two layouts.
 @component
 export class DC7_LanguagesAndRestart extends Scenario {
   async run(): Promise<void> {
@@ -17,10 +18,10 @@ export class DC7_LanguagesAndRestart extends Scenario {
       // Audit (29 Oct): BRIEFING lasts testScan + testWait; with 9 models built on
       // Restart a 1 s wait could pass before the BRIEFING check ran. 3 s removes the race.
       c.config.testWaitSeconds = 3
-      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
-      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       expect(c.config.layoutSeed).toBe(0)
       c.resetForTest(true)
+      c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario (after the reset, which clears test hooks, 5j-19f)
+      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       expect(c.state).toBe("LANGUAGE")
 
       await press("LangButton.ja")
@@ -42,6 +43,8 @@ export class DC7_LanguagesAndRestart extends Scenario {
       const first = copyLayout(c.layout)
 
       await press("RestartButton")
+      expect(c.state).toBe("LEVEL")
+      await press("LevelButton.normal")
       expect(c.state).toBe("BRIEFING")
       expect(c.language).toBe("ja")
       expect(getLanguage()).toBe("ja")
@@ -50,6 +53,8 @@ export class DC7_LanguagesAndRestart extends Scenario {
       await expectState(c, "RESULT", runS * 1000)
 
       await press("RestartButton")
+      expect(c.state).toBe("LEVEL")
+      await press("LevelButton.normal")
       expect(c.state).toBe("BRIEFING")
       expect(c.language).toBe("ja")
       const third = copyLayout(c.layout)

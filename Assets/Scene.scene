@@ -1633,6 +1633,7 @@
     aftershockDurationMin: true
     aftershockDurationMax: true
     aftershockStrength: true
+    aftershockGraceSeconds: true
     fallCountMin: true
     fallCountMax: true
     fallMarginSeconds: true
@@ -1645,6 +1646,7 @@
     testScanSeconds: true
     testAftershockDelaySeconds: true
     testAftershockDurationSeconds: true
+    testAftershockGraceSeconds: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1708,6 +1710,7 @@
       aftershockDurationMin: !<float> 10.000000
       aftershockDurationMax: !<float> 20.000000
       aftershockStrength: 0.600000
+      aftershockGraceSeconds: !<float> 5.000000
       fallCountMin: !<float> 1.000000
       fallCountMax: !<float> 3.000000
       fallMarginSeconds: !<float> 3.000000
@@ -1720,6 +1723,7 @@
       testScanSeconds: 0.500000
       testAftershockDelaySeconds: 0.500000
       testAftershockDurationSeconds: !<float> 4.000000
+      testAftershockGraceSeconds: !<float> 1.000000
   ScriptTypes:
     "":
       {}

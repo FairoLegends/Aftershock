@@ -5,7 +5,7 @@ import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {getLanguage, latinFont, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
 import {
-  drawOnTop,
+  drawOnTopWhenReady,
   SOFT_DIM,
   SOFT_GREEN,
   SOFT_PANEL_RADIUS_CM,
@@ -173,7 +173,7 @@ export class Hud extends BaseScriptComponent {
     }
     this.snapNext = true
     this.sceneObject.enabled = true
-    drawOnTop(this.sceneObject) // 5h item 3: panel and warning banner draw over the room
+    drawOnTopWhenReady(this, this.sceneObject) // 5h item 3, 5j-19f: panel and warning banner draw over the room, again once the layout settles
   }
 
   /** Hides the HUD, the warning banner and the notice. */

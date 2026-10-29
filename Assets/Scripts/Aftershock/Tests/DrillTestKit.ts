@@ -47,24 +47,34 @@ export async function expectState(c: DrillController, state: string, timeoutMs: 
 }
 
 /**
- * A fresh BRIEFING with this scenario's config. RESULT and GAME_OVER use the
- * Restart button, LANGUAGE and SAFETY the normal buttons. BRIEFING, QUAKE and
- * POST_QUAKE have timers from an earlier config, so they use resetForTest().
+ * A fresh BRIEFING with this scenario's config, language and level. LANGUAGE,
+ * SAFETY, LEVEL, RESULT and GAME_OVER use the normal buttons (Restart opens
+ * the level picker, 5j-19a). BRIEFING, QUAKE, POST_QUAKE and AFTERSHOCK have
+ * timers from an earlier config, so they use resetForTest(true); it clears
+ * every test hook (5j-19f), so this scenario's hooks are put back before the
+ * pickers.
  */
 export async function toFreshBriefing(c: DrillController, force: LayoutForce | null = CLASSIC): Promise<void> {
   c.forceLayoutForTest(force)
-  if (c.state === "LANGUAGE") {
+  if (c.state !== "LANGUAGE" && c.state !== "SAFETY" && c.state !== "LEVEL" && c.state !== "RESULT" && c.state !== "GAME_OVER") {
+    const aftershock = c.aftershockForcedForTest
+    const fallsOff = c.fallsDisabledForTest
+    const lang = c.language
+    c.resetForTest(true)
+    c.forceLayoutForTest(force)
+    c.forceAftershockForTest(aftershock)
+    c.disableFallsForTest(fallsOff)
+    await press("LangButton." + lang)
+  } else if (c.state === "LANGUAGE") {
     await press("LangButton.id")
   }
   if (c.state === "SAFETY") {
     await press("ContinueButton")
   } else if (c.state === "RESULT" || c.state === "GAME_OVER") {
     await press("RestartButton")
-  } else if (c.state !== "LEVEL") {
-    c.resetForTest()
   }
   if (c.state === "LEVEL") {
-    await press("LevelButton.normal") // Slice 7C: the level picker sits between SAFETY and BRIEFING
+    await press("LevelButton." + c.level) // the current level is preselected; one pinch keeps it
   }
   expect(c.state).toBe("BRIEFING")
   expect(c.health).toBe(c.config.healthStart)

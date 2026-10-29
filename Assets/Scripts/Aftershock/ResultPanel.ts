@@ -7,7 +7,7 @@ import {ScoreBreakdown} from "./ScoreCalculator"
 import {getLanguage, latinFont, Lines, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
 import {
   createRoundRect,
-  drawOnTop,
+  drawOnTopWhenReady,
   PinchGuard,
   SOFT_DIM,
   SOFT_GREEN_TEXT,
@@ -186,7 +186,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.showPanel()
   }
 
-  /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
+  /** Out of health: what went wrong (over.why.stood, over.why.danger or hit.fell, 5j-19b), no score (TDD §7). */
   showGameOver(reason: StringKey, extra: ResultLine[] = []): void {
     this._mode = "gameOver"
     this.sceneObject.enabled = true
@@ -208,7 +208,7 @@ export class ResultPanel extends BaseScriptComponent {
   private showPanel(): void {
     this.sceneObject.enabled = true
     if (this.restart) this.restart.reset()
-    drawOnTop(this.sceneObject)
+    drawOnTopWhenReady(this, this.sceneObject) // 5j-19f: again once the layout settles
     this.pinchGuard.arm()
   }
 

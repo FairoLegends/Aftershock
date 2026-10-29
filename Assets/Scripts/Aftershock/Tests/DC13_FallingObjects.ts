@@ -1,10 +1,11 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {atHeight, expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
 
-// DC13 (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e): on Normal with the
+// DC13 (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e, 19b): on Normal with the
 // CLASSIC set (shelf and cabinet present), an item landing on a standing head
+// outside every danger zone does nothing; inside the shelf's danger zone it
 // costs fallHitDamage and shows hit.fell; one landing on a head ducked under
 // the table does nothing. Easy schedules no falls; Normal schedules
 // fallCountMin..fallCountMax.
@@ -26,18 +27,36 @@ export class DC13_FallingObjects extends Scenario {
       await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       await sleep(300)
 
-      // (a) Standing at the start spot, not safe: a shelf item lands on the head.
+      // (a) At the start spot (outside every danger zone), not safe: an item landing on the head does not hit (5j-19b).
       expect(c.inDanger).toBe(false)
+      expect(c.isSafe).toBe(false)
+      const landedOut = c.fallsLanded
+      const hitsOut = c.fallHits
+      expect(c.forceFallForTest("shelf", start)).toBe(true)
+      await waitFor(() => c.fallsLanded > landedOut, 2000)
+      expect(c.fallsLanded).toBe(landedOut + 1)
+      expect(c.fallHits).toBe(hitsOut)
+
+      // Inside the shelf's danger zone, standing, not safe: a shelf item lands on the head.
+      const shelf = c.shelfDanger.sceneObject.getTransform().getWorldPosition()
+      const inShelf = atHeight(c, shelf, c.config.eyeHeight)
+      expect(c.shelfDanger.contains(inShelf)).toBe(true)
+      c.headPose.setOverride(inShelf, levelLook(start, shelf))
+      await sleep(300)
+      expect(c.inDanger).toBe(true)
       expect(c.isSafe).toBe(false)
       const landed0 = c.fallsLanded
       const hits0 = c.fallHits
       const h0 = c.health
-      expect(c.forceFallForTest("shelf", start)).toBe(true)
+      expect(c.forceFallForTest("shelf", inShelf)).toBe(true)
       await waitFor(() => c.fallsLanded > landed0, 2000)
       const h1 = c.health
       expect(c.fallsLanded).toBe(landed0 + 1)
       expect(c.fallHits).toBe(hits0 + 1)
-      expect(Math.abs(h0 - h1 - c.config.fallHitDamage) <= 0.5).toBe(true)
+      // The hit, plus the danger drain while the item falls (at most the 2 s wait above, plus polling).
+      const lost = h0 - h1
+      expect(lost >= c.config.fallHitDamage - 0.5).toBe(true)
+      expect(lost <= c.config.fallHitDamage + c.config.healthDrainPerSecond * 2.5).toBe(true)
       expect(c.hud.isNoticeShown).toBe(true)
       expect(c.hud.noticeKey).toBe("hit.fell")
 

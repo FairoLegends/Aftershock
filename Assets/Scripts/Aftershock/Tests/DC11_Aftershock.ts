@@ -1,5 +1,6 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
+import {ScoreBreakdown} from "../ScoreCalculator"
 import {lines} from "../Strings"
 import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
 
@@ -27,6 +28,7 @@ export class DC11_Aftershock extends Scenario {
       expect(c.hasBeenSafe).toBe(true)
       await expectState(c, "POST_QUAKE", (c.config.testDurationSeconds + 2) * 1000)
       expect(c.aftershockHappened).toBe(false)
+      const standingAtQuakeEnd = c.secondsStanding // 5j-19c: the score is the main quake's
 
       // Leave the zone: the quiet wait, then the aftershock.
       c.headPose.setOverride(start, levelLook(start, c.safeZone.center))
@@ -47,6 +49,7 @@ export class DC11_Aftershock extends Scenario {
       c.headPose.setOverride(start, levelLook(start, c.safeZone.center))
       await expectState(c, "RESULT", 2000)
       expect(c.aftershockHappened).toBe(true)
+      expect((c.lastScore as ScoreBreakdown).secondsStanding).toBe(standingAtQuakeEnd)
       const s = (c.aftershockTimeToCover as number).toFixed(1)
       const shown = c.resultPanel.texts.join(" | ")
       const label = lines("result.aftershock", {"{s}": s}).primary.split(/[:：]/)[0].trim()

@@ -32,6 +32,7 @@
     aftershockDelayMin: false
     aftershockDurationMax: false
     aftershockDurationMin: false
+    aftershockGraceSeconds: false
     aftershockStrength: false
     bedWarnMargin: false
     bedWarnSeconds: false
@@ -92,6 +93,7 @@
     tableSwitchHysteresis: false
     testAftershockDelaySeconds: false
     testAftershockDurationSeconds: false
+    testAftershockGraceSeconds: false
     testDurationSeconds: false
     testMode: false
     testScanSeconds: false
@@ -167,6 +169,7 @@
       aftershockDurationMin: !<float> 10.000000
       aftershockDurationMax: !<float> 20.000000
       aftershockStrength: 0.600000
+      aftershockGraceSeconds: !<float> 5.000000
       fallCountMin: !<float> 1.000000
       fallCountMax: !<float> 3.000000
       fallMarginSeconds: !<float> 3.000000
@@ -179,6 +182,7 @@
       testScanSeconds: 0.500000
       testAftershockDelaySeconds: 0.500000
       testAftershockDurationSeconds: !<float> 4.000000
+      testAftershockGraceSeconds: !<float> 1.000000
   ScriptTypes:
     -
       {}
@@ -267,6 +271,7 @@
     - '// @input float aftershockDurationMin = 10 {"hint":"Shortest aftershock, in seconds"}'
     - '// @input float aftershockDurationMax = 20 {"hint":"Longest aftershock, in seconds"}'
     - "// @input float aftershockStrength = 0.6 {\"hint\":\"Aftershock shake as a share of the main quake's amplitude and tilt (0 to 1)\"}"
+    - '// @input float aftershockGraceSeconds = 5 {"hint":"Aftershock: seconds after it starts before not being safe drains health (it drains sooner once under cover again), 5j-19c"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Falling objects (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e)"}'
     - '// @input float fallCountMin = 1 {"hint":"Fewest items that fall during each quake and aftershock (Normal and Hard; Easy has none)"}'
@@ -283,3 +288,4 @@
     - '// @input float testScanSeconds = 0.5 {"hint":"Scan intro length when testMode is on, in seconds"}'
     - '// @input float testAftershockDelaySeconds = 0.5 {"hint":"Quiet wait before the aftershock when testMode is on, in seconds"}'
     - '// @input float testAftershockDurationSeconds = 4 {"hint":"Aftershock duration when testMode is on, in seconds"}'
+    - '// @input float testAftershockGraceSeconds = 1 {"hint":"Aftershock grace (aftershockGraceSeconds) when testMode is on, in seconds"}'

@@ -263,6 +263,9 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Aftershock shake as a share of the main quake's amplitude and tilt (0 to 1)")
   aftershockStrength: number = 0.6
+  @input
+  @hint("Aftershock: seconds after it starts before not being safe drains health (it drains sooner once under cover again), 5j-19c")
+  aftershockGraceSeconds: number = 5
   @ui.group_end
 
   @ui.group_start("Falling objects (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e)")
@@ -315,4 +318,7 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Aftershock duration when testMode is on, in seconds")
   testAftershockDurationSeconds: number = 4
+  @input
+  @hint("Aftershock grace (aftershockGraceSeconds) when testMode is on, in seconds")
+  testAftershockGraceSeconds: number = 1
 }
