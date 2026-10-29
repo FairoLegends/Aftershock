@@ -77,6 +77,9 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `level.hard.3` | Selalu ada gempa susulan | Always an aftershock | Immer ein Nachbeben | 必ず余震あり | 一定有余震 |
 | `result.aftershock` | Gempa susulan: {s} s | Aftershock cover: {s} s | Nachbeben-Deckung: {s} s | 余震で身を守るまで：{s} 秒 | 余震躲避用时：{s} 秒 |
 | `result.level` | Tingkat: {level} | Level: {level} | Stufe: {level} | レベル：{level} | 难度：{level} |
+| `label.lamp` | Lampu bisa roboh | Lamp can fall over | Die Lampe kann umfallen | ランプが倒れるかも | 落地灯可能倒下 |
+| `label.tv` | TV bisa jatuh | TV can fall | Der Fernseher kann herunterfallen | テレビが落ちるかも | 电视可能掉落 |
+| `warn.bed` | Kasur bukan tempat berlindung | A bed is not a safe place | Ein Bett ist kein sicherer Ort | ベッドは安全な場所ではありません | 床不是安全的地方 |
 
 ## Fonts
 
