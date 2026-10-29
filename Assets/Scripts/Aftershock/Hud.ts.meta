@@ -28,7 +28,6 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    alarmColor: false
     backingColor: false
     barColor: false
     config: false
@@ -37,7 +36,6 @@
     textColor: false
     textOutlineColor: false
     textOutlineSize: false
-    trackColor: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -54,9 +52,7 @@
       textColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
       textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
       textOutlineSize: 0.200000
-      alarmColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
       barColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
-      trackColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.200000}
   ScriptTypes:
     -
       {}
@@ -71,7 +67,5 @@
     - '// @input vec4 textColor = {1,1,1,1} {"hint":"Instruction, label and timer text color (white)", "widget":"color"}'
     - '// @input vec4 textOutlineColor = {0.2,0.2,0.2,1} {"hint":"Thin outline around every HUD text, so white text reads on the light backing", "widget":"color"}'
     - '// @input float textOutlineSize = 0.2 {"hint":"Outline strength, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
-    - '// @input vec4 alarmColor = {1,0.353,0.31,1} {"hint":"Alarm red #FF5A4F: warning banner, and the health bar below healthAlarmBelow", "widget":"color"}'
     - '// @input vec4 barColor = {1,1,1,1} {"hint":"Health bar fill color at or above healthAlarmBelow", "widget":"color"}'
-    - '// @input vec4 trackColor = {1,1,1,0.2} {"hint":"Health bar track (empty part) color", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

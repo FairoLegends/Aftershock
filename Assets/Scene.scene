@@ -1148,9 +1148,7 @@
     textColor: true
     textOutlineColor: true
     textOutlineSize: true
-    alarmColor: true
     barColor: true
-    trackColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1162,9 +1160,7 @@
       textColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
       textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
       textOutlineSize: 0.200000
-      alarmColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
       barColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
-      trackColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.200000}
   ScriptTypes:
     "":
       {}
