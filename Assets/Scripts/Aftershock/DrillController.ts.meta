@@ -38,6 +38,7 @@
     chairPrefab: false
     config: false
     edgeWarning: false
+    fallingObjects: false
     floorPath: false
     glassDanger: false
     glassLabel: false
@@ -103,6 +104,7 @@
       scanIntro: !<MappingBased.AssignableType_23> 00000000-0000-0000-0000-000000000000
       floorPath: !<MappingBased.AssignableType_24> 00000000-0000-0000-0000-000000000000
       edgeWarning: !<MappingBased.AssignableType_25> 00000000-0000-0000-0000-000000000000
+      fallingObjects: !<MappingBased.AssignableType_26> 00000000-0000-0000-0000-000000000000
       tablePrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       cabinetPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       shelfPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
@@ -148,6 +150,7 @@
     - "// @input AssignableType_24 floorPath {\"hint\":\"FloorPath component: green chevrons to the target table's safe zone\"}"
     - '// @input AssignableType_25 edgeWarning {"hint":"EdgeWarning component: red view-edge pulse while health drains"}'
     - '// @ui {"widget":"group_end"}'
+    - '// @input AssignableType_26 fallingObjects {"hint":"FallingObjects component (under the Room): items that fall off the shelf, cabinet and TV (Slice 7D)"}'
     - '// @ui {"widget":"group_start", "label":"Furniture models (Slice 7R)"}'
     - '// @input Asset.ObjectPrefab tablePrefab {"hint":"Table model (both tables): root at bottom center, cm, front +Z"}'
     - // @input Asset.ObjectPrefab cabinetPrefab

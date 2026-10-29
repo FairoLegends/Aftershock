@@ -265,6 +265,32 @@ export class DrillConfig extends BaseScriptComponent {
   aftershockStrength: number = 0.6
   @ui.group_end
 
+  @ui.group_start("Falling objects (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e)")
+  @input
+  @hint("Fewest items that fall during each quake and aftershock (Normal and Hard; Easy has none)")
+  fallCountMin: number = 1
+
+  @input
+  @hint("Most items that fall during each quake and aftershock")
+  fallCountMax: number = 3
+
+  @input
+  @hint("Items fall no sooner than this after the shake starts and no later than this before it ends, in seconds")
+  fallMarginSeconds: number = 3
+
+  @input
+  @hint("An item landing within this distance (XZ) of the head hits it, unless the head is safe under a table (cm)")
+  fallHitRadius: number = 40
+
+  @input
+  @hint("Health lost when an item hits the head (points)")
+  fallHitDamage: number = 15
+
+  @input
+  @hint("How long the hit.fell notice stays up, in seconds")
+  fallNoticeSeconds: number = 2
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")

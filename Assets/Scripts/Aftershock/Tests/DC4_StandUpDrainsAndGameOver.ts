@@ -18,6 +18,7 @@ export class DC4_StandUpDrainsAndGameOver extends Scenario {
     const prevDuration = c.config.testDurationSeconds
     try {
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
+      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.config.testMode = true
       c.config.testDurationSeconds = DURATION_S
       await toFreshBriefing(c)

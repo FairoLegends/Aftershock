@@ -28,6 +28,7 @@ export class DC1_SafetyThenRoom extends Scenario {
     // rules on the classic item set, so the four named items must all be present.
     controller.forceLayoutForTest(CLASSIC)
     controller.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
+    controller.disableFallsForTest(true) // Slice 7D: no falls in this scenario
 
     // Slice 5L: the Lens opens on the language picker; Bahasa Indonesia → SAFETY.
     expect(controller.state).toBe("LANGUAGE")

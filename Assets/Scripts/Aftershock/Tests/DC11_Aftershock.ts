@@ -16,6 +16,7 @@ export class DC11_Aftershock extends Scenario {
     const prevDuration = c.config.testDurationSeconds
     try {
       c.forceAftershockForTest(true)
+      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.config.testMode = true
       await toFreshBriefing(c)
       expect(c.level).toBe("normal")

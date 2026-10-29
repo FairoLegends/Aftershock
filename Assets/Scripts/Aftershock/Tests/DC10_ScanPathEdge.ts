@@ -17,6 +17,7 @@ export class DC10_ScanPathEdge extends Scenario {
     const prevWait = c.config.testWaitSeconds
     try {
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
+      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.config.testMode = true
       c.config.testWaitSeconds = 3 // BRIEFING outlasts the scan check below
       await toFreshBriefing(c)

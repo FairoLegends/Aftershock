@@ -4,9 +4,9 @@ import {StringKey} from "./Strings"
 
 // Level rules (Slice 7C, ENGINEERING_PLAN 5j item 18). Pure: DrillController
 // asks these what the picked level changes; the numbers live in DrillConfig.
-//   easy   tables tableDistanceMin..easyTableMax, labels stay through the quake, no aftershock
-//   normal today's rules, aftershock with normalAftershockChance
-//   hard   no guides at all (find it yourself), drain × hardDrainMultiplier, aftershock always
+//   easy   tables tableDistanceMin..easyTableMax, labels stay through the quake, no aftershock, nothing falls
+//   normal today's rules, aftershock with normalAftershockChance, falling items (Slice 7D)
+//   hard   no guides at all (find it yourself), drain × hardDrainMultiplier, aftershock always, falling items
 
 export type Level = "easy" | "normal" | "hard"
 
@@ -62,4 +62,9 @@ export function guidesOn(level: Level): boolean {
 /** True on Easy: the hazard labels are not hidden when the quake starts. */
 export function labelsStayInQuake(level: Level): boolean {
   return level === "easy"
+}
+
+/** False on Easy: Easy keeps the quake calm, nothing falls (Slice 7D). */
+export function fallsOn(level: Level): boolean {
+  return level !== "easy"
 }

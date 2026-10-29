@@ -1,0 +1,52 @@
+- !<AssetImportMetadata/f63850a2-986b-4af9-81e5-ede28a3392c3>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> c6e8377a-1077-4079-81fc-a833de3dbd8e
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> c6e8377a-1077-4079-81fc-a833de3dbd8e
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 55baf5fc-84d2-42bb-8d4a-d219c12e865b
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/55baf5fc-84d2-42bb-8d4a-d219c12e865b>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: c353336d-3446-4a8d-a560-2c5b378141a0
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    boxMesh: false
+    config: false
+    itemMaterial: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      boxMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
+      itemMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - // @input AssignableType_1 config
+    - '// @input Asset.RenderMesh boxMesh {"hint":"Unit cube mesh for the items (Aftershock/Meshes/AS_Box.mesh)"}'
+    - '// @input Asset.Material itemMaterial {"hint":"Item material to clone; its baseColor is set to light oak or off-white (Aftershock/Materials/AS_ItemA.mat)"}'

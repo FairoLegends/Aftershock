@@ -16,6 +16,7 @@ export class DC12_Levels extends Scenario {
     const prevDuration = c.config.testDurationSeconds
     try {
       c.forceAftershockForTest(false) // Hard always rolls one; this scenario goes straight to RESULT
+      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.forceLayoutForTest(CLASSIC)
       c.resetForTest(true)
       expect(c.state).toBe("LANGUAGE")

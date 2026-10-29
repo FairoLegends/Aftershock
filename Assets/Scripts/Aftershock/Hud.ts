@@ -194,15 +194,20 @@ export class Hud extends BaseScriptComponent {
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
 
-  /** warn.bed notice (§5j-15 bed trap) in the banner spot for `seconds`; it replaces the warning banner. */
-  showNotice(seconds: number): void {
+  /** A notice (warn.bed §5j-15 bed trap, hit.fell Slice 7D) in the banner spot for `seconds`; it replaces the warning banner. */
+  showNotice(seconds: number, key: StringKey = "warn.bed"): void {
     this.hideWarning()
+    if (this.noticePair && this.noticePair.key !== key) {
+      this.noticePair.key = key
+      setLinePair(this.noticePair.primary, this.noticePair.secondary, lines(key))
+    }
     this.notice.enabled = true
     this.noticeTimer.reset(seconds)
   }
 
   private readonly pairs: {key: StringKey; primary: Text; secondary: Text}[] = []
   private bannerPair: {key: StringKey; primary: Text; secondary: Text} | null = null
+  private noticePair: {key: StringKey; primary: Text; secondary: Text} | null = null
 
   /** Re-renders the banner, the labels and the current instruction in the selected language (Slice 5L). */
   private refreshTexts(): void {
@@ -328,6 +333,10 @@ export class Hud extends BaseScriptComponent {
   }
   get isNoticeShown(): boolean {
     return this.notice !== null && this.notice.isEnabledInHierarchy
+  }
+  /** The notice's current key (warn.bed or hit.fell), or null before it is built. */
+  get noticeKey(): StringKey | null {
+    return this.noticePair ? this.noticePair.key : null
   }
   get instructionKey(): StringKey | null {
     return this._instructionKey
@@ -519,6 +528,7 @@ export class Hud extends BaseScriptComponent {
       this.addText(content, "Notice.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, SOFT_WHITE, false),
       this.addText(content, "Notice.en", "", WARNING_EM_CM, WARN_W, HIDDEN_H, SOFT_WHITE, false)
     )
+    this.noticePair = this.pairs[this.pairs.length - 1]
     notice.enabled = false
     this.notice = notice
   }

@@ -2,6 +2,7 @@ import {BriefingPanel} from "./BriefingPanel"
 import {DANGER_LABEL_HALF_H, DangerZone} from "./DangerZone"
 import {DrillConfig} from "./DrillConfig"
 import {EdgeWarning} from "./EdgeWarning"
+import {FALL_SOURCES, FallFrom, FallingObjects, FallSource} from "./FallingObjects"
 import {FloorPath} from "./FloorPath"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
@@ -13,6 +14,7 @@ import {
   aftershockChance,
   DEFAULT_LEVEL,
   drainMultiplier,
+  fallsOn,
   guidesOn,
   labelsStayInQuake,
   layoutParamsFor,
@@ -191,6 +193,10 @@ export class DrillController extends BaseScriptComponent {
   edgeWarning: EdgeWarning
   @ui.group_end
 
+  @input
+  @hint("FallingObjects component (under the Room): items that fall off the shelf, cabinet and TV (Slice 7D)")
+  fallingObjects: FallingObjects
+
   @ui.group_start("Furniture models (Slice 7R)")
   @input
   @hint("Table model (both tables): root at bottom center, cm, front +Z")
@@ -270,7 +276,8 @@ export class DrillController extends BaseScriptComponent {
   private _hasBeenSafe = false
   private _tSafe: number | null = null // s from quake start
   private safeSince = -1 // s; when inZone && ducked last began, -1 when not safe
-
+  private _fallHits = 0 // Slice 7D: items that hit the head this drill
+  private fallsDisabled = false // LEAF disableFallsForTest
   // Read-only getters for LEAF assertions (TDD §8).
   get state(): DrillState | null {
     return this._state
@@ -417,6 +424,17 @@ export class DrillController extends BaseScriptComponent {
   get edgeWarningActive(): boolean {
     return this.edgeWarning.edgeWarningActive
   }
+  // Slice 7D test getters (5j-8, 17e).
+  get fallsScheduled(): number {
+    return this.fallingObjects.fallsScheduled
+  }
+  get fallsLanded(): number {
+    return this.fallingObjects.fallsLanded
+  }
+  /** Items that hit the head (within fallHitRadius, not safe) this drill. */
+  get fallHits(): number {
+    return this._fallHits
+  }
 
   onAwake(): void {
     this.quakeStartTimer = this.createEvent("DelayedCallbackEvent")
@@ -464,7 +482,8 @@ export class DrillController extends BaseScriptComponent {
       ["scanIntro", this.scanIntro],
       ["floorPath", this.floorPath],
       ["edgeWarning", this.edgeWarning],
-      ["levelPanel", this.levelPanel]
+      ["levelPanel", this.levelPanel],
+      ["fallingObjects", this.fallingObjects]
     ]
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
     if (missing.length > 0) {
@@ -472,6 +491,7 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     this.zones = {cabinet: this.cabinetDanger, shelf: this.shelfDanger, glass: this.glassDanger, lamp: this.lampDanger, tv: this.tvDanger}
+    this.fallingObjects.onLanded = (source, x, z) => this.onItemLanded(source, x, z)
     this.labels = {cabinet: this.cabinetLabel, shelf: this.shelfLabel, glass: this.glassLabel, lamp: this.lampLabel, tv: this.tvLabel}
     this.safeZones = [this.safeZone, this.safeZone2]
     const wrong = HAZARDS.filter((h) => this.zones[h].item !== h || !this.zones[h].hazard).map((h) => h + "Danger")
@@ -659,6 +679,30 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} forceAftershockForTest: ${on === null ? "off" : on}`)
   }
 
+  /** LEAF test hook only (TDD §8): true stops scheduled falls (forceFallForTest still drops one); false lets them fall again. */
+  disableFallsForTest(off: boolean): void {
+    this.fallsDisabled = off
+    if (off) {
+      this.fallingObjects.cancelPending()
+    }
+    console.log(`${LOG} disableFallsForTest: ${off}`)
+  }
+
+  /**
+   * LEAF test hook only (TDD §8): drops one item now from that hazard (it
+   * must be in this drill). With landAt it lands at that world XZ, ignoring
+   * the zone rule; otherwise in front of the hazard as in the drill.
+   */
+  forceFallForTest(item: FallSource, landAt: vec3 | null): boolean {
+    const at = this._layout ? this._layout.items[item] : undefined
+    if (!at || this.activeHazards.indexOf(item) < 0) {
+      console.warn(`${LOG} forceFallForTest: no ${item} in this drill`)
+      return false
+    }
+    console.log(`${LOG} forceFallForTest: ${item}${landAt ? ` at (${fmt(landAt.x)}, ${fmt(landAt.z)})` : ""}`)
+    return this.fallingObjects.drop({source: item, at}, landAt ? this.toRoomLocal(landAt) : null)
+  }
+
   /**
    * LEAF test hook only (TDD §8); the drill never calls it. Every following
    * BRIEFING uses these tables and hazards (positions stay procedural) until
@@ -819,6 +863,8 @@ export class DrillController extends BaseScriptComponent {
     this._bedWarnCount = 0
     this._walkAllowance = 0
     this._nearestTableDistance = 0
+    this._fallHits = 0
+    this.fallingObjects.clear()
     this.resetCover()
     this._instructionKey = "instr.brief"
     // ENGINEERING_PLAN 5f item 1: never the current head height (restarting while ducked broke ducking).
@@ -897,6 +943,7 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} QUAKE: lasts ${fmt(this._quakeDuration)} s`)
 
     this.quakeShaker.startShake(this._quakeDuration)
+    this.scheduleFalls(this._quakeDuration)
     if (this.rumbleAudio.audioTrack) {
       this.rumbleAudio.volume = 0 // ramps with the shake (DESIGN_BRIEF §6.2)
       this.rumbleAudio.play(-1)
@@ -994,6 +1041,48 @@ export class DrillController extends BaseScriptComponent {
       console.log(`${LOG} QUAKE: ducked on the bed: warn.bed (${this._bedWarnCount}x); a bed is not cover`)
     }
     this._nearBed = near
+  }
+
+  /** Slice 7D (5j-8): fallCountMin..Max falls this shake from the shelf, cabinet and TV present; none on Easy. */
+  private scheduleFalls(durationSeconds: number): void {
+    if (!fallsOn(this._level) || this.fallsDisabled || !this._layout) {
+      console.log(`${LOG} falls: off (${this.fallsDisabled ? "disabled for test" : "level " + this._level})`)
+      return
+    }
+    const sources: FallFrom[] = []
+    for (const s of FALL_SOURCES) {
+      const at = this._layout.items[s]
+      if (at && this.activeHazards.indexOf(s) >= 0) {
+        sources.push({source: s, at})
+      }
+    }
+    this.fallingObjects.scheduleShake(durationSeconds, sources)
+  }
+
+  /**
+   * Slice 7D hit rule (5j-8, 17e): an item landing within fallHitRadius (XZ)
+   * of the head while it is not safe (inZone && ducked) costs fallHitDamage
+   * and shows hit.fell. Only while shaking; at 0 health, game over (danger).
+   */
+  private onItemLanded(source: FallSource, x: number, z: number): void {
+    if (this._state !== "QUAKE" && this._state !== "AFTERSHOCK") {
+      return
+    }
+    const head = this.toRoomLocal(this.headPose.position)
+    const dist = Math.sqrt((head.x - x) * (head.x - x) + (head.y - z) * (head.y - z))
+    if (dist > this.config.fallHitRadius || this.isSafe) {
+      console.log(`${LOG} ${this._state}: ${source} item landed ${fmt(dist)} cm from the head${this.isSafe ? " (safe under cover)" : ""}; no hit`)
+      return
+    }
+    this._fallHits++
+    this._health = Math.max(0, this._health - this.config.fallHitDamage)
+    this.hud.setHealth(this._health)
+    this.hud.showNotice(this.config.fallNoticeSeconds, "hit.fell")
+    console.log(`${LOG} ${this._state}: ${source} item hit the head (${fmt(dist)} cm, ${this._fallHits}x); health ${fmt(this._health)}`)
+    if (this._health <= 0) {
+      this._gameOverReason = "over.why.danger"
+      this.onHealthDepleted()
+    }
   }
 
   /** True when the head is in any of this drill's safe zones. */
@@ -1139,6 +1228,7 @@ export class DrillController extends BaseScriptComponent {
     this.quakeUpdate.enabled = false
     this.quakeEndTimer.cancel()
     this.quakeShaker.stopShake()
+    this.fallingObjects.cancelPending() // items already in the air still land, but hit only while shaking
     if (this.rumbleAudio.isPlaying()) {
       this.rumbleAudio.stop(false)
     }
@@ -1204,6 +1294,7 @@ export class DrillController extends BaseScriptComponent {
     const c = this.config
     const d = c.testMode ? c.testAftershockDurationSeconds : randomBetween(c.aftershockDurationMin, c.aftershockDurationMax)
     this.quakeShaker.startShake(d, c.aftershockStrength)
+    this.scheduleFalls(d)
     this.rumbleAudio.volume = 0
     if (this.rumbleAudio.audioTrack) {
       this.rumbleAudio.play(-1)

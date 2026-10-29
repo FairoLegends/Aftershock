@@ -42,6 +42,12 @@
     edgeClearFraction: false
     edgePulseHz: false
     eyeHeight: false
+    fallCountMax: false
+    fallCountMin: false
+    fallHitDamage: false
+    fallHitRadius: false
+    fallMarginSeconds: false
+    fallNoticeSeconds: false
     fontBody: false
     fontJa: false
     fontZh: false
@@ -161,6 +167,12 @@
       aftershockDurationMin: !<float> 10.000000
       aftershockDurationMax: !<float> 20.000000
       aftershockStrength: 0.600000
+      fallCountMin: !<float> 1.000000
+      fallCountMax: !<float> 3.000000
+      fallMarginSeconds: !<float> 3.000000
+      fallHitRadius: !<float> 40.000000
+      fallHitDamage: !<float> 15.000000
+      fallNoticeSeconds: !<float> 2.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -255,6 +267,14 @@
     - '// @input float aftershockDurationMin = 10 {"hint":"Shortest aftershock, in seconds"}'
     - '// @input float aftershockDurationMax = 20 {"hint":"Longest aftershock, in seconds"}'
     - "// @input float aftershockStrength = 0.6 {\"hint\":\"Aftershock shake as a share of the main quake's amplitude and tilt (0 to 1)\"}"
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Falling objects (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e)"}'
+    - '// @input float fallCountMin = 1 {"hint":"Fewest items that fall during each quake and aftershock (Normal and Hard; Easy has none)"}'
+    - '// @input float fallCountMax = 3 {"hint":"Most items that fall during each quake and aftershock"}'
+    - '// @input float fallMarginSeconds = 3 {"hint":"Items fall no sooner than this after the shake starts and no later than this before it ends, in seconds"}'
+    - '// @input float fallHitRadius = 40 {"hint":"An item landing within this distance (XZ) of the head hits it, unless the head is safe under a table (cm)"}'
+    - '// @input float fallHitDamage = 15 {"hint":"Health lost when an item hits the head (points)"}'
+    - '// @input float fallNoticeSeconds = 2 {"hint":"How long the hit.fell notice stays up, in seconds"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'

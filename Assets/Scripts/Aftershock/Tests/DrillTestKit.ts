@@ -127,4 +127,5 @@ export function restore(c: DrillController, testMode: boolean, testDurationSecon
   c.headPose.clearOverride()
   c.forceLayoutForTest(null)
   c.forceAftershockForTest(null) // Slice 7C: back to the level's chance
+  c.disableFallsForTest(false) // Slice 7D: falls on again
 }

@@ -18,6 +18,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
       // Restart a 1 s wait could pass before the BRIEFING check ran. 3 s removes the race.
       c.config.testWaitSeconds = 3
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
+      c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       expect(c.config.layoutSeed).toBe(0)
       c.resetForTest(true)
       expect(c.state).toBe("LANGUAGE")

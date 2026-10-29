@@ -238,6 +238,21 @@
     []
   Components:
     - !<own> 35501b69-b651-41e6-9b64-72a252df8105
+- !<SceneObject/046839bf-5d5c-4a5f-be26-ae8a9c7a4b9b>
+  PrefabRemaps:
+    []
+  Name: FallingObjects
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> c8e0f0db-1d48-4afb-a033-26eaa0dd3227
 - !<SceneObject/0493e4e2-baca-417a-81fd-6da4e7f6e04f>
   PrefabRemaps:
     []
@@ -1618,6 +1633,12 @@
     aftershockDurationMin: true
     aftershockDurationMax: true
     aftershockStrength: true
+    fallCountMin: true
+    fallCountMax: true
+    fallMarginSeconds: true
+    fallHitRadius: true
+    fallHitDamage: true
+    fallNoticeSeconds: true
     testMode: true
     testWaitSeconds: true
     testDurationSeconds: true
@@ -1687,6 +1708,12 @@
       aftershockDurationMin: !<float> 10.000000
       aftershockDurationMax: !<float> 20.000000
       aftershockStrength: 0.600000
+      fallCountMin: !<float> 1.000000
+      fallCountMax: !<float> 3.000000
+      fallMarginSeconds: !<float> 3.000000
+      fallHitRadius: !<float> 40.000000
+      fallHitDamage: !<float> 15.000000
+      fallNoticeSeconds: !<float> 2.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -2377,6 +2404,7 @@
     - !<own> 80037e64-aef5-4def-9f1c-5c65421decf5
     - !<own> 0e8688f8-2e1e-472b-9b18-290b9c5f4602
     - !<own> 235565ea-925a-4995-be27-32921680800c
+    - !<own> 046839bf-5d5c-4a5f-be26-ae8a9c7a4b9b
   Components:
     - !<own> 30de3aec-07f9-441e-8f20-3c0a7158ba47
 - !<SceneObject/6a7a67db-5675-49bb-8f31-ba0588e3cffc>
@@ -4274,6 +4302,24 @@
   ScriptTypes:
     "":
       {}
+- !<ScriptComponent/c8e0f0db-1d48-4afb-a033-26eaa0dd3227>
+  PrefabRemaps:
+    []
+  Name: FallingObjects
+  Enabled: true
+  ScriptAsset: !<reference> c6e8377a-1077-4079-81fc-a833de3dbd8e
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
+      boxMesh: !<reference.RenderMesh> f27ea527-2119-4880-ad06-453f0e7daaf3
+      itemMaterial: !<reference.Material> 2659a21e-7a1c-4a22-ac88-59885cb7afc8
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/c94a207c-319d-4df6-a512-889e73492ccd>
   PrefabRemaps:
     []
@@ -5505,6 +5551,7 @@
       scanIntro: !<MappingBased.AssignableType_23> 67bce35c-a8a7-451b-a6a3-1a4ec31c35de
       floorPath: !<MappingBased.AssignableType_24> 9f8d2fbd-7283-4da9-b193-08e8747212c1
       edgeWarning: !<MappingBased.AssignableType_25> 0735a83d-fdd5-4d23-ba88-ba52fe8a35bd
+      fallingObjects: !<MappingBased.AssignableType_26> c8e0f0db-1d48-4afb-a033-26eaa0dd3227
       tablePrefab: !<reference.ObjectPrefab> 68a4de7c-d609-40a8-8e70-c31fd9877491
       cabinetPrefab: !<reference.ObjectPrefab> 1c8bc680-a962-43dc-8449-ab4fe5c708b5
       shelfPrefab: !<reference.ObjectPrefab> ff246972-5993-4e77-bf50-fe5c3c0cf985
