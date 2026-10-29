@@ -2,20 +2,19 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {BrutalFrame, BRUTAL_RED, BRUTAL_WHITE} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6: labels use 2.5 cm type. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
 const LABEL_EM_CM = 2.5
 const ENGLISH_SCALE = 0.8
-const CHAR_EM = 0.55 // rough Latin glyph width (em) to tell when a line needs to wrap
+const LINE_H_PER_EM = 1.25 // as ResultPanel
 
 // Label layout (cm). Not drill tunables: they only shape the label.
 const INNER_W = 34
 const PAD = 1.5
 const ROW_GAP = 0.6
 const LINE_ID_H = 3.0
-const LINE_ID_WRAP_H = 6.0 // Slice 5L: long German lines wrap to two lines instead of clipping
 const LINE_EN_H = 2.4
 const HIDDEN_H = 0.001 // the English line collapses to this when English is selected
 const ABOVE_GAP = 1.0 // gap between the label's backing and an attached line above it (danger label)
@@ -67,7 +66,8 @@ export class HazardLabel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = createLightBacking(this.sceneObject, this.backingColor)
+    // Slice 7A: hazards are solid red, white text, white hard plate; the safe zone keeps its colors.
+    const backing = new BrutalFrame(this.sceneObject, this.isHazard ? BRUTAL_RED : this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -85,7 +85,7 @@ export class HazardLabel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backing.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.setSize(r.containerWidth, r.containerHeight)
       this.height = r.containerHeight
       this.placeAbove()
     })
@@ -98,12 +98,18 @@ export class HazardLabel extends BaseScriptComponent {
     this.secondary = secondary.text
     this.secondaryItem = secondary.item
     this.primary.horizontalOverflow = HorizontalOverflow.Wrap
+    this.secondary.horizontalOverflow = HorizontalOverflow.Wrap
     this.refresh()
     onLanguageChanged.add(() => this.refresh())
   }
 
   show(): void {
     this.sceneObject.enabled = true
+    this.refresh() // fonts are registered by now, so measure in the real font
+  }
+
+  private get isHazard(): boolean {
+    return this.key !== "label.safe"
   }
 
   hide(): void {
@@ -143,12 +149,21 @@ export class HazardLabel extends BaseScriptComponent {
   /** Re-renders the key in the selected language; a long primary line wraps to two lines. */
   private refresh(): void {
     const l = lines(this.key as StringKey)
-    setLinePair(this.primary, this.secondary, l)
-    const wraps = l.primary.length * LABEL_EM_CM * CHAR_EM > INNER_W
-    const h = wraps ? LINE_ID_WRAP_H : LINE_ID_H
-    this.primary.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -h / 2, h / 2)
-    this.primaryItem.overrideHeight = h
-    this.secondaryItem.overrideHeight = l.secondary.length > 0 ? LINE_EN_H : HIDDEN_H
+    setLinePair(this.primary, this.secondary, l, "body") // 5j-12 (b): Manrope
+    this.fitLine(this.primary, this.primaryItem, true, LABEL_EM_CM)
+    this.fitLine(this.secondary, this.secondaryItem, l.secondary.length > 0, LABEL_EM_CM * ENGLISH_SCALE)
+  }
+
+  /** Same as ResultPanel.fitLine: height = measured line count × line height. */
+  private fitLine(t: Text, item: FlexItem, shown: boolean, emCm: number): void {
+    const lineH = emCm * LINE_H_PER_EM
+    let h = shown ? lineH : HIDDEN_H
+    if (shown && t.text.length > 0) {
+      const box = t.getBoundingBox()
+      h = Math.max(1, Math.round((box.top - box.bottom) / lineH)) * lineH
+    }
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -h / 2, h / 2)
+    item.overrideHeight = h
   }
 
   private addLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {
@@ -159,7 +174,7 @@ export class HazardLabel extends BaseScriptComponent {
     t.size = LABEL_EM_CM * SIZE_PER_CM * scale
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
-    t.textFill.color = this.textColor
+    t.textFill.color = this.isHazard ? BRUTAL_WHITE : this.textColor
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Overflow

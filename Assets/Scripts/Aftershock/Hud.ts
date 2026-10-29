@@ -4,7 +4,7 @@ import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUI
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
-import {fontFor, getLanguage, latinFont, lines, onLanguageChanged, primaryLine, setLinePair, StringKey} from "./Strings"
+import {FontRole, fontFor, getLanguage, latinFont, lines, onLanguageChanged, primaryLine, setLinePair, StringKey} from "./Strings"
 import {BrutalFrame, BRUTAL_BORDER_CM, BRUTAL_RED, BRUTAL_WHITE, BRUTAL_YELLOW, createSquareRect, drawOnTop, Marquee} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm.
@@ -21,12 +21,14 @@ const ROW_GAP = 0.8
 const INSTR_ID_H = 8.4 // two wrapped lines
 const INSTR_EN_H = 6.8
 const ROW_H = 5
-const LABEL_W = 9
+const LABEL_W = 8
 const LABEL_ID_H = 2.6
 const LABEL_EN_H = 2.1
 const BAR_W = 16
 const BAR_H = 1.6
-const TIMER_W = 9
+const TIMER_W = 10 // 5j-12 defect 4: its own column, wide enough for "00:59" at TIMER_EM_CM
+const TIMER_EM_CM = 2.5
+const ROW_COL_GAP = 1.2 // label, bar, label, timer: 8 + 16 + 8 + 10 + 3 x 1.2 = 45.6 <= INNER_W
 const WARN_W = 40
 const WARN_ID_H = 9
 const WARN_EN_H = 7.2
@@ -36,11 +38,18 @@ const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 // Slice 7A numbered steps (01 goUnder, 02 duck, 03 hold): three cells over the instruction area.
 const STEP_KEYS: StringKey[] = ["step.goUnder", "step.duck", "step.hold"]
 const STEP_W = 14
-const STEP_H = 13
+const STEP_H = 14
 const STEP_GAP = 2 // 3 x 14 + 2 x 2 = INNER_W
-const STEP_TEXT_W = 12.5
-const STEP_NUMBER_EM = 3.5
-const STEP_NAME_EM = 2.5 // label size: the name wraps inside a 14 cm cell
+const STEP_TEXT_W = 13
+const STEP_FIT_W = STEP_TEXT_W - 0.4 // a word wider than this would break mid-word
+const STEP_NUMBER_EM = 3 // Syne, above the name (5j-12 (a))
+const STEP_NUMBER_Y = 4.6
+const STEP_NAME_EM = 2 // Manrope; wraps at word boundaries, two lines at most
+const STEP_NAME_MIN_EM = 1.6
+const STEP_NAME_Y = 0
+const STEP_EN_EM = 1.5 // the English line, smaller Manrope
+const STEP_EN_Y = -4.6
+const LINE_H_PER_EM = 1.25 // as ResultPanel
 const STEP_THIN_CM = 0.15 // upcoming-step border
 const STEP_DONE_ALPHA = 0.4
 const STEP_TEXT_Z = 0.1
@@ -57,11 +66,11 @@ const SEG_EMPTY_BORDER = new vec4(1, 1, 1, 0.35)
 
 // Slice 7A marquee.dch strip, with the banner for its first warningShowSeconds.
 const DCH_W = 70
-const DCH_H = 2.6
-const DCH_EM = 1.4
+const DCH_H = 3.2
+const DCH_EM = 2 // 5j-12 defect 5: 2 cm Syne
 const DCH_GAP = 1.5
 const DCH_SPEED = 5 // cm/s
-const DCH_PERIOD = 45 // cm between copies
+const DCH_WORD_GAP = 6 // cm between the end of one copy and the next
 
 /** Height of the HUD panel backing (cm): two instruction lines and the health/timer row (buildPanel). */
 export const HUD_PANEL_HEIGHT = PAD * 2 + INSTR_ID_H + INSTR_EN_H + ROW_H + ROW_GAP * 2
@@ -111,19 +120,9 @@ export class Hud extends BaseScriptComponent {
   textOutlineSize: number = 0.2
 
   @input
-  @hint("Alarm red #FF5A4F: warning banner, and the health bar below healthAlarmBelow")
-  @widget(new ColorWidget())
-  alarmColor: vec4 = new vec4(1, 0.353, 0.31, 1)
-
-  @input
   @hint("Health bar fill color at or above healthAlarmBelow")
   @widget(new ColorWidget())
   barColor: vec4 = new vec4(1, 1, 1, 1)
-
-  @input
-  @hint("Health bar track (empty part) color")
-  @widget(new ColorWidget())
-  trackColor: vec4 = new vec4(1, 1, 1, 0.2)
   @ui.group_end
 
   private transform: Transform | null = null
@@ -139,6 +138,8 @@ export class Hud extends BaseScriptComponent {
   private readonly stepNames: Text[] = []
   private readonly stepEnglish: Text[] = []
   private readonly stepStrikes: SceneObject[] = []
+  private readonly stepNameText: string[] = ["", "", ""] // last fitted name per step
+  private readonly stepNameEm: number[] = [STEP_NAME_EM, STEP_NAME_EM, STEP_NAME_EM]
   private marquee: Marquee | null = null
   private readonly followPos = new vec3(0, 0, 0)
   private readonly followRot = quat.quatIdentity()
@@ -187,26 +188,26 @@ export class Hud extends BaseScriptComponent {
 
   /** warn.quake banner at the center of view for warningShowSeconds. */
   showWarning(): void {
-    this.marquee.setText(primaryLine("marquee.dch"), fontFor(getLanguage(), "title"))
+    this.marquee.setText(primaryLine("marquee.dch"), latinFont("title"), fontFor(getLanguage(), "title"))
     this.banner.enabled = true
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
 
-  private readonly pairs: {key: StringKey; primary: Text; secondary: Text}[] = []
+  private readonly pairs: {key: StringKey; primary: Text; secondary: Text; role: FontRole}[] = []
 
   /** Re-renders the banner, the labels and the current instruction in the selected language (Slice 5L). */
   private refreshTexts(): void {
     for (const p of this.pairs) {
-      setLinePair(p.primary, p.secondary, lines(p.key))
+      setLinePair(p.primary, p.secondary, lines(p.key), p.role)
     }
     if (this._instructionKey) {
       this.setInstruction(this._instructionKey)
     }
   }
 
-  private addPair(key: StringKey, primary: Text, secondary: Text): void {
-    this.pairs.push({key, primary, secondary})
-    setLinePair(primary, secondary, lines(key))
+  private addPair(key: StringKey, primary: Text, secondary: Text, role: FontRole): void {
+    this.pairs.push({key, primary, secondary, role})
+    setLinePair(primary, secondary, lines(key), role)
   }
 
   /**
@@ -219,7 +220,7 @@ export class Hud extends BaseScriptComponent {
     this.instructionId.enabled = step < 0
     this.instructionEn.enabled = step < 0
     if (step < 0) {
-      setLinePair(this.instructionId, this.instructionEn, lines(key))
+      setLinePair(this.instructionId, this.instructionEn, lines(key), "body")
     } else {
       this.setSteps(step)
     }
@@ -232,7 +233,8 @@ export class Hud extends BaseScriptComponent {
       const frame = this.stepFrames[i]
       const done = i < active
       const on = i === active
-      setLinePair(this.stepNames[i], this.stepEnglish[i], lines(STEP_KEYS[i]))
+      setLinePair(this.stepNames[i], this.stepEnglish[i], lines(STEP_KEYS[i]), "body")
+      this.fitStepName(i)
       frame.setAccent(on ? BRUTAL_YELLOW : BRUTAL_WHITE)
       frame.setBorderSize(i > active ? STEP_THIN_CM : BRUTAL_BORDER_CM)
       frame.setPlateVisible(i <= active)
@@ -243,6 +245,41 @@ export class Hud extends BaseScriptComponent {
       this.stepEnglish[i].textFill.color = color
       this.stepStrikes[i].enabled = done
     }
+  }
+
+  /**
+   * 5j-12 (a): a step name wraps at word boundaries only, to two lines at
+   * most. A word wider than the cell, or a third line, shrinks the name (never
+   * under STEP_NAME_MIN_EM). Measures once per text, at most 3 getBoundingBox
+   * calls (the limit is 5 per Text per frame).
+   */
+  private fitStepName(i: number): void {
+    const t = this.stepNames[i]
+    const text = t.text
+    if (text !== this.stepNameText[i]) {
+      this.stepNameText[i] = text
+      let em = STEP_NAME_EM
+      t.size = em * SIZE_PER_CM
+      t.horizontalOverflow = HorizontalOverflow.Overflow
+      t.text = text.split(" ").reduce((a, b) => (b.length > a.length ? b : a), "")
+      const box = t.getBoundingBox()
+      const w = box.right - box.left
+      if (w > STEP_FIT_W) {
+        em = Math.max(STEP_NAME_MIN_EM, (em * STEP_FIT_W) / w)
+      }
+      t.text = text
+      t.horizontalOverflow = HorizontalOverflow.Wrap
+      for (let k = 0; k < 2 && em > STEP_NAME_MIN_EM; k++) {
+        t.size = em * SIZE_PER_CM
+        const b = t.getBoundingBox()
+        if (Math.round((b.top - b.bottom) / (em * LINE_H_PER_EM)) <= 2) {
+          break
+        }
+        em = Math.max(STEP_NAME_MIN_EM, em * 0.85)
+      }
+      this.stepNameEm[i] = em
+    }
+    t.size = this.stepNameEm[i] * SIZE_PER_CM
   }
 
   /** Health in 0..healthStart, as 10 segments. Filled segments turn red below healthAlarmBelow. */
@@ -352,7 +389,8 @@ export class Hud extends BaseScriptComponent {
     const rowFlex = row.createComponent(FlexLayout.getTypeName()) as FlexLayout
     rowFlex.direction = FlexDirection.Row
     rowFlex.alignItems = FlexAlign.Center
-    rowFlex.justifyContent = FlexJustify.SpaceBetween
+    rowFlex.justifyContent = FlexJustify.Center
+    rowFlex.columnGap = ROW_COL_GAP
     rowFlex.width = INNER_W
     rowFlex.height = ROW_H
 
@@ -375,7 +413,8 @@ export class Hud extends BaseScriptComponent {
     }
 
     this.addLabel(row, "TimerLabel", "hud.time")
-    this.timerLabel = this.addText(row, "TimerText", "00:00", INSTRUCTION_EM_CM, TIMER_W, ROW_H, this.textColor, false)
+    this.timerLabel = this.addText(row, "TimerText", "00:00", TIMER_EM_CM, TIMER_W, ROW_H, this.textColor, false)
+    this.timerLabel.horizontalOverflow = HorizontalOverflow.Shrink
   }
 
   /**
@@ -393,15 +432,15 @@ export class Hud extends BaseScriptComponent {
       const frame = new BrutalFrame(cell, new vec4(1, 1, 1, 0.12))
       frame.setSize(STEP_W, STEP_H)
       this.stepFrames.push(frame)
-      const n = this.stepText(cell, "Step" + (i + 1) + ".number", STEP_NUMBER_EM, 3.8, 4)
+      const n = this.stepText(cell, "Step" + (i + 1) + ".number", STEP_NUMBER_EM, STEP_NUMBER_Y, 3.8)
       n.text = "0" + (i + 1)
       this.stepNumbers.push(n)
-      const name = this.stepText(cell, "Step" + (i + 1) + ".name", STEP_NAME_EM, -0.4, 4.2)
+      const name = this.stepText(cell, "Step" + (i + 1) + ".name", STEP_NAME_EM, STEP_NAME_Y, 2 * STEP_NAME_EM * LINE_H_PER_EM)
       name.capitilizationOverride = CapitilizationOverride.AllUpper
       this.stepNames.push(name)
-      this.stepEnglish.push(this.stepText(cell, "Step" + (i + 1) + ".en", SMALL_EM_CM, -4.4, 3.4))
+      this.stepEnglish.push(this.stepText(cell, "Step" + (i + 1) + ".en", STEP_EN_EM, STEP_EN_Y, 3.8))
       const strike = this.child(cell, "Step" + (i + 1) + ".strike")
-      strike.getTransform().setLocalPosition(new vec3(0, -0.4, STEP_TEXT_Z * 2))
+      strike.getTransform().setLocalPosition(new vec3(0, STEP_NAME_Y, STEP_TEXT_Z * 2))
       createSquareRect(strike, STEP_WHITE, STEP_TEXT_W, STRIKE_H)
       strike.enabled = false
       this.stepStrikes.push(strike)
@@ -438,7 +477,7 @@ export class Hud extends BaseScriptComponent {
     const backing = new BrutalFrame(banner, BRUTAL_RED)
     const content = this.child(banner, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
-    this.marquee = new Marquee(banner, "MarqueeDch", DCH_W, DCH_H, DCH_EM, BRUTAL_YELLOW, DCH_SPEED, DCH_PERIOD)
+    this.marquee = new Marquee(banner, "MarqueeDch", DCH_W, DCH_H, DCH_EM, BRUTAL_YELLOW, DCH_SPEED, DCH_WORD_GAP)
     const flex = this.column(content, ROW_GAP, PAD)
     flex.width = WARN_W + PAD * 2
     flex.onLayoutComplete.add((r) => {
@@ -448,7 +487,8 @@ export class Hud extends BaseScriptComponent {
     this.addPair(
       "warn.quake",
       this.addText(content, "Warning.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, BRUTAL_WHITE, false),
-      this.addText(content, "Warning.en", "", WARNING_EM_CM * ENGLISH_SCALE, WARN_W, WARN_EN_H, BRUTAL_WHITE, false)
+      this.addText(content, "Warning.en", "", WARNING_EM_CM * ENGLISH_SCALE, WARN_W, WARN_EN_H, BRUTAL_WHITE, false),
+      "title"
     )
     onLanguageChanged.add(() => this.refreshTexts())
     banner.enabled = false
@@ -463,11 +503,11 @@ export class Hud extends BaseScriptComponent {
     item.overrideHeight = LABEL_ID_H + LABEL_EN_H
     const flex = this.column(so, 0, 0)
     flex.width = LABEL_W
-    this.addPair(
-      key,
-      this.addText(so, name + ".id", "", SMALL_EM_CM, LABEL_W, LABEL_ID_H, this.textColor, false),
-      this.addText(so, name + ".en", "", SMALL_EM_CM * ENGLISH_SCALE, LABEL_W, LABEL_EN_H, this.textColor, false)
-    )
+    const primary = this.addText(so, name + ".id", "", SMALL_EM_CM, LABEL_W, LABEL_ID_H, this.textColor, false)
+    const secondary = this.addText(so, name + ".en", "", SMALL_EM_CM * ENGLISH_SCALE, LABEL_W, LABEL_EN_H, this.textColor, false)
+    primary.horizontalOverflow = HorizontalOverflow.Shrink // 5j-12 defect 4: never wider than its column
+    secondary.horizontalOverflow = HorizontalOverflow.Shrink
+    this.addPair(key, primary, secondary, "body")
   }
 
   private column(so: SceneObject, gap: number, pad: number): FlexLayout {

@@ -3,7 +3,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {Lang, LANGS, latinFont, primaryLine, setLineText, STRINGS} from "./Strings"
+import {fontFor, getLanguage, Lang, LANGS, latinFont, primaryLine, setLineText, STRINGS} from "./Strings"
 import {BrutalFrame, BRUTAL_WHITE, drawOnTop, makeBrutalButton, Marquee, PinchGuard, resetBrutalButton} from "./UiBacking"
 
 // Same type scale as SafetyPanel (size / 43.886 = em-square in cm at 110 cm).
@@ -22,15 +22,20 @@ const BUTTON_W = 18
 const BUTTON_H = 4 // 5h item 2 (learner): 4 cm tall so all five fit in view at eye level
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const NUMBER_INSET = 1.6 // "01".."05" sit this far in from the button's left edge
+const NUMBER_HALF_W = 1.2 // half the number's box
+// 5j-12 defect 2: the label box starts right of the number and ends inside the
+// button; the label is left-aligned in it and shrinks only if it would not fit.
+const LABEL_LEFT = -BUTTON_W / 2 + NUMBER_INSET + NUMBER_HALF_W + 0.8
+const LABEL_RIGHT = BUTTON_W / 2 - 0.8
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 const BUTTON_FILL = new vec4(1, 1, 1, 0.12)
 
-// Slice 7A marquee.drill strip above the picker.
-const MARQUEE_H = 2.6
-const MARQUEE_EM = 1.4
+// Slice 7A marquee.drill strip above the picker (5j-12 defect 5: white, 2 cm Syne).
+const MARQUEE_H = 3.2
+const MARQUEE_EM = 2
 const MARQUEE_GAP = 1.5
 const MARQUEE_SPEED = 4 // cm/s
-const MARQUEE_PERIOD = 40 // cm between copies
+const MARQUEE_WORD_GAP = 5 // cm between the end of one copy and the next
 
 const NUMBER_COLOR = new vec4(1, 1, 1, 0.65)
 
@@ -75,7 +80,7 @@ export class LanguagePanel extends BaseScriptComponent {
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
 
     const panelW = INNER_W + PAD * 2
-    this.marquee = new Marquee(this.sceneObject, "MarqueeDrill", panelW, MARQUEE_H, MARQUEE_EM, BRUTAL_WHITE, MARQUEE_SPEED, MARQUEE_PERIOD)
+    this.marquee = new Marquee(this.sceneObject, "MarqueeDrill", panelW, MARQUEE_H, MARQUEE_EM, BRUTAL_WHITE, MARQUEE_SPEED, MARQUEE_WORD_GAP)
 
     const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
     flex.width = panelW
@@ -129,7 +134,7 @@ export class LanguagePanel extends BaseScriptComponent {
     for (const t of this.numberTexts) {
       if (numberFont) t.font = numberFont
     }
-    this.marquee.setText(primaryLine("marquee.drill"), latinFont("title"))
+    this.marquee.setText(primaryLine("marquee.drill"), latinFont("title"), fontFor(getLanguage(), "title"))
     this.sceneObject.enabled = true
     for (let i = 0; i < this.buttons.length; i++) {
       resetBrutalButton(this.buttons[i], this.frames[i])
@@ -178,9 +183,11 @@ export class LanguagePanel extends BaseScriptComponent {
 
     const label = global.scene.createSceneObject("lang.name." + lang)
     label.setParent(frame.face)
-    label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
-    const t = this.addText(label, STRINGS["lang.name"][lang], BUTTON_SIZE, BUTTON_W - 0.5, BUTTON_H - 0.5, lang)
+    label.getTransform().setLocalPosition(new vec3((LABEL_LEFT + LABEL_RIGHT) / 2, 0, BUTTON_LABEL_Z))
+    const t = this.addText(label, STRINGS["lang.name"][lang], BUTTON_SIZE, LABEL_RIGHT - LABEL_LEFT, BUTTON_H - 0.5, lang)
     t.capitilizationOverride = CapitilizationOverride.AllUpper
+    t.horizontalAlignment = HorizontalAlignment.Left
+    t.horizontalOverflow = HorizontalOverflow.Shrink
 
     // "01".."05": not a language line, so it stays out of `texts`.
     const num = global.scene.createSceneObject("lang.num." + lang)
@@ -195,7 +202,7 @@ export class LanguagePanel extends BaseScriptComponent {
     n.verticalAlignment = VerticalAlignment.Center
     n.horizontalOverflow = HorizontalOverflow.Overflow
     n.verticalOverflow = VerticalOverflow.Overflow
-    n.layoutRect = Rect.create(-1.5, 1.5, -BUTTON_H / 2, BUTTON_H / 2)
+    n.layoutRect = Rect.create(-NUMBER_HALF_W, NUMBER_HALF_W, -BUTTON_H / 2, BUTTON_H / 2)
     n.text = (index + 1 < 10 ? "0" : "") + (index + 1)
     this.numberTexts.push(n)
   }

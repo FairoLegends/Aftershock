@@ -1,7 +1,7 @@
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, insideRect, LayoutItem} from "./LayoutGenerator"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {createLightBacking} from "./UiBacking"
+import {BrutalFrame, BRUTAL_RED, BRUTAL_WHITE, createLightBacking} from "./UiBacking"
 
 // DESIGN_BRIEF §5.2: labels use 2.5 cm type. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -14,7 +14,10 @@ const OUTLINE_LIFT = 0.6 // outline above the fill (z-fighting)
 const OUTLINE_W = 1.5
 const LINE_GAP = 3 // primary line center to English line center
 /** Half the danger label's height (cm), for HazardLabel.attachAbove (ENGINEERING_PLAN 5i item 1). */
-export const DANGER_LABEL_HALF_H = LINE_GAP
+export const DANGER_LABEL_HALF_H = LINE_GAP + 0.5 // half the red-outlined tag (Slice 7A)
+const TAG_BORDER_CM = 0.3
+const TAG_FILL = new vec4(1, 0, 0, 0.15)
+const TAG_TEXT_Z = 0.1
 const LABEL_W = 30
 const FLAT = quat.angleAxis(-Math.PI / 2, vec3.right()) // a UI rectangle's +Z (its face) turned to +Y
 
@@ -177,6 +180,9 @@ export class DangerZone extends BaseScriptComponent {
     const so = global.scene.createSceneObject("DangerLabel")
     so.setParent(this.sceneObject)
     so.createComponent("Component.Canvas")
+    const tag = new BrutalFrame(so, TAG_FILL, BRUTAL_RED, TAG_BORDER_CM)
+    tag.setPlateVisible(false)
+    tag.setSize(LABEL_W, DANGER_LABEL_HALF_H * 2)
     this.labelPrimary = this.addLine(so, "label.danger.id", 1)
     this.labelSecondary = this.addLine(so, "label.danger.en", ENGLISH_SCALE)
     so.enabled = false
@@ -188,10 +194,10 @@ export class DangerZone extends BaseScriptComponent {
   /** Selected language on top, English below; with English selected one centered line. */
   private refreshLabel(): void {
     const l = lines("label.danger")
-    setLinePair(this.labelPrimary, this.labelSecondary, l)
+    setLinePair(this.labelPrimary, this.labelSecondary, l, "body")
     const two = l.secondary.length > 0
-    this.labelPrimary.getSceneObject().getTransform().setLocalPosition(new vec3(0, two ? LINE_GAP / 2 : 0, 0))
-    this.labelSecondary.getSceneObject().getTransform().setLocalPosition(new vec3(0, -LINE_GAP / 2, 0))
+    this.labelPrimary.getSceneObject().getTransform().setLocalPosition(new vec3(0, two ? LINE_GAP / 2 : 0, TAG_TEXT_Z))
+    this.labelSecondary.getSceneObject().getTransform().setLocalPosition(new vec3(0, -LINE_GAP / 2, TAG_TEXT_Z))
   }
 
   private addLine(parent: SceneObject, name: string, scale: number): Text {
@@ -202,7 +208,9 @@ export class DangerZone extends BaseScriptComponent {
     t.size = LABEL_EM_CM * SIZE_PER_CM * scale
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
-    t.textFill.color = this.lineColor
+    t.textFill.color = BRUTAL_WHITE // Slice 7A: white uppercase text on the red-outlined tag
+    t.capitilizationOverride = CapitilizationOverride.AllUpper
+    t.letterSpacing = 0.25
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Overflow

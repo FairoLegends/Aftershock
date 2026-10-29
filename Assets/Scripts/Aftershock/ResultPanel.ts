@@ -4,8 +4,8 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {ScoreBreakdown} from "./ScoreCalculator"
-import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createLightBacking, drawOnTop, PinchGuard} from "./UiBacking"
+import {FontRole, latinFont, lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
+import {BrutalFrame, createSquareRect, drawOnTop, makeBrutalButton, PinchGuard, resetBrutalButton} from "./UiBacking"
 
 // DESIGN_BRIEF §5 type scale (same as SafetyPanel). Used by the Restart label only.
 type TextRole = "Headline2" | "Caption"
@@ -29,7 +29,13 @@ const ROW_GAP = 1.6 // above each bilingual pair
 const LINE_ID_H = 1.8 // Restart label lines
 const LINE_EN_H = 1.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
-const DETAIL_LINES = 3
+const DETAIL_LINES = 2 // Slice 7A: the score has its own row
+const SCORE_EM_CM = 5 // big Syne number
+const SCORE_LABEL_EM_CM = 2.5 // "Skor" beside it; English below at SMALL_EM_CM
+const SCORE_ROW_H = 7
+const SCORE_RULE_H = 0.6 // thick rule under the score
+const SCORE_SPLIT = 0.8 // half the gap between the number and its label
+const BUTTON_FILL = new vec4(1, 1, 1, 0.12)
 const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
 const BUTTON_H = 5
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
@@ -83,11 +89,18 @@ export class ResultPanel extends BaseScriptComponent {
   private details: LinePair[] = []
   private shownTexts: Text[] = []
   private _mode: ResultMode | null = null
+  private scoreRow: SceneObject
+  private scoreItem: FlexItem
+  private scoreNumber: Text
+  private scoreId: Text
+  private scoreEn: Text
+  private restartButton: Button
+  private restartFrame: BrutalFrame
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = createLightBacking(this.sceneObject, this.backingColor)
+    const backing = new BrutalFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -105,18 +118,20 @@ export class ResultPanel extends BaseScriptComponent {
     flex.paddingLeft = PAD
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
-      backing.size = new vec2(r.containerWidth, r.containerHeight)
+      backing.setSize(r.containerWidth, r.containerHeight)
     })
 
     this.title = this.addPair(content, "Title")
     for (let i = 0; i < DETAIL_LINES; i++) {
       this.details.push(this.addPair(content, "Line" + (i + 1)))
     }
+    this.addScoreRow(content)
     this.addRestartButton(content)
-    this.setPair(this.title, null, false, BIG_EM_CM)
+    this.setPair(this.title, null, false, BIG_EM_CM, "title")
     for (const pair of this.details) {
       this.setPair(pair, null, true, SMALL_EM_CM)
     }
+    this.setScore(null)
   }
 
   /**
@@ -138,32 +153,31 @@ export class ResultPanel extends BaseScriptComponent {
    */
   showResult(b: ScoreBreakdown): void {
     this._mode = "result"
-    this.setPair(this.title, lines("result.title"), false, BIG_EM_CM)
-    const score = fill("result.score", "{score}", "" + b.score)
+    this.setPair(this.title, lines("result.title"), false, BIG_EM_CM, "title")
     if (b.tSafe === null) {
       this.setPair(this.details[0], lines("result.never"), true, SMALL_EM_CM)
-      this.setPair(this.details[1], score, true, BIG_EM_CM)
-      this.setPair(this.details[2], null, true, SMALL_EM_CM)
+      this.setPair(this.details[1], null, true, SMALL_EM_CM)
     } else {
       this.setPair(this.details[0], fill("result.speed", "{s}", b.tSafe.toFixed(1)), true, SMALL_EM_CM)
       this.setPair(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), true, SMALL_EM_CM)
-      this.setPair(this.details[2], score, true, BIG_EM_CM)
     }
+    this.setScore(b.score)
     this.showPanel()
   }
 
   /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
   showGameOver(reason: StringKey): void {
     this._mode = "gameOver"
-    this.setPair(this.title, lines("over.title"), false, BIG_EM_CM)
+    this.setPair(this.title, lines("over.title"), false, BIG_EM_CM, "title")
     this.setPair(this.details[0], lines(reason), true, SMALL_EM_CM)
     this.setPair(this.details[1], null, true, SMALL_EM_CM)
-    this.setPair(this.details[2], null, true, SMALL_EM_CM)
+    this.setScore(null)
     this.showPanel()
   }
 
   private showPanel(): void {
     this.sceneObject.enabled = true
+    if (this.restartButton) resetBrutalButton(this.restartButton, this.restartFrame)
     drawOnTop(this.sceneObject)
     this.pinchGuard.arm()
   }
@@ -190,9 +204,9 @@ export class ResultPanel extends BaseScriptComponent {
    * Fills a line pair from a bilingual string at `emCm` (English at 80%), or
    * collapses it when text is null.
    */
-  private setPair(pair: LinePair, text: ReturnType<typeof lines> | null, gapAbove: boolean, emCm: number): void {
+  private setPair(pair: LinePair, text: ReturnType<typeof lines> | null, gapAbove: boolean, emCm: number, role: FontRole = "body"): void {
     const shown = text !== null
-    setLinePair(pair.id, pair.en, shown ? text : {primary: "", secondary: ""})
+    setLinePair(pair.id, pair.en, shown ? text : {primary: "", secondary: ""}, role)
     this.fitLine(pair.id, pair.idItem, shown, emCm)
     this.fitLine(pair.en, pair.enItem, shown, emCm * ENGLISH_SCALE)
     pair.idItem.marginTop = shown && gapAbove ? ROW_GAP : 0
@@ -243,11 +257,17 @@ export class ResultPanel extends BaseScriptComponent {
     btn.size = new vec3(BUTTON_W, BUTTON_H, 1)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
     item.alignSelf = FlexAlignSelf.Center
-    item.marginTop = ROW_GAP * 1.5
+    item.marginTop = ROW_GAP
+
+    // Slice 7A: the same brutal button as Continue; the label rides on the face.
+    this.restartButton = btn
+    this.restartFrame = makeBrutalButton(btn, BUTTON_W, BUTTON_H, BUTTON_FILL, () => {
+      if (this.pinchGuard.open) this.restartEvent.invoke()
+    })
 
     // Bilingual label: Indonesian on top, English below at 80%.
     const label = global.scene.createSceneObject("RestartLabel")
-    label.setParent(so)
+    label.setParent(this.restartFrame.face)
     label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
     const labelFlex = label.createComponent(FlexLayout.getTypeName()) as FlexLayout
     labelFlex.width = BUTTON_W - 0.5
@@ -262,13 +282,55 @@ export class ResultPanel extends BaseScriptComponent {
     // Slice 5L: the button label follows the selected language (child 0 = primary, 1 = English).
     const restartPrimary = label.getChild(0).getComponent("Component.Text") as Text
     const restartSecondary = label.getChild(1).getComponent("Component.Text") as Text
-    const refreshRestart = (): void => setLinePair(restartPrimary, restartSecondary, lines("btn.restart"))
+    restartPrimary.capitilizationOverride = CapitilizationOverride.AllUpper
+    const refreshRestart = (): void => setLinePair(restartPrimary, restartSecondary, lines("btn.restart"), "title")
     refreshRestart()
     onLanguageChanged.add(refreshRestart)
+  }
 
-    btn.onTriggerUp.add(() => {
-      if (this.pinchGuard.open) this.restartEvent.invoke()
-    })
+  /** Slice 7A score row: big Syne number, "Skor / Score" beside it, a thick rule under it. */
+  private addScoreRow(parent: SceneObject): void {
+    const so = global.scene.createSceneObject("Score")
+    so.setParent(parent)
+    this.scoreRow = so
+    this.scoreItem = so.createComponent(FlexItem.getTypeName()) as FlexItem
+    this.scoreItem.overrideWidth = INNER_W
+    this.scoreItem.overrideHeight = SCORE_ROW_H
+    this.scoreItem.alignSelf = FlexAlignSelf.Center
+    this.scoreNumber = this.scoreText(so, "Score.number", SCORE_EM_CM, -INNER_W / 2, -SCORE_SPLIT, 0.5, HorizontalAlignment.Right)
+    this.scoreId = this.scoreText(so, "Score.id", SCORE_LABEL_EM_CM, SCORE_SPLIT, INNER_W / 2, 1.4, HorizontalAlignment.Left)
+    this.scoreEn = this.scoreText(so, "Score.en", SMALL_EM_CM, SCORE_SPLIT, INNER_W / 2, -1.2, HorizontalAlignment.Left)
+    const rule = global.scene.createSceneObject("Score.rule")
+    rule.setParent(so)
+    rule.getTransform().setLocalPosition(new vec3(0, -SCORE_ROW_H / 2 + SCORE_RULE_H / 2, 0))
+    createSquareRect(rule, WHITE, INNER_W, SCORE_RULE_H)
+  }
+
+  private scoreText(parent: SceneObject, name: string, emCm: number, left: number, right: number, y: number, align: HorizontalAlignment): Text {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    so.getTransform().setLocalPosition(new vec3(0, y, 0))
+    const t = so.createComponent("Component.Text") as Text
+    t.text = ""
+    this.styleText(t, emCm * SIZE_PER_CM, false)
+    t.horizontalAlignment = align
+    t.layoutRect = Rect.create(left, right, -emCm * 0.7, emCm * 0.7)
+    this.shownTexts.push(t)
+    return t
+  }
+
+  /** Shows the score row (null hides it: game over). */
+  private setScore(score: number | null): void {
+    const shown = score !== null
+    this.scoreRow.enabled = shown
+    this.scoreItem.overrideHeight = shown ? SCORE_ROW_H : HIDDEN_H
+    this.scoreItem.marginTop = shown ? ROW_GAP : 0
+    const l = lines("result.score", {"{score}": ""})
+    const strip = (s: string): string => s.replace(/[:：]\s*$/, "").trim()
+    setLinePair(this.scoreId, this.scoreEn, shown ? {primary: strip(l.primary), secondary: strip(l.secondary)} : {primary: "", secondary: ""}, "title")
+    this.scoreNumber.text = shown ? "" + score : ""
+    const f = latinFont("title")
+    if (f) this.scoreNumber.font = f
   }
 
   private addButtonLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {

@@ -193,16 +193,35 @@ export function styleBrutalText(t: Text, emCm: number, outline: vec4, outlineSiz
   t.verticalOverflow = VerticalOverflow.Overflow
 }
 
-/** Marquee strip: text scrolling left between a top and a bottom border line (5j-1). */
+// Marquee words: no ink beyond the strip ends (Text has no clip mask, so a
+// word is hidden as soon as any part of it would cross an end; 5j-12 defect 5).
+const MARQUEE_INSET_CM = 0.4 // words stay this far inside each strip end
+const MARQUEE_LETTER_SPACING = 0.2
+const MARQUEE_EST_EM_PER_CHAR = 0.75 // width guess when a word cannot be measured yet
+
+/**
+ * Marquee strip: text scrolling left between a top and a bottom border line
+ * (5j-1). Each word is its own Text, repeated `gapCm` apart, so the strip
+ * stays full even when one copy is wider than the strip.
+ */
 export class Marquee {
   readonly root: SceneObject
-  private readonly copies: Transform[] = []
   private readonly texts: Text[] = []
-  private readonly colors: vec4[] = []
+  private readonly transforms: Transform[] = []
+  private readonly centers: number[] = [] // word center within one copy (cm, from its left)
+  private readonly halves: number[] = [] // word half-width (cm)
   private readonly tmp = new vec3(0, 0, 0)
   private readonly speed: number
-  private readonly period: number
+  private readonly gap: number
   private readonly width: number
+  private readonly height: number
+  private readonly emCm: number
+  private readonly color: vec4
+  private readonly name: string
+  private words: string[] = []
+  private period = 1 // one copy plus the gap (cm)
+  private copies = 0
+  private measured = false
   private x = 0
 
   constructor(
@@ -213,11 +232,15 @@ export class Marquee {
     emCm: number,
     color: vec4,
     speedCmPerS: number,
-    periodCm: number
+    gapCm: number
   ) {
+    this.name = name
     this.width = width
+    this.height = height
+    this.emCm = emCm
+    this.color = color
     this.speed = speedCmPerS
-    this.period = periodCm
+    this.gap = gapCm
     this.root = global.scene.createSceneObject(name)
     this.root.setParent(parent)
     const line = 0.3
@@ -227,39 +250,49 @@ export class Marquee {
       b.getTransform().setLocalPosition(new vec3(0, y, 0))
       createSquareRect(b, color, width, line)
     }
-    // Enough copies, one period apart, to cover the strip plus one period of scroll.
-    const n = Math.ceil(width / periodCm) + 2
-    for (let i = 0; i < n; i++) {
-      const so = global.scene.createSceneObject(name + ".text")
-      so.setParent(this.root)
-      const t = so.createComponent("Component.Text") as Text
-      styleBrutalText(t, emCm, new vec4(0, 0, 0, 0), 0)
-      t.textFill.color = color
-      t.letterSpacing = 1
-      t.layoutRect = Rect.create(-periodCm / 2, periodCm / 2, -height / 2, height / 2)
-      this.texts.push(t)
-      this.colors.push(new vec4(color.x, color.y, color.z, color.w))
-      this.copies.push(so.getTransform())
-    }
-    this.place()
   }
 
-  /** Sets the strip text (the same on every copy) and its font. */
-  setText(text: string, font: Font | null): void {
-    for (const t of this.texts) {
-      if (font && t.font !== font) {
-        t.font = font
-      }
-      t.text = text
+  /**
+   * Sets the strip text and its font. `wideFont` is used for words with
+   * CJK characters (the Latin font has no such glyphs).
+   */
+  setText(text: string, font: Font | null, wideFont: Font | null = null): void {
+    this.words = text.split(" ").filter((w) => w.length > 0)
+    // Enough copies to cover the strip plus one period of scroll; one word at least emCm wide.
+    const guess = Math.max(this.emCm, this.estimate(text)) + this.gap
+    this.copies = Math.ceil(this.width / guess) + 2
+    const need = this.words.length * this.copies
+    while (this.texts.length < need) {
+      this.addText()
     }
+    for (let i = 0; i < this.texts.length; i++) {
+      const t = this.texts[i]
+      if (i >= need) {
+        t.enabled = false
+        t.text = ""
+        continue
+      }
+      const word = this.words[i % this.words.length]
+      const f = /[　-鿿＀-￯]/.test(word) && wideFont ? wideFont : font
+      if (f && t.font !== f) {
+        t.font = f
+      }
+      t.text = word
+    }
+    this.measured = false
+    this.measure()
+    this.place()
   }
 
   get textComponents(): Text[] {
     return this.texts
   }
 
-  /** Advances the scroll; call from an UpdateEvent while shown. No allocation. */
+  /** Advances the scroll; call from an UpdateEvent while shown. No allocation once measured. */
   tick(dt: number): void {
+    if (!this.measured) {
+      this.measure()
+    }
     this.x -= this.speed * dt
     if (this.x <= -this.period) {
       this.x += this.period
@@ -267,24 +300,64 @@ export class Marquee {
     this.place()
   }
 
-  private place(): void {
-    const left = -this.width / 2 - this.period / 2
-    const fade = this.period / 2
-    for (let i = 0; i < this.copies.length; i++) {
-      this.tmp.x = left + this.x + i * this.period + this.period / 2
-      this.tmp.y = 0
-      this.tmp.z = 0.05
-      this.copies[i].setLocalPosition(this.tmp)
-      // Text has no clip mask: copies fade out as they cross either end of the strip.
-      const over = Math.abs(this.tmp.x) + this.period / 2 - this.width / 2
-      const alpha = over <= 0 ? 1 : Math.max(0, 1 - over / fade)
-      const visible = alpha > 0.02
-      if (this.texts[i].enabled !== visible) {
-        this.texts[i].enabled = visible
+  private addText(): void {
+    const so = global.scene.createSceneObject(this.name + ".text")
+    so.setParent(this.root)
+    const t = so.createComponent("Component.Text") as Text
+    styleBrutalText(t, this.emCm, new vec4(0, 0, 0, 0), 0)
+    t.textFill.color = this.color
+    t.letterSpacing = MARQUEE_LETTER_SPACING
+    t.layoutRect = Rect.create(-1, 1, -this.height / 2, this.height / 2)
+    this.texts.push(t)
+    this.transforms.push(so.getTransform())
+  }
+
+  /** Word widths from the first copy's Texts; estimated until the text can be measured. */
+  private measure(): void {
+    const space = this.emCm * 0.3
+    let ok = true
+    let cursor = 0
+    this.centers.length = 0
+    this.halves.length = 0
+    for (let j = 0; j < this.words.length; j++) {
+      let w = 0
+      const box = this.texts[j].getBoundingBox()
+      if (box && box.right - box.left > 0.01) {
+        w = box.right - box.left
+      } else {
+        w = this.estimate(this.words[j])
+        ok = false
       }
-      if (visible) {
-        this.colors[i].w = alpha
-        this.texts[i].textFill.color = this.colors[i]
+      this.centers.push(cursor + w / 2)
+      this.halves.push(w / 2)
+      cursor += w + space
+    }
+    this.period = Math.max(1, cursor - space + this.gap)
+    this.measured = ok
+  }
+
+  private estimate(text: string): number {
+    return text.length * this.emCm * MARQUEE_EST_EM_PER_CHAR
+  }
+
+  private place(): void {
+    const n = this.words.length
+    if (n === 0) {
+      return
+    }
+    const left = -this.width / 2 - this.period
+    const limit = this.width / 2 - MARQUEE_INSET_CM
+    for (let c = 0; c < this.copies; c++) {
+      for (let j = 0; j < n; j++) {
+        const i = c * n + j
+        this.tmp.x = left + this.x + c * this.period + this.centers[j]
+        this.tmp.y = 0
+        this.tmp.z = 0.05
+        this.transforms[i].setLocalPosition(this.tmp)
+        const visible = Math.abs(this.tmp.x) + this.halves[j] <= limit
+        if (this.texts[i].enabled !== visible) {
+          this.texts[i].enabled = visible
+        }
       }
     }
   }

@@ -144,7 +144,8 @@ export class SafetyPanel extends BaseScriptComponent {
   private refresh(): void {
     for (const p of this.pairs) {
       const l = lines(p.key)
-      setLinePair(p.primary, p.secondary, l)
+      // 5j-12 (b): safety sentences in Manrope; the Continue label stays Syne.
+      setLinePair(p.primary, p.secondary, l, p.key === "btn.continue" ? "title" : "body")
       p.secondaryItem.overrideHeight = l.secondary.length > 0 ? p.height : HIDDEN_H
     }
   }

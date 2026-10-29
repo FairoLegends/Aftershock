@@ -13,8 +13,9 @@ const ENGLISH_SCALE = 0.8
 const INNER_W = 46
 const PAD = 2.5
 const ROW_GAP = 1.0
-const LINE_ID_H = 8.4 // two wrapped lines
+const LINE_ID_H = 8.4 // first guess; refresh() measures the wrapped text
 const LINE_EN_H = 6.8
+const LINE_H_PER_EM = 1.25 // as ResultPanel
 const HIDDEN_H = 0.001 // the English line collapses to this when English is selected
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
@@ -38,6 +39,7 @@ export class BriefingPanel extends BaseScriptComponent {
   private readonly shownTexts: Text[] = []
   private primary: Text
   private secondary: Text
+  private primaryItem: FlexItem
   private secondaryItem: FlexItem
 
   onAwake(): void {
@@ -64,7 +66,9 @@ export class BriefingPanel extends BaseScriptComponent {
       backing.setSize(r.containerWidth, r.containerHeight)
     })
 
-    this.primary = this.addLine(content, "instr.brief.id", LINE_ID_H, 1).text
+    const primary = this.addLine(content, "instr.brief.id", LINE_ID_H, 1)
+    this.primary = primary.text
+    this.primaryItem = primary.item
     const secondary = this.addLine(content, "instr.brief.en", LINE_EN_H, ENGLISH_SCALE)
     this.secondary = secondary.text
     this.secondaryItem = secondary.item
@@ -72,11 +76,28 @@ export class BriefingPanel extends BaseScriptComponent {
     onLanguageChanged.add(() => this.refresh())
   }
 
-  /** Re-renders instr.brief in the selected language (Slice 5L); English only collapses the second line. */
+  /**
+   * Re-renders instr.brief in the selected language (Slice 5L) in Manrope
+   * (5j-12 (b)). Each line's height is measured, so the backing follows the
+   * wrapped text (5j-12 defect 3); English only collapses the second line.
+   */
   private refresh(): void {
     const l = lines("instr.brief")
-    setLinePair(this.primary, this.secondary, l)
-    this.secondaryItem.overrideHeight = l.secondary.length > 0 ? LINE_EN_H : HIDDEN_H
+    setLinePair(this.primary, this.secondary, l, "body")
+    this.fitLine(this.primary, this.primaryItem, true, INSTRUCTION_EM_CM)
+    this.fitLine(this.secondary, this.secondaryItem, l.secondary.length > 0, INSTRUCTION_EM_CM * ENGLISH_SCALE)
+  }
+
+  /** Same as ResultPanel.fitLine: height = measured line count × line height. */
+  private fitLine(t: Text, item: FlexItem, shown: boolean, emCm: number): void {
+    const lineH = emCm * LINE_H_PER_EM
+    let h = shown ? lineH : HIDDEN_H
+    if (shown && t.text.length > 0) {
+      const box = t.getBoundingBox()
+      h = Math.max(1, Math.round((box.top - box.bottom) / lineH)) * lineH
+    }
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -h / 2, h / 2)
+    item.overrideHeight = h
   }
 
   /**
@@ -94,6 +115,7 @@ export class BriefingPanel extends BaseScriptComponent {
 
   show(): void {
     this.sceneObject.enabled = true
+    this.refresh() // fonts are registered by now, so measure in the real font
     drawOnTop(this.sceneObject) // 5h item 3; no button here, so no pinch guard
   }
 
