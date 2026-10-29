@@ -1,30 +1,27 @@
-import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexItem"
-import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
-import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {BrutalFrame, BRUTAL_RED, BRUTAL_WHITE} from "./UiBacking"
+import {createRoundRect, SOFT_INNER_RADIUS_CM, SOFT_LINE, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6: labels use 2.5 cm type. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
 const LABEL_EM_CM = 2.5
-const ENGLISH_SCALE = 0.8
 const LINE_H_PER_EM = 1.25 // as ResultPanel
 
 // Label layout (cm). Not drill tunables: they only shape the label.
-const INNER_W = 34
-const PAD = 1.5
-const ROW_GAP = 0.6
-const LINE_ID_H = 3.0
-const LINE_EN_H = 2.4
-const HIDDEN_H = 0.001 // the English line collapses to this when English is selected
+// Slice 7A-soft (mockup .lbl): a see-through rounded panel, a dot, bold text.
+const INNER_W = 34 // widest text; longer lines wrap
+const PAD_X = 1.6
+const PAD_Y = 1.0
+const DOT_CM = 1.1
+const DOT_GAP = 1.0 // dot to text
+const SLACK = 0.3 // keeps a measured line from wrapping in its final rect
 const ABOVE_GAP = 1.0 // gap between the label's backing and an attached line above it (danger label)
-const CONTENT_Z = 0.6 // keeps content off the back plate (z-fighting)
+const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
 /**
- * A world-space label on a hazard or on the safe zone (R3, R4): the selected
- * language on top, English below at 80% (Slice 5L). Its scene rotation makes
- * it face the start spot; DrillController shows it in BRIEFING and hides it
- * in SAFETY. attachAbove() sets another label (the danger label) on top of it.
+ * A world-space label on a hazard or on the safe zone (R3, R4), in the
+ * selected language only (5j-13d). Its scene rotation makes it face the start
+ * spot; DrillController shows it in BRIEFING and hides it in SAFETY.
+ * attachAbove() sets another label (the danger label) on top of it.
  */
 @component
 export class HazardLabel extends BaseScriptComponent {
@@ -44,7 +41,7 @@ export class HazardLabel extends BaseScriptComponent {
   key: string = "label.cabinet"
 
   @input
-  @hint("Text color: dark orange #D9480F for hazards (learner, 27 Oct), green #3DDC84 for the safe zone")
+  @hint("Safe zone text and dot color: green #3DDC84. Hazards always use white text and a red #FF5A4F dot (Slice 7A-soft).")
   @widget(new ColorWidget())
   textColor: vec4 = new vec4(0.851, 0.282, 0.059, 1)
 
@@ -55,50 +52,29 @@ export class HazardLabel extends BaseScriptComponent {
   @ui.group_end
 
   private readonly shownTexts: Text[] = []
+  private backing: SoftFrame
+  private dot: SceneObject
   private primary: Text
-  private primaryItem: FlexItem
   private secondary: Text
-  private secondaryItem: FlexItem
-  private height = PAD * 2 + LINE_ID_H + ROW_GAP + LINE_EN_H // cm, backing height (until the first layout)
+  private height = PAD_Y * 2 + LABEL_EM_CM * LINE_H_PER_EM // cm, backing height
   private above: SceneObject | null = null
   private aboveHalfH = 0 // cm
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
-
-    // Slice 7A: hazards are solid red, white text, white hard plate; the safe zone keeps its colors.
-    const backing = new BrutalFrame(this.sceneObject, this.isHazard ? BRUTAL_RED : this.backingColor)
+    this.backing = new SoftFrame(this.sceneObject, this.backingColor, SOFT_INNER_RADIUS_CM, SOFT_LINE)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
 
-    const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
-    flex.width = INNER_W + PAD * 2
-    flex.height = -1
-    flex.direction = FlexDirection.Column
-    flex.alignItems = FlexAlign.Center
-    flex.justifyContent = FlexJustify.Center
-    flex.rowGap = ROW_GAP
-    flex.paddingTop = PAD
-    flex.paddingBottom = PAD
-    flex.paddingLeft = PAD
-    flex.paddingRight = PAD
-    flex.onLayoutComplete.add((r) => {
-      backing.setSize(r.containerWidth, r.containerHeight)
-      this.height = r.containerHeight
-      this.placeAbove()
-    })
+    this.dot = global.scene.createSceneObject("Dot")
+    this.dot.setParent(content)
+    createRoundRect(this.dot, this.isHazard ? SOFT_RED : this.textColor, DOT_CM, DOT_CM, DOT_CM / 2)
 
     const key = this.key as StringKey
-    const primary = this.addLine(content, key + ".id", LINE_ID_H, 1)
-    const secondary = this.addLine(content, key + ".en", LINE_EN_H, ENGLISH_SCALE)
-    this.primary = primary.text
-    this.primaryItem = primary.item
-    this.secondary = secondary.text
-    this.secondaryItem = secondary.item
-    this.primary.horizontalOverflow = HorizontalOverflow.Wrap
-    this.secondary.horizontalOverflow = HorizontalOverflow.Wrap
+    this.primary = this.addLine(content, key + ".id")
+    this.secondary = this.addLine(content, key + ".en")
     this.refresh()
     onLanguageChanged.add(() => this.refresh())
   }
@@ -146,44 +122,51 @@ export class HazardLabel extends BaseScriptComponent {
     }
   }
 
-  /** Re-renders the key in the selected language; a long primary line wraps to two lines. */
+  /**
+   * Re-renders the key in the selected language and shrinks the backing to
+   * the dot and the measured text; a long line wraps inside INNER_W.
+   * getBoundingBox: one call per refresh (limit 5 per Text per frame).
+   */
   private refresh(): void {
-    const l = lines(this.key as StringKey)
-    setLinePair(this.primary, this.secondary, l, "body") // 5j-12 (b): Manrope
-    this.fitLine(this.primary, this.primaryItem, true, LABEL_EM_CM)
-    this.fitLine(this.secondary, this.secondaryItem, l.secondary.length > 0, LABEL_EM_CM * ENGLISH_SCALE)
-  }
-
-  /** Same as ResultPanel.fitLine: height = measured line count × line height. */
-  private fitLine(t: Text, item: FlexItem, shown: boolean, emCm: number): void {
-    const lineH = emCm * LINE_H_PER_EM
-    let h = shown ? lineH : HIDDEN_H
-    if (shown && t.text.length > 0) {
+    setLinePair(this.primary, this.secondary, lines(this.key as StringKey))
+    const t = this.primary
+    const lineH = LABEL_EM_CM * LINE_H_PER_EM
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -lineH / 2, lineH / 2)
+    let textW = Math.min(INNER_W, t.text.length * LABEL_EM_CM * 0.55) // estimate until the text can be measured
+    let lineCount = Math.max(1, Math.ceil((t.text.length * LABEL_EM_CM * 0.55) / INNER_W))
+    if (t.text.length > 0 && this.sceneObject.isEnabledInHierarchy) {
       const box = t.getBoundingBox()
-      h = Math.max(1, Math.round((box.top - box.bottom) / lineH)) * lineH
+      if (box.right > box.left) {
+        textW = Math.min(INNER_W, box.right - box.left)
+        lineCount = Math.max(1, Math.round((box.top - box.bottom) / lineH))
+      }
     }
-    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -h / 2, h / 2)
-    item.overrideHeight = h
+    const textH = lineCount * lineH
+    const contentW = DOT_CM + DOT_GAP + textW
+    const left = -contentW / 2
+    this.dot.getTransform().setLocalPosition(new vec3(left + DOT_CM / 2, (textH - lineH) / 2, 0))
+    const w = lineCount > 1 ? INNER_W : textW + SLACK
+    t.getSceneObject().getTransform().setLocalPosition(new vec3(left + DOT_CM + DOT_GAP + w / 2, 0, 0))
+    t.layoutRect = Rect.create(-w / 2, w / 2, -textH / 2, textH / 2)
+    this.height = textH + PAD_Y * 2
+    this.backing.setSize(contentW + PAD_X * 2, this.height)
+    this.placeAbove()
   }
 
-  private addLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {
+  private addLine(parent: SceneObject, name: string): Text {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
     t.text = ""
-    t.size = LABEL_EM_CM * SIZE_PER_CM * scale
+    t.size = LABEL_EM_CM * SIZE_PER_CM
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
-    t.textFill.color = this.isHazard ? BRUTAL_WHITE : this.textColor
-    t.horizontalAlignment = HorizontalAlignment.Center
+    t.textFill.color = this.isHazard ? SOFT_WHITE : this.textColor
+    t.horizontalAlignment = HorizontalAlignment.Left
     t.verticalAlignment = VerticalAlignment.Center
-    t.horizontalOverflow = HorizontalOverflow.Overflow
+    t.horizontalOverflow = HorizontalOverflow.Wrap
     t.verticalOverflow = VerticalOverflow.Overflow
-    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -height / 2, height / 2)
-    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
-    item.alignSelf = FlexAlignSelf.Stretch
-    item.overrideHeight = height
     this.shownTexts.push(t)
-    return {text: t, item}
+    return t
   }
 }

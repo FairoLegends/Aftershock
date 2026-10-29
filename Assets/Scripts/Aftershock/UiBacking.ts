@@ -4,84 +4,72 @@ import {
 } from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 
-// Slice 7A "Brutal AR" (ENGINEERING_PLAN 5j, mockup docs/design): square
-// corners, a light 0.4 cm border and a hard offset plate 1 cm right and 1 cm
-// down at 90%. The display is additive, so border and plate are white (yellow
-// for focus). Only the L-shaped part of the plate outside the face is drawn:
-// a full plate behind a translucent backing would show through it.
-export const BRUTAL_BORDER_CM = 0.4
-export const BRUTAL_PLATE_CM = 1
-export const BRUTAL_PLATE_ALPHA = 0.9
-export const BRUTAL_WHITE = new vec4(1, 1, 1, 1)
-export const BRUTAL_YELLOW = new vec4(1, 1, 0, 1)
-export const BRUTAL_RED = new vec4(1, 0, 0, 1)
-const PLATE_Z = -0.05
+// Slice 7A-soft (ENGINEERING_PLAN 5j item 13, mockup docs/design/Aftershock
+// Soft UI.html): rounded corners, a thin light border only on panels, cards
+// and secondary buttons, no offset plate, see-through fills. One action color
+// (green), red for danger, white for text. Values in cm at 110 cm.
+export const SOFT_PANEL_RADIUS_CM = 2.4
+export const SOFT_INNER_RADIUS_CM = 1.4 // buttons, rows and labels inside or beside a panel (concentric, smaller)
+export const SOFT_BORDER_CM = 0.12
+export const SOFT_LINE = new vec4(1, 1, 1, 0.28)
+export const SOFT_WHITE = new vec4(1, 1, 1, 1)
+export const SOFT_DIM = new vec4(1, 1, 1, 0.72) // secondary text: labels, step numbers
+export const SOFT_GREEN = new vec4(0.239, 0.863, 0.518, 1) // #3DDC84
+export const SOFT_GREEN_TEXT = new vec4(0.024, 0.129, 0.059, 1) // #06210F, text on the green button
+export const SOFT_RED = new vec4(1, 0.353, 0.31, 1) // #FF5A4F
+const SOFT_GREEN_FOCUS = new vec4(0.239, 0.863, 0.518, 0.24) // hover/focus fill and glow
+const SOFT_GREEN_PRESSED = new vec4(0.2, 0.769, 0.455, 1) // #33C474
+const SOFT_BUTTON_FILL = new vec4(1, 1, 1, 0.1) // secondary button at rest
+const PRESS_SCALE = 0.96
+const PRESS_SECONDS = 0.12 // back to full size after release
+const GLOW_CM = 0.6 // the primary button's focus glow reaches this far out
 
-/** A square, flat rect on `host` (no gradient, no rounding): bar cells, rules, strike lines. */
-export function createSquareRect(host: SceneObject, color: vec4, w: number, h: number): RoundedRectangle {
+/** A flat rounded rect on `host` (no gradient). The radius never exceeds half the shorter side. */
+export function createRoundRect(host: SceneObject, color: vec4, w: number, h: number, radiusCm: number): RoundedRectangle {
   const rect = host.createComponent(RoundedRectangle.getTypeName()) as RoundedRectangle
-  rect.blendMode = RoundedRectBlendMode.Normal
+  rect.blendMode = RoundedRectBlendMode.Normal // the default (Disabled) is opaque
   rect.gradient = false
-  rect.cornerRadius = 0
+  rect.cornerRadius = Math.min(radiusCm, w / 2, h / 2)
   rect.backgroundColor = color
   rect.size = new vec2(w, h)
   return rect
 }
 
 /**
- * Backing + border + hard plate. The face ("Face", holding the backing) can
- * carry children such as a button label, so they move with it on press.
+ * Rounded backing with an optional thin border. The face (holding the
+ * backing) can carry children such as a button label, so they scale with it
+ * on press.
  */
-export class BrutalFrame {
+export class SoftFrame {
   readonly face: SceneObject
   readonly backing: RoundedRectangle
-  private readonly plateRight: RoundedRectangle
-  private readonly plateBottom: RoundedRectangle
-  private readonly plateRightT: Transform
-  private readonly plateBottomT: Transform
   private readonly faceT: Transform
-  private readonly offset: number
+  private readonly radius: number
   private w = 1
   private h = 1
-  private pressed = false
 
   constructor(
     parent: SceneObject,
     fill: vec4,
-    accent: vec4 = BRUTAL_WHITE,
-    borderCm: number = BRUTAL_BORDER_CM,
-    offsetCm: number = BRUTAL_PLATE_CM
+    radiusCm: number = SOFT_PANEL_RADIUS_CM,
+    border: vec4 | null = SOFT_LINE,
+    name: string = "Face"
   ) {
-    this.offset = offsetCm
-    const pr = global.scene.createSceneObject("PlateR")
-    pr.setParent(parent)
-    const pb = global.scene.createSceneObject("PlateB")
-    pb.setParent(parent)
-    this.plateRight = createSquareRect(pr, BRUTAL_WHITE, 1, 1)
-    this.plateBottom = createSquareRect(pb, BRUTAL_WHITE, 1, 1)
-    this.plateRightT = pr.getTransform()
-    this.plateBottomT = pb.getTransform()
-
-    this.face = global.scene.createSceneObject("Face")
+    this.radius = radiusCm
+    this.face = global.scene.createSceneObject(name)
     this.face.setParent(parent)
     this.faceT = this.face.getTransform()
-    this.backing = createSquareRect(this.face, fill, 1, 1)
-    this.backing.border = borderCm > 0
-    this.backing.borderSize = borderCm
+    this.backing = createRoundRect(this.face, fill, 1, 1, radiusCm)
     this.backing.borderSoftness = 0
-    this.setAccent(accent)
+    this.setBorder(border)
   }
 
-  /** Face size in cm; the plate follows. */
+  /** Face size in cm. */
   setSize(w: number, h: number): void {
     this.w = w
     this.h = h
-    const o = this.offset
     this.backing.size = new vec2(w, h)
-    this.plateRight.size = new vec2(o, h)
-    this.plateBottom.size = new vec2(Math.max(0.01, w - o), o)
-    this.plateRightT.setLocalPosition(new vec3(w / 2 + o / 2, -o / 2, PLATE_Z))
-    this.plateBottomT.setLocalPosition(new vec3(o / 2, -h / 2 - o / 2, PLATE_Z))
+    this.backing.cornerRadius = Math.min(this.radius, w / 2, h / 2)
   }
 
   get width(): number {
@@ -91,47 +79,27 @@ export class BrutalFrame {
     return this.h
   }
 
-  /** Border and plate color (white by default, yellow for focus). */
-  setAccent(color: vec4): void {
-    this.backing.borderColor = color
-    const plate = new vec4(color.x, color.y, color.z, color.w * BRUTAL_PLATE_ALPHA)
-    this.plateRight.backgroundColor = plate
-    this.plateBottom.backgroundColor = plate
-  }
-
   setFill(color: vec4): void {
     this.backing.backgroundColor = color
   }
 
-  /** Pressed: the face moves into the plate (offset right and down) and the plate collapses. */
-  setPressed(pressed: boolean): void {
-    if (pressed === this.pressed) {
-      return
+  /** Border color, or null for none. */
+  setBorder(color: vec4 | null, cm: number = SOFT_BORDER_CM): void {
+    this.backing.border = color !== null
+    if (color !== null) {
+      this.backing.borderColor = color
+      this.backing.borderSize = cm
     }
-    this.pressed = pressed
-    const o = pressed ? this.offset : 0
-    this.faceT.setLocalPosition(new vec3(o, -o, 0))
-    this.plateRight.sceneObject.enabled = !pressed
-    this.plateBottom.sceneObject.enabled = !pressed
   }
 
-  /** Whole frame opacity (done steps use 0.4). */
+  /** Whole frame opacity (done steps use 0.45). */
   setOpacity(alpha: number): void {
     this.backing.opacity = alpha
-    this.plateRight.opacity = alpha
-    this.plateBottom.opacity = alpha
   }
 
-  /** Border width in cm (upcoming steps use a thin one). */
-  setBorderSize(cm: number): void {
-    this.backing.border = cm > 0
-    this.backing.borderSize = cm
-  }
-
-  /** Shows or hides the hard plate (not while pressed). */
-  setPlateVisible(visible: boolean): void {
-    this.plateRight.sceneObject.enabled = visible && !this.pressed
-    this.plateBottom.sceneObject.enabled = visible && !this.pressed
+  /** Face scale (press feedback); the label under the face scales with it. */
+  setScale(s: number): void {
+    this.faceT.setLocalScale(new vec3(s, s, 1))
   }
 }
 
@@ -148,217 +116,167 @@ export function hideKitVisual(buttonObject: SceneObject): void {
 }
 
 /**
- * Slice 7A button: a BrutalFrame on the UI Kit Button. Hover/focus turns
- * border and plate yellow; while pinched the face sits in the plate. `action`
- * runs on release (callers keep their pinch guard inside it). The label goes
- * under `frame.face` so it moves with the press.
+ * Slice 7A-soft button on the UI Kit Button. Primary (Continue, Restart):
+ * solid green, dark label, a green glow on hover/focus. Secondary (language
+ * buttons): see-through with a thin border, green fill 24% and green border on
+ * hover/focus. Pinch: the face scales to 0.96 and eases back in 0.12 s after
+ * release. `action` runs on release (callers keep their pinch guard inside
+ * it). Labels go under `face` so they scale with the press.
  */
-export function makeBrutalButton(btn: Button, w: number, h: number, fill: vec4, action: () => void): BrutalFrame {
-  const so = btn.getSceneObject()
-  const frame = new BrutalFrame(so, fill)
-  frame.setSize(w, h)
-  btn.onInitialized.add(() => hideKitVisual(so))
-  btn.onHoverEnter.add(() => frame.setAccent(BRUTAL_YELLOW))
-  btn.onHoverExit.add(() => {
-    frame.setAccent(BRUTAL_WHITE)
-    frame.setPressed(false)
-  })
-  btn.onTriggerDown.add(() => frame.setPressed(true))
-  btn.onTriggerUp.add(() => {
-    frame.setPressed(false)
-    action()
-  })
-  return frame
-}
+export class SoftButton {
+  readonly frame: SoftFrame
+  private readonly glow: SoftFrame | null = null
+  private readonly buttonObject: SceneObject
+  private readonly primary: boolean
+  private readonly anim: SceneEvent
+  private releasedAt = -1 // getTime() of the last release, -1 when not easing back
 
-/** Back to rest (white, not pressed) and the kit visual hidden; panels call it on show(). */
-export function resetBrutalButton(btn: Button, frame: BrutalFrame): void {
-  frame.setAccent(BRUTAL_WHITE)
-  frame.setPressed(false)
-  hideKitVisual(btn.getSceneObject())
-}
+  constructor(owner: BaseScriptComponent, btn: Button, w: number, h: number, primary: boolean, action: () => void) {
+    this.buttonObject = btn.getSceneObject()
+    this.primary = primary
+    if (primary) {
+      this.glow = new SoftFrame(this.buttonObject, SOFT_GREEN_FOCUS, SOFT_INNER_RADIUS_CM + GLOW_CM, null, "Glow")
+      this.glow.setSize(w + GLOW_CM * 2, h + GLOW_CM * 2)
+      this.glow.face.enabled = false
+    }
+    this.frame = new SoftFrame(this.buttonObject, this.restFill, SOFT_INNER_RADIUS_CM, this.restBorder)
+    this.frame.setSize(w, h)
+    btn.onInitialized.add(() => hideKitVisual(this.buttonObject))
+    btn.onHoverEnter.add(() => this.setFocus(true))
+    btn.onHoverExit.add(() => this.setFocus(false))
+    btn.onTriggerDown.add(() => this.press())
+    btn.onTriggerUp.add(() => {
+      this.release()
+      action()
+    })
+    this.anim = owner.createEvent("UpdateEvent")
+    this.anim.bind(() => this.tick())
+    this.anim.enabled = false
+  }
 
-/** Text styled for Slice 7A: white, thin dark outline, centered, never clipped. */
-export function styleBrutalText(t: Text, emCm: number, outline: vec4, outlineSize: number): void {
-  t.size = emCm * 43.886
-  ;(t as Text & {weight?: number}).weight = 700
-  t.depthTest = true
-  t.textFill.color = BRUTAL_WHITE
-  t.outlineSettings.enabled = outlineSize > 0
-  t.outlineSettings.size = outlineSize
-  t.outlineSettings.fill.color = outline
-  t.horizontalAlignment = HorizontalAlignment.Center
-  t.verticalAlignment = VerticalAlignment.Center
-  t.horizontalOverflow = HorizontalOverflow.Overflow
-  t.verticalOverflow = VerticalOverflow.Overflow
-}
+  get face(): SceneObject {
+    return this.frame.face
+  }
 
-// Marquee words: no ink beyond the strip ends (Text has no clip mask, so a
-// word is hidden as soon as any part of it would cross an end; 5j-12 defect 5).
-const MARQUEE_INSET_CM = 0.4 // words stay this far inside each strip end
-const MARQUEE_LETTER_SPACING = 0.2
-const MARQUEE_EST_EM_PER_CHAR = 0.75 // width guess when a word cannot be measured yet
+  /** Back to rest (no focus, full size) and the kit visual hidden; panels call it on show(). */
+  reset(): void {
+    this.setFocus(false)
+    this.releasedAt = -1
+    this.anim.enabled = false
+    this.frame.setScale(1)
+    hideKitVisual(this.buttonObject)
+  }
 
-/**
- * Marquee strip: text scrolling left between a top and a bottom border line
- * (5j-1). Each word is its own Text, repeated `gapCm` apart, so the strip
- * stays full even when one copy is wider than the strip.
- */
-export class Marquee {
-  readonly root: SceneObject
-  private readonly texts: Text[] = []
-  private readonly transforms: Transform[] = []
-  private readonly centers: number[] = [] // word center within one copy (cm, from its left)
-  private readonly halves: number[] = [] // word half-width (cm)
-  private readonly tmp = new vec3(0, 0, 0)
-  private readonly speed: number
-  private readonly gap: number
-  private readonly width: number
-  private readonly height: number
-  private readonly emCm: number
-  private readonly color: vec4
-  private readonly name: string
-  private words: string[] = []
-  private period = 1 // one copy plus the gap (cm)
-  private copies = 0
-  private measured = false
-  private x = 0
+  private get restFill(): vec4 {
+    return this.primary ? SOFT_GREEN : SOFT_BUTTON_FILL
+  }
 
-  constructor(
-    parent: SceneObject,
-    name: string,
-    width: number,
-    height: number,
-    emCm: number,
-    color: vec4,
-    speedCmPerS: number,
-    gapCm: number
-  ) {
-    this.name = name
-    this.width = width
-    this.height = height
-    this.emCm = emCm
-    this.color = color
-    this.speed = speedCmPerS
-    this.gap = gapCm
-    this.root = global.scene.createSceneObject(name)
-    this.root.setParent(parent)
-    const line = 0.3
-    for (const y of [height / 2 - line / 2, -height / 2 + line / 2]) {
-      const b = global.scene.createSceneObject(name + ".border")
-      b.setParent(this.root)
-      b.getTransform().setLocalPosition(new vec3(0, y, 0))
-      createSquareRect(b, color, width, line)
+  private get restBorder(): vec4 | null {
+    return this.primary ? null : SOFT_LINE
+  }
+
+  private setFocus(on: boolean): void {
+    if (this.glow) {
+      this.glow.face.enabled = on
+    } else {
+      this.frame.setFill(on ? SOFT_GREEN_FOCUS : this.restFill)
+      this.frame.setBorder(on ? SOFT_GREEN : this.restBorder)
     }
   }
 
-  /**
-   * Sets the strip text and its font. `wideFont` is used for words with
-   * CJK characters (the Latin font has no such glyphs).
-   */
-  setText(text: string, font: Font | null, wideFont: Font | null = null): void {
-    this.words = text.split(" ").filter((w) => w.length > 0)
-    // Enough copies to cover the strip plus one period of scroll; one word at least emCm wide.
-    const guess = Math.max(this.emCm, this.estimate(text)) + this.gap
-    this.copies = Math.ceil(this.width / guess) + 2
-    const need = this.words.length * this.copies
-    while (this.texts.length < need) {
-      this.addText()
-    }
-    for (let i = 0; i < this.texts.length; i++) {
-      const t = this.texts[i]
-      if (i >= need) {
-        t.enabled = false
-        t.text = ""
-        continue
-      }
-      const word = this.words[i % this.words.length]
-      const f = /[　-鿿＀-￯]/.test(word) && wideFont ? wideFont : font
-      if (f && t.font !== f) {
-        t.font = f
-      }
-      t.text = word
-    }
-    this.measured = false
-    this.measure()
-    this.place()
+  private press(): void {
+    this.releasedAt = -1
+    this.anim.enabled = false
+    this.frame.setScale(PRESS_SCALE)
+    if (this.primary) this.frame.setFill(SOFT_GREEN_PRESSED)
   }
 
-  get textComponents(): Text[] {
-    return this.texts
+  private release(): void {
+    if (this.primary) this.frame.setFill(SOFT_GREEN)
+    this.releasedAt = getTime()
+    this.anim.enabled = true
   }
 
-  /** Advances the scroll; call from an UpdateEvent while shown. No allocation once measured. */
-  tick(dt: number): void {
-    if (!this.measured) {
-      this.measure()
-    }
-    this.x -= this.speed * dt
-    if (this.x <= -this.period) {
-      this.x += this.period
-    }
-    this.place()
-  }
-
-  private addText(): void {
-    const so = global.scene.createSceneObject(this.name + ".text")
-    so.setParent(this.root)
-    const t = so.createComponent("Component.Text") as Text
-    styleBrutalText(t, this.emCm, new vec4(0, 0, 0, 0), 0)
-    t.textFill.color = this.color
-    t.letterSpacing = MARQUEE_LETTER_SPACING
-    t.layoutRect = Rect.create(-1, 1, -this.height / 2, this.height / 2)
-    this.texts.push(t)
-    this.transforms.push(so.getTransform())
-  }
-
-  /** Word widths from the first copy's Texts; estimated until the text can be measured. */
-  private measure(): void {
-    const space = this.emCm * 0.3
-    let ok = true
-    let cursor = 0
-    this.centers.length = 0
-    this.halves.length = 0
-    for (let j = 0; j < this.words.length; j++) {
-      let w = 0
-      const box = this.texts[j].getBoundingBox()
-      if (box && box.right - box.left > 0.01) {
-        w = box.right - box.left
-      } else {
-        w = this.estimate(this.words[j])
-        ok = false
-      }
-      this.centers.push(cursor + w / 2)
-      this.halves.push(w / 2)
-      cursor += w + space
-    }
-    this.period = Math.max(1, cursor - space + this.gap)
-    this.measured = ok
-  }
-
-  private estimate(text: string): number {
-    return text.length * this.emCm * MARQUEE_EST_EM_PER_CHAR
-  }
-
-  private place(): void {
-    const n = this.words.length
-    if (n === 0) {
+  /** Eases the face back from PRESS_SCALE to 1; runs only while easing. */
+  private tick(): void {
+    const t = this.releasedAt < 0 ? 1 : (getTime() - this.releasedAt) / PRESS_SECONDS
+    if (t >= 1) {
+      this.frame.setScale(1)
+      this.anim.enabled = false
       return
     }
-    const left = -this.width / 2 - this.period
-    const limit = this.width / 2 - MARQUEE_INSET_CM
-    for (let c = 0; c < this.copies; c++) {
-      for (let j = 0; j < n; j++) {
-        const i = c * n + j
-        this.tmp.x = left + this.x + c * this.period + this.centers[j]
-        this.tmp.y = 0
-        this.tmp.z = 0.05
-        this.transforms[i].setLocalPosition(this.tmp)
-        const visible = Math.abs(this.tmp.x) + this.halves[j] <= limit
-        if (this.texts[i].enabled !== visible) {
-          this.texts[i].enabled = visible
-        }
-      }
+    const eased = 1 - (1 - t) * (1 - t)
+    this.frame.setScale(PRESS_SCALE + (1 - PRESS_SCALE) * eased)
+  }
+}
+
+// 5j-13b tabular numbers: the Text API has no font-feature (tnum) setting and
+// the Manrope subset's digits are proportional ("1" 0.42 em, "0" 0.64 em), so
+// each character gets its own Text centered in a fixed slot.
+const DIGIT_SLOT_EM = 0.66 // widest Manrope digit ("0", 0.642 em) plus a little
+const NARROW_SLOT_EM = 0.36 // ":" and "." (0.328 em)
+
+/**
+ * Fixed-width digits for the timer and the score. `source` keeps the whole
+ * string (getters, LEAF) but draws nothing; the cells, children of its object,
+ * copy its size, weight, color and outline. `pattern` gives one slot per
+ * character ("00:00", "000"); `anchor` -1 / 0 / 1 puts the slots' left edge,
+ * center or right edge at the source object's origin. A right-anchored value
+ * shorter than the pattern fills the rightmost slots.
+ */
+export class TabularText {
+  readonly source: Text
+  private readonly cells: Text[] = []
+  private readonly anchor: number
+
+  constructor(source: Text, pattern: string, emCm: number, anchor: -1 | 0 | 1) {
+    this.source = source
+    this.anchor = anchor
+    const widths = pattern.split("").map((c) => (/[0-9]/.test(c) ? DIGIT_SLOT_EM : NARROW_SLOT_EM) * emCm)
+    const total = widths.reduce((a, b) => a + b, 0)
+    let x = anchor < 0 ? 0 : anchor > 0 ? -total : -total / 2
+    const parent = source.getSceneObject()
+    for (let i = 0; i < widths.length; i++) {
+      const so = global.scene.createSceneObject(parent.name + "." + i)
+      so.setParent(parent)
+      so.getTransform().setLocalPosition(new vec3(x + widths[i] / 2, 0, 0))
+      const t = so.createComponent("Component.Text") as Text
+      t.size = source.size
+      ;(t as Text & {weight?: number}).weight = (source as Text & {weight?: number}).weight
+      t.depthTest = source.depthTest
+      t.textFill.color = source.textFill.color
+      t.outlineSettings.enabled = source.outlineSettings.enabled
+      t.outlineSettings.size = source.outlineSettings.size
+      t.outlineSettings.fill.color = source.outlineSettings.fill.color
+      t.horizontalAlignment = HorizontalAlignment.Center
+      t.verticalAlignment = VerticalAlignment.Center
+      t.horizontalOverflow = HorizontalOverflow.Overflow
+      t.verticalOverflow = VerticalOverflow.Overflow
+      t.layoutRect = Rect.create(-widths[i] / 2, widths[i] / 2, -emCm * 0.7, emCm * 0.7)
+      t.text = ""
+      this.cells.push(t)
+      x += widths[i]
+    }
+    source.enabled = false // its string stays readable; only the cells draw
+    this.set(source.text)
+  }
+
+  set(value: string): void {
+    this.source.text = value
+    const n = this.cells.length
+    const offset = this.anchor > 0 ? n - value.length : 0
+    for (let i = 0; i < n; i++) {
+      const k = i - offset
+      this.cells[i].text = k >= 0 && k < value.length ? value.charAt(k) : ""
+    }
+  }
+
+  setFont(font: Font | null): void {
+    if (!font) {
+      return
+    }
+    for (const t of this.cells) {
+      if (t.font !== font) t.font = font
     }
   }
 }

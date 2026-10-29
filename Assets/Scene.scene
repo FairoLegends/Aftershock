@@ -781,15 +781,15 @@
   Enabled: true
   ScriptAsset: !<reference> 14a6a1ef-6a21-4909-8c0c-ffa7d67fe121
   ScriptInputsDefault:
-    {}
+    lineColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       kind: shelf
-      fillColor: !<Vec4> {x: 1.000000, y: 0.000000, z: 0.000000, w: 0.250000}
-      lineColor: !<Vec4> {x: 1.000000, y: 0.000000, z: 0.000000, w: 1.000000}
+      fillColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 0.200000}
+      lineColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
   ScriptTypes:
     "":
       {}
@@ -1398,7 +1398,6 @@
       eyeHeight: !<float> 160.000000
       fontJa: !<reference.Font> 0dd7ea67-5428-41a0-943a-f6d12cd1b5a6
       fontZh: !<reference.Font> 6436afc0-6595-4825-b7a9-71e841f50bb4
-      fontTitle: !<reference.Font> be997fde-dff4-45c6-aa27-02ed228291e2
       fontBody: !<reference.Font> edecb9ee-4461-4f09-a961-75e55d4b7a4f
       tableDistanceMin: !<float> 100.000000
       tableDistanceMax: !<float> 200.000000
@@ -2179,14 +2178,15 @@
   ScriptAsset: !<reference> 14a6a1ef-6a21-4909-8c0c-ffa7d67fe121
   ScriptInputsDefault:
     kind: true
+    lineColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       kind: cabinet
-      fillColor: !<Vec4> {x: 1.000000, y: 0.000000, z: 0.000000, w: 0.250000}
-      lineColor: !<Vec4> {x: 1.000000, y: 0.000000, z: 0.000000, w: 1.000000}
+      fillColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 0.200000}
+      lineColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
   ScriptTypes:
     "":
       {}
@@ -2367,15 +2367,15 @@
   Enabled: true
   ScriptAsset: !<reference> 14a6a1ef-6a21-4909-8c0c-ffa7d67fe121
   ScriptInputsDefault:
-    {}
+    lineColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       kind: glass
-      fillColor: !<Vec4> {x: 1.000000, y: 0.000000, z: 0.000000, w: 0.250000}
-      lineColor: !<Vec4> {x: 1.000000, y: 0.000000, z: 0.000000, w: 1.000000}
+      fillColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 0.200000}
+      lineColor: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 1.000000}
   ScriptTypes:
     "":
       {}

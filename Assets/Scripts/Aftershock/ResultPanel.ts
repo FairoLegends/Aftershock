@@ -4,59 +4,70 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {ScoreBreakdown} from "./ScoreCalculator"
-import {FontRole, latinFont, lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {BrutalFrame, createSquareRect, drawOnTop, makeBrutalButton, PinchGuard, resetBrutalButton} from "./UiBacking"
-
-// DESIGN_BRIEF §5 type scale (same as SafetyPanel). Used by the Restart label only.
-type TextRole = "Headline2" | "Caption"
-const TYPE_SCALE: Record<TextRole, {size: number; weight: number}> = {
-  Headline2: {size: 48, weight: 700},
-  Caption: {size: 38, weight: 500}
-}
-const ENGLISH_SCALE = 0.8
+import {getLanguage, latinFont, Lines, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
+import {
+  createRoundRect,
+  drawOnTop,
+  PinchGuard,
+  SOFT_DIM,
+  SOFT_GREEN_TEXT,
+  SOFT_INNER_RADIUS_CM,
+  SoftButton,
+  SoftFrame,
+  TabularText
+} from "./UiBacking"
 
 // Panel text at the HUD scale (ENGINEERING_PLAN 5i item 4): em heights in cm,
 // Text.size = em (cm) x SIZE_PER_CM, as in Hud.ts.
 const SIZE_PER_CM = 43.886
-const BIG_EM_CM = 3.5 // title and score line
-const SMALL_EM_CM = 2 // the other detail lines
+const BIG_EM_CM = 3.5 // title
+const SMALL_EM_CM = 2 // detail rows
 const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the panel font is 1.25 em
 
 // Panel layout (cm). Not drill tunables: they only shape the panel.
+// Slice 7A-soft (mockup .score, .stats): title, a rounded score row, detail
+// rows (label left dimmed, value right bold, thin rule between), Restart.
 const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood); longer lines wrap
 const PAD = 2.5
-const ROW_GAP = 1.6 // above each bilingual pair
-const LINE_ID_H = 1.8 // Restart label lines
-const LINE_EN_H = 1.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
-const DETAIL_LINES = 2 // Slice 7A: the score has its own row
-const SCORE_EM_CM = 5 // big Syne number
-const SCORE_LABEL_EM_CM = 2.5 // "Skor" beside it; English below at SMALL_EM_CM
-const SCORE_ROW_H = 7
-const SCORE_RULE_H = 0.6 // thick rule under the score
-const SCORE_SPLIT = 0.8 // half the gap between the number and its label
-const BUTTON_FILL = new vec4(1, 1, 1, 0.12)
+const DETAIL_LINES = 2
+const DETAIL_PAD = 0.5 // above and below a detail row's text
+const DETAIL_GAP = 1.0 // above the first detail row
+const VALUE_W = 12 // detail value column, right
+const RULE_H = 0.1
+const RULE_COLOR = new vec4(1, 1, 1, 0.14)
+const SCORE_ROW_H = 6
+const SCORE_ROW_FILL = new vec4(1, 1, 1, 0.08)
+const SCORE_ROW_GAP = 1.2 // above the score row
+const SCORE_EM_CM = 4 // the number, right
+const SCORE_LABEL_EM_CM = 2.5 // "Skor", left
+const SCORE_INSET = 1.4 // text inset from the row's ends
+const BUTTON_GAP = 1.6 // above Restart
 const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
 const BUTTON_H = 5
+const BUTTON_EM_CM = 2
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
+const ROW_Z = 0.05 // row text above the score row's backing
 
 const WHITE = new vec4(1, 1, 1, 1)
 
 export type ResultMode = "result" | "gameOver"
 
-/** One bilingual line pair: Indonesian on top, English below at 80%. */
-interface LinePair {
+/** One row: the selected language (`id`), the collapsed English line (`en`) and, when split at ":", a value on the right. */
+interface Row {
   id: Text
   en: Text
-  idItem: FlexItem
-  enItem: FlexItem
+  value: Text | null
+  rule: SceneObject | null
+  item: FlexItem
 }
 
 /**
- * Result and game-over panel (TDD §3.1, §7, R12, R13): a title, up to three
- * detail lines and one Restart button. Text comes from Strings.ts only. It
- * owns no drill state: DrillController fills it and listens to onRestart.
+ * Result and game-over panel (TDD §3.1, §7, R12, R13): a title, the score,
+ * up to two detail rows and one Restart button. Text comes from Strings.ts
+ * only. It owns no drill state: DrillController fills it and listens to
+ * onRestart.
  */
 @component
 export class ResultPanel extends BaseScriptComponent {
@@ -85,22 +96,21 @@ export class ResultPanel extends BaseScriptComponent {
   /** 5h item 1: presses are ignored for pinchGuard.seconds after the panel shows. */
   readonly pinchGuard = new PinchGuard()
 
-  private title: LinePair | null = null
-  private details: LinePair[] = []
+  private title: Row
+  private details: Row[] = []
   private shownTexts: Text[] = []
   private _mode: ResultMode | null = null
   private scoreRow: SceneObject
   private scoreItem: FlexItem
-  private scoreNumber: Text
+  private scoreNumber: TabularText
   private scoreId: Text
   private scoreEn: Text
-  private restartButton: Button
-  private restartFrame: BrutalFrame
+  private restart: SoftButton | null = null
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = new BrutalFrame(this.sceneObject, this.backingColor)
+    const backing = new SoftFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -112,7 +122,7 @@ export class ResultPanel extends BaseScriptComponent {
     flex.direction = FlexDirection.Column
     flex.alignItems = FlexAlign.Center
     flex.justifyContent = FlexJustify.Center
-    flex.rowGap = 0 // gaps are margins, so collapsed lines leave none
+    flex.rowGap = 0 // gaps are margins, so collapsed rows leave none
     flex.paddingTop = PAD
     flex.paddingBottom = PAD
     flex.paddingLeft = PAD
@@ -121,15 +131,15 @@ export class ResultPanel extends BaseScriptComponent {
       backing.setSize(r.containerWidth, r.containerHeight)
     })
 
-    this.title = this.addPair(content, "Title")
-    for (let i = 0; i < DETAIL_LINES; i++) {
-      this.details.push(this.addPair(content, "Line" + (i + 1)))
-    }
+    this.title = this.addRow(content, "Title", false)
     this.addScoreRow(content)
+    for (let i = 0; i < DETAIL_LINES; i++) {
+      this.details.push(this.addRow(content, "Line" + (i + 1), i > 0))
+    }
     this.addRestartButton(content)
-    this.setPair(this.title, null, false, BIG_EM_CM, "title")
-    for (const pair of this.details) {
-      this.setPair(pair, null, true, SMALL_EM_CM)
+    this.setRow(this.title, null, BIG_EM_CM)
+    for (const row of this.details) {
+      this.setRow(row, null, SMALL_EM_CM)
     }
     this.setScore(null)
   }
@@ -153,31 +163,33 @@ export class ResultPanel extends BaseScriptComponent {
    */
   showResult(b: ScoreBreakdown): void {
     this._mode = "result"
-    this.setPair(this.title, lines("result.title"), false, BIG_EM_CM, "title")
-    if (b.tSafe === null) {
-      this.setPair(this.details[0], lines("result.never"), true, SMALL_EM_CM)
-      this.setPair(this.details[1], null, true, SMALL_EM_CM)
-    } else {
-      this.setPair(this.details[0], fill("result.speed", "{s}", b.tSafe.toFixed(1)), true, SMALL_EM_CM)
-      this.setPair(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), true, SMALL_EM_CM)
-    }
+    this.sceneObject.enabled = true // measure the rows in the real font
+    this.setRow(this.title, lines("result.title"), BIG_EM_CM)
     this.setScore(b.score)
+    if (b.tSafe === null) {
+      this.setRow(this.details[0], lines("result.never"), SMALL_EM_CM)
+      this.setRow(this.details[1], null, SMALL_EM_CM)
+    } else {
+      this.setRow(this.details[0], fill("result.speed", "{s}", b.tSafe.toFixed(1)), SMALL_EM_CM)
+      this.setRow(this.details[1], fill("result.health", "{h}", "" + Math.round(b.healthLeft)), SMALL_EM_CM)
+    }
     this.showPanel()
   }
 
   /** Out of health: what went wrong (over.why.stood or over.why.danger), no score (TDD §7). */
   showGameOver(reason: StringKey): void {
     this._mode = "gameOver"
-    this.setPair(this.title, lines("over.title"), false, BIG_EM_CM, "title")
-    this.setPair(this.details[0], lines(reason), true, SMALL_EM_CM)
-    this.setPair(this.details[1], null, true, SMALL_EM_CM)
+    this.sceneObject.enabled = true
+    this.setRow(this.title, lines("over.title"), BIG_EM_CM)
     this.setScore(null)
+    this.setRow(this.details[0], lines(reason), SMALL_EM_CM)
+    this.setRow(this.details[1], null, SMALL_EM_CM)
     this.showPanel()
   }
 
   private showPanel(): void {
     this.sceneObject.enabled = true
-    if (this.restartButton) resetBrutalButton(this.restartButton, this.restartFrame)
+    if (this.restart) this.restart.reset()
     drawOnTop(this.sceneObject)
     this.pinchGuard.arm()
   }
@@ -201,55 +213,83 @@ export class ResultPanel extends BaseScriptComponent {
   }
 
   /**
-   * Fills a line pair from a bilingual string at `emCm` (English at 80%), or
-   * collapses it when text is null.
+   * Fills a row at `emCm`, or collapses it when text is null. A detail row
+   * splits at the first ":" into a dimmed label (left) and a bold value
+   * (right); a line without one is centered and wraps (5i-4 readability).
    */
-  private setPair(pair: LinePair, text: ReturnType<typeof lines> | null, gapAbove: boolean, emCm: number, role: FontRole = "body"): void {
+  private setRow(row: Row, text: Lines | null, emCm: number): void {
     const shown = text !== null
-    setLinePair(pair.id, pair.en, shown ? text : {primary: "", secondary: ""}, role)
-    this.fitLine(pair.id, pair.idItem, shown, emCm)
-    this.fitLine(pair.en, pair.enItem, shown, emCm * ENGLISH_SCALE)
-    pair.idItem.marginTop = shown && gapAbove ? ROW_GAP : 0
-  }
-
-  /**
-   * Sizes a line and grows its slot to the number of lines it wraps to inside
-   * INNER_W. getBoundingBox is limited to 5 calls per Text per frame (measured);
-   * this makes one per line per show.
-   */
-  private fitLine(t: Text, item: FlexItem, shown: boolean, emCm: number): void {
-    t.size = emCm * SIZE_PER_CM
+    const l = shown ? text : {primary: "", secondary: ""}
     const lineH = emCm * LINE_H_PER_EM
+    const m = row.value ? /^(.*?)\s*[:：]\s*(.+)$/.exec(l.primary) : null
+    const label = m ? m[1] : l.primary
+    setLinePair(row.id, row.en, {primary: label, secondary: l.secondary})
+    row.id.size = emCm * SIZE_PER_CM
+    row.id.textFill.color = m ? SOFT_DIM : WHITE
+    row.id.horizontalAlignment = m ? HorizontalAlignment.Left : HorizontalAlignment.Center
+    const left = -INNER_W / 2
+    const right = m ? INNER_W / 2 - VALUE_W : INNER_W / 2
+    row.id.layoutRect = Rect.create(left, right, -lineH / 2, lineH / 2)
+    if (row.value) {
+      setLineText(row.value, m ? m[2] : "", getLanguage())
+    }
+    // Grow the slot to the number of lines the text wraps to. getBoundingBox
+    // is limited to 5 calls per Text per frame (measured); this makes one.
     let h = shown ? lineH : HIDDEN_H
-    if (shown && t.text.length > 0) {
-      const box = t.getBoundingBox()
+    if (shown && label.length > 0 && row.id.getSceneObject().isEnabledInHierarchy) {
+      const box = row.id.getBoundingBox()
       h = Math.max(1, Math.round((box.top - box.bottom) / lineH)) * lineH
     }
-    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -h / 2, h / 2)
-    item.overrideHeight = h
+    row.id.layoutRect = Rect.create(left, right, -h / 2, h / 2)
+    const pad = shown && row.value ? DETAIL_PAD : 0
+    row.item.overrideHeight = h + pad * 2
+    if (row.rule) {
+      row.rule.enabled = shown
+      row.rule.getTransform().setLocalPosition(new vec3(0, h / 2 + pad, 0))
+    }
+    if (row === this.details[0]) {
+      row.item.marginTop = shown ? DETAIL_GAP : 0
+    }
   }
 
-  private addPair(parent: SceneObject, name: string): LinePair {
-    const id = this.addLine(parent, name + ".id")
-    const en = this.addLine(parent, name + ".en")
-    return {id: id.text, en: en.text, idItem: id.item, enItem: en.item}
-  }
-
-  private addLine(parent: SceneObject, name: string): {text: Text; item: FlexItem} {
+  private addRow(parent: SceneObject, name: string, ruleAbove: boolean): Row {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
-    const t = so.createComponent("Component.Text") as Text
-    t.text = ""
-    this.styleText(t, SMALL_EM_CM * SIZE_PER_CM, true)
-    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -HIDDEN_H / 2, HIDDEN_H / 2)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
     item.overrideWidth = INNER_W
     item.overrideHeight = HIDDEN_H
     item.alignSelf = FlexAlignSelf.Center
-    this.shownTexts.push(t)
-    return {text: t, item}
+    const id = this.addText(so, name + ".id", SMALL_EM_CM, true)
+    const en = this.addText(so, name + ".en", SMALL_EM_CM, true)
+    let value: Text | null = null
+    let rule: SceneObject | null = null
+    if (name !== "Title") {
+      value = this.addText(so, name + ".value", SMALL_EM_CM, false)
+      value.horizontalAlignment = HorizontalAlignment.Right
+      const h = SMALL_EM_CM * LINE_H_PER_EM
+      value.layoutRect = Rect.create(INNER_W / 2 - VALUE_W, INNER_W / 2, -h / 2, h / 2)
+    }
+    if (ruleAbove) {
+      rule = global.scene.createSceneObject(name + ".rule")
+      rule.setParent(so)
+      createRoundRect(rule, RULE_COLOR, INNER_W, RULE_H, 0)
+    }
+    return {id, en, value, rule, item}
   }
 
+  private addText(parent: SceneObject, name: string, emCm: number, wrap: boolean): Text {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    so.getTransform().setLocalPosition(new vec3(0, 0, ROW_Z))
+    const t = so.createComponent("Component.Text") as Text
+    t.text = ""
+    this.styleText(t, emCm * SIZE_PER_CM, wrap)
+    t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -HIDDEN_H / 2, HIDDEN_H / 2)
+    this.shownTexts.push(t)
+    return t
+  }
+
+  /** Slice 7A-soft: the primary (green) button; the label rides on the face. */
   private addRestartButton(parent: SceneObject): void {
     const so = global.scene.createSceneObject("RestartButton")
     so.setParent(parent)
@@ -257,38 +297,39 @@ export class ResultPanel extends BaseScriptComponent {
     btn.size = new vec3(BUTTON_W, BUTTON_H, 1)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
     item.alignSelf = FlexAlignSelf.Center
-    item.marginTop = ROW_GAP
+    item.marginTop = BUTTON_GAP
 
-    // Slice 7A: the same brutal button as Continue; the label rides on the face.
-    this.restartButton = btn
-    this.restartFrame = makeBrutalButton(btn, BUTTON_W, BUTTON_H, BUTTON_FILL, () => {
+    this.restart = new SoftButton(this, btn, BUTTON_W, BUTTON_H, true, () => {
       if (this.pinchGuard.open) this.restartEvent.invoke()
     })
 
-    // Bilingual label: Indonesian on top, English below at 80%.
     const label = global.scene.createSceneObject("RestartLabel")
-    label.setParent(this.restartFrame.face)
+    label.setParent(this.restart.face)
     label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
-    const labelFlex = label.createComponent(FlexLayout.getTypeName()) as FlexLayout
-    labelFlex.width = BUTTON_W - 0.5
-    labelFlex.height = BUTTON_H - 0.5
-    labelFlex.direction = FlexDirection.Column
-    labelFlex.alignItems = FlexAlign.Stretch
-    labelFlex.justifyContent = FlexJustify.Center
-    labelFlex.rowGap = 0.2
-
-    this.addButtonLine(label, "btn.restart.id", "", LINE_ID_H, 1)
-    this.addButtonLine(label, "btn.restart.en", "", LINE_EN_H, ENGLISH_SCALE)
-    // Slice 5L: the button label follows the selected language (child 0 = primary, 1 = English).
-    const restartPrimary = label.getChild(0).getComponent("Component.Text") as Text
-    const restartSecondary = label.getChild(1).getComponent("Component.Text") as Text
-    restartPrimary.capitilizationOverride = CapitilizationOverride.AllUpper
-    const refreshRestart = (): void => setLinePair(restartPrimary, restartSecondary, lines("btn.restart"), "title")
+    const primary = this.addButtonLine(label, "btn.restart.id")
+    const secondary = this.addButtonLine(label, "btn.restart.en")
+    const refreshRestart = (): void => setLinePair(primary, secondary, lines("btn.restart"))
     refreshRestart()
     onLanguageChanged.add(refreshRestart)
   }
 
-  /** Slice 7A score row: big Syne number, "Skor / Score" beside it, a thick rule under it. */
+  private addButtonLine(parent: SceneObject, name: string): Text {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    const t = so.createComponent("Component.Text") as Text
+    t.text = ""
+    this.styleText(t, BUTTON_EM_CM * SIZE_PER_CM, false)
+    t.textFill.color = SOFT_GREEN_TEXT
+    t.outlineSettings.enabled = false // dark text on solid green
+    t.horizontalOverflow = HorizontalOverflow.Shrink
+    const w = BUTTON_W - 1
+    const h = BUTTON_EM_CM * LINE_H_PER_EM
+    t.layoutRect = Rect.create(-w / 2, w / 2, -h / 2, h / 2)
+    this.shownTexts.push(t)
+    return t
+  }
+
+  /** Slice 7A-soft score row (mockup .score): rounded, "Skor" left, the number right in fixed-width digits. */
   private addScoreRow(parent: SceneObject): void {
     const so = global.scene.createSceneObject("Score")
     so.setParent(parent)
@@ -297,19 +338,21 @@ export class ResultPanel extends BaseScriptComponent {
     this.scoreItem.overrideWidth = INNER_W
     this.scoreItem.overrideHeight = SCORE_ROW_H
     this.scoreItem.alignSelf = FlexAlignSelf.Center
-    this.scoreNumber = this.scoreText(so, "Score.number", SCORE_EM_CM, -INNER_W / 2, -SCORE_SPLIT, 0.5, HorizontalAlignment.Right)
-    this.scoreId = this.scoreText(so, "Score.id", SCORE_LABEL_EM_CM, SCORE_SPLIT, INNER_W / 2, 1.4, HorizontalAlignment.Left)
-    this.scoreEn = this.scoreText(so, "Score.en", SMALL_EM_CM, SCORE_SPLIT, INNER_W / 2, -1.2, HorizontalAlignment.Left)
-    const rule = global.scene.createSceneObject("Score.rule")
-    rule.setParent(so)
-    rule.getTransform().setLocalPosition(new vec3(0, -SCORE_ROW_H / 2 + SCORE_RULE_H / 2, 0))
-    createSquareRect(rule, WHITE, INNER_W, SCORE_RULE_H)
+    const row = new SoftFrame(so, SCORE_ROW_FILL, SOFT_INNER_RADIUS_CM, null, "Score.backing")
+    row.setSize(INNER_W, SCORE_ROW_H)
+    const x = INNER_W / 2 - SCORE_INSET
+    this.scoreId = this.scoreText(so, "Score.id", SCORE_LABEL_EM_CM, -x, x, HorizontalAlignment.Left)
+    this.scoreId.textFill.color = SOFT_DIM
+    this.scoreEn = this.scoreText(so, "Score.en", SMALL_EM_CM, -x, x, HorizontalAlignment.Left)
+    const number = this.scoreText(so, "Score.number", SCORE_EM_CM, -x, x, HorizontalAlignment.Right)
+    number.getSceneObject().getTransform().setLocalPosition(new vec3(x, 0, ROW_Z))
+    this.scoreNumber = new TabularText(number, "000", SCORE_EM_CM, 1)
   }
 
-  private scoreText(parent: SceneObject, name: string, emCm: number, left: number, right: number, y: number, align: HorizontalAlignment): Text {
+  private scoreText(parent: SceneObject, name: string, emCm: number, left: number, right: number, align: HorizontalAlignment): Text {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
-    so.getTransform().setLocalPosition(new vec3(0, y, 0))
+    so.getTransform().setLocalPosition(new vec3(0, 0, ROW_Z))
     const t = so.createComponent("Component.Text") as Text
     t.text = ""
     this.styleText(t, emCm * SIZE_PER_CM, false)
@@ -324,31 +367,17 @@ export class ResultPanel extends BaseScriptComponent {
     const shown = score !== null
     this.scoreRow.enabled = shown
     this.scoreItem.overrideHeight = shown ? SCORE_ROW_H : HIDDEN_H
-    this.scoreItem.marginTop = shown ? ROW_GAP : 0
+    this.scoreItem.marginTop = shown ? SCORE_ROW_GAP : 0
     const l = lines("result.score", {"{score}": ""})
     const strip = (s: string): string => s.replace(/[:：]\s*$/, "").trim()
-    setLinePair(this.scoreId, this.scoreEn, shown ? {primary: strip(l.primary), secondary: strip(l.secondary)} : {primary: "", secondary: ""}, "title")
-    this.scoreNumber.text = shown ? "" + score : ""
-    const f = latinFont("title")
-    if (f) this.scoreNumber.font = f
-  }
-
-  private addButtonLine(parent: SceneObject, name: string, text: string, height: number, scale: number): void {
-    const so = global.scene.createSceneObject(name)
-    so.setParent(parent)
-    const t = so.createComponent("Component.Text") as Text
-    t.text = text
-    // Restart label unchanged: Headline2, English at 80% but never under the Caption floor.
-    this.styleText(t, Math.max(TYPE_SCALE.Headline2.size * scale, TYPE_SCALE.Caption.size), false)
-    const w = BUTTON_W - 0.5
-    t.layoutRect = Rect.create(-w / 2, w / 2, -height / 2, height / 2)
-    so.createComponent(FlexItem.getTypeName())
-    this.shownTexts.push(t)
+    setLinePair(this.scoreId, this.scoreEn, shown ? {primary: strip(l.primary), secondary: strip(l.secondary)} : {primary: "", secondary: ""})
+    this.scoreNumber.set(shown ? "" + score : "")
+    this.scoreNumber.setFont(latinFont())
   }
 
   private styleText(t: Text, size: number, wrap: boolean): void {
     t.size = size
-    ;(t as Text & {weight?: number}).weight = TYPE_SCALE.Headline2.weight
+    ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
     t.textFill.color = WHITE
     if (this.textOutlineSize > 0) {
@@ -363,7 +392,7 @@ export class ResultPanel extends BaseScriptComponent {
   }
 }
 
-/** A Strings.ts entry (selected language + English) with its placeholder filled in. */
-function fill(key: StringKey, placeholder: string, value: string): ReturnType<typeof lines> {
+/** A Strings.ts entry with its placeholder filled in. */
+function fill(key: StringKey, placeholder: string, value: string): Lines {
   return lines(key, {[placeholder]: value})
 }

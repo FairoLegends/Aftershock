@@ -4,9 +4,9 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {BrutalFrame, drawOnTop, makeBrutalButton, PinchGuard, resetBrutalButton} from "./UiBacking"
+import {drawOnTop, PinchGuard, SOFT_GREEN_TEXT, SoftButton, SoftFrame} from "./UiBacking"
 
-/** One string's two lines: selected language on top, English below at 80%. */
+/** One string's line and its collapsed English line (5j-13d: one language per screen). */
 interface LinePair {
   key: StringKey
   primary: Text
@@ -41,7 +41,6 @@ const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
 const BUTTON_H = 5
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
-const BUTTON_FILL = new vec4(1, 1, 1, 0.12)
 
 const WHITE = new vec4(1, 1, 1, 1)
 
@@ -67,13 +66,12 @@ export class SafetyPanel extends BaseScriptComponent {
 
   private readonly shownTexts: Text[] = []
   private readonly pairs: LinePair[] = []
-  private continueButton: Button
-  private continueFrame: BrutalFrame
+  private continueButton: SoftButton | null = null
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = new BrutalFrame(this.sceneObject, this.backingColor)
+    const backing = new SoftFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -85,7 +83,7 @@ export class SafetyPanel extends BaseScriptComponent {
     flex.direction = FlexDirection.Column
     flex.alignItems = FlexAlign.Center
     flex.justifyContent = FlexJustify.Center
-    flex.rowGap = ROW_GAP
+    flex.rowGap = 0 // gaps are margins, so a collapsed English line leaves none
     flex.paddingTop = PAD
     flex.paddingBottom = PAD
     flex.paddingLeft = PAD
@@ -94,8 +92,8 @@ export class SafetyPanel extends BaseScriptComponent {
       backing.setSize(r.containerWidth, r.containerHeight)
     })
 
-    this.addBilingual(content, "safety.drill")
-    this.addBilingual(content, "safety.room")
+    this.addBilingual(content, "safety.drill", false)
+    this.addBilingual(content, "safety.room", true)
     this.addContinueButton(content)
     this.refresh()
     onLanguageChanged.add(() => this.refresh())
@@ -116,7 +114,7 @@ export class SafetyPanel extends BaseScriptComponent {
 
   show(): void {
     this.sceneObject.enabled = true
-    if (this.continueButton) resetBrutalButton(this.continueButton, this.continueFrame)
+    if (this.continueButton) this.continueButton.reset()
     drawOnTop(this.sceneObject)
     this.pinchGuard.arm()
   }
@@ -134,18 +132,20 @@ export class SafetyPanel extends BaseScriptComponent {
     return this.shownTexts.map((t) => t.text)
   }
 
-  private addBilingual(parent: SceneObject, key: StringKey): void {
+  private addBilingual(parent: SceneObject, key: StringKey, gapAbove: boolean): void {
     const primary = this.addLine(parent, key + ".id", LINE_ID_H, 1)
+    if (gapAbove) {
+      primary.item.marginTop = ROW_GAP
+    }
     const secondary = this.addLine(parent, key + ".en", LINE_EN_H, ENGLISH_SCALE)
     this.pairs.push({key, primary: primary.text, secondary: secondary.text, secondaryItem: secondary.item, height: LINE_EN_H})
   }
 
-  /** Re-renders every line in the selected language (Slice 5L); English only collapses the second line. */
+  /** Re-renders every line in the selected language only (5j-13d); the English slot collapses. */
   private refresh(): void {
     for (const p of this.pairs) {
       const l = lines(p.key)
-      // 5j-12 (b): safety sentences in Manrope; the Continue label stays Syne.
-      setLinePair(p.primary, p.secondary, l, p.key === "btn.continue" ? "title" : "body")
+      setLinePair(p.primary, p.secondary, l)
       p.secondaryItem.overrideHeight = l.secondary.length > 0 ? p.height : HIDDEN_H
     }
   }
@@ -173,15 +173,13 @@ export class SafetyPanel extends BaseScriptComponent {
     item.alignSelf = FlexAlignSelf.Center
     item.marginTop = ROW_GAP
 
-    // Slice 7A: brutal button; the label rides on the face so it moves on press.
-    this.continueButton = btn
-    this.continueFrame = makeBrutalButton(btn, BUTTON_W, BUTTON_H, BUTTON_FILL, () => {
+    // Slice 7A-soft: the primary (green) button; the label rides on the face so it moves on press.
+    this.continueButton = new SoftButton(this, btn, BUTTON_W, BUTTON_H, true, () => {
       if (this.pinchGuard.open) this.continueEvent.invoke()
     })
 
-    // Bilingual label: Indonesian on top, English below at 80%.
     const label = global.scene.createSceneObject("ContinueLabel")
-    label.setParent(this.continueFrame.face)
+    label.setParent(this.continueButton.face)
     label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
     const labelFlex = label.createComponent(FlexLayout.getTypeName()) as FlexLayout
     labelFlex.width = BUTTON_W - 0.5
@@ -189,12 +187,13 @@ export class SafetyPanel extends BaseScriptComponent {
     labelFlex.direction = FlexDirection.Column
     labelFlex.alignItems = FlexAlign.Stretch
     labelFlex.justifyContent = FlexJustify.Center
-    labelFlex.rowGap = 0.2
+    labelFlex.rowGap = 0
 
     const primary = this.addButtonLine(label, "btn.continue.id", LINE_ID_H, 1)
     const secondary = this.addButtonLine(label, "btn.continue.en", LINE_EN_H, ENGLISH_SCALE)
     this.pairs.push({key: "btn.continue", primary: primary.text, secondary: secondary.text, secondaryItem: secondary.item, height: LINE_EN_H})
-    primary.text.capitilizationOverride = CapitilizationOverride.AllUpper
+    primary.text.textFill.color = SOFT_GREEN_TEXT // dark text on solid green
+    secondary.text.textFill.color = SOFT_GREEN_TEXT
   }
 
   private addButtonLine(parent: SceneObject, name: string, height: number, scale: number): {text: Text; item: FlexItem} {

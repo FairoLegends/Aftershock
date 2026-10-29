@@ -1,8 +1,8 @@
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 
 // Every user-facing string in the Lens (TDD §6), in the five languages of
-// docs/STRINGS_I18N.md (Slice 5L). Panels show the selected language on top
-// and English below at 80%; English alone when English is selected.
+// docs/STRINGS_I18N.md (Slice 5L). Panels show the selected language only
+// (Slice 7A-soft, 5j-13d); the language picker title shows all five.
 // Do not put user-facing text anywhere else.
 
 export type Lang = "id" | "en" | "de" | "ja" | "zh"
@@ -361,7 +361,11 @@ export function getString(key: StringKey, lang: Lang = current): string {
 /** Placeholder fills, e.g. {"{s}": "4.2"}; used in every language. */
 export type Fills = Record<string, string>
 
-/** One string as shown: selected language on top, English below ("" when English is selected). */
+/**
+ * One string as shown. Slice 7A-soft (ENGINEERING_PLAN 5j item 13d): one
+ * language per screen, so secondary is always "" and panels hide their
+ * English line. Only the language picker title keeps its five languages.
+ */
 export interface Lines {
   primary: string
   secondary: string
@@ -370,7 +374,7 @@ export interface Lines {
 export function lines(key: StringKey, fills?: Fills): Lines {
   return {
     primary: fill(STRINGS[key][current], fills),
-    secondary: current === "en" ? "" : fill(STRINGS[key].en, fills)
+    secondary: ""
   }
 }
 
@@ -384,62 +388,46 @@ function fill(text: string, fills?: Fills): string {
   return text
 }
 
-/** One string in the selected language only (marquee strips: no English line). */
-export function primaryLine(key: StringKey): string {
-  return STRINGS[key][current]
-}
-
-// Fonts (Slice 5L, 7A): ja and zh lines use the Noto subsets; id, en and de
-// use Syne for primary lines and titles ("title") and Manrope for English
-// secondary lines and small text ("body"). DrillController registers them
-// from DrillConfig. An unwired font falls back to the default (SpecsSans).
-export type FontRole = "title" | "body"
-
+// Fonts (Slice 5L, 7A-soft 5j-13b): one family. ja and zh lines use the Noto
+// subsets; every Latin line (id, en, de, titles, numbers) uses Manrope.
+// DrillController registers them from DrillConfig. An unwired font falls
+// back to the default (SpecsSans).
 let fontJa: Font | null = null
 let fontZh: Font | null = null
-let fontTitle: Font | null = null
-let fontBody: Font | null = null
+let fontLatin: Font | null = null
 let defaultFont: Font | null = null
 
-export function setLanguageFonts(ja: Font | null, zh: Font | null, title: Font | null = null, body: Font | null = null): void {
+export function setLanguageFonts(ja: Font | null, zh: Font | null, latin: Font | null = null): void {
   fontJa = ja ? ja : null
   fontZh = zh ? zh : null
-  fontTitle = title ? title : null
-  fontBody = body ? body : null
+  fontLatin = latin ? latin : null
 }
 
-/** The font a line in this language and role needs, or null for the default font. */
-export function fontFor(lang: Lang, role: FontRole = "title"): Font | null {
+/** The font a line in this language needs, or null for the default font. */
+export function fontFor(lang: Lang): Font | null {
   if (lang === "ja") {
     return fontJa
   }
   if (lang === "zh") {
     return fontZh
   }
-  return role === "title" ? fontTitle : fontBody
+  return fontLatin
 }
 
-/** The Latin font for a role, for text that is the same in every language (numbers, timer). */
-export function latinFont(role: FontRole): Font | null {
-  return role === "title" ? fontTitle : fontBody
+/** The Latin font (Manrope), for text that is the same in every language (numbers, timer). */
+export function latinFont(): Font | null {
+  return fontLatin
 }
 
 /**
- * Sets a Text's string and its font for `lang` and `role`. The default font
- * is taken from the first Text that still has it.
+ * Sets a Text's string and its font for `lang`. The default font is taken
+ * from the first Text that still has it.
  */
-export function setLineText(t: Text, text: string, lang: Lang, role: FontRole = "title"): void {
-  if (
-    defaultFont === null &&
-    t.font &&
-    t.font !== fontJa &&
-    t.font !== fontZh &&
-    t.font !== fontTitle &&
-    t.font !== fontBody
-  ) {
+export function setLineText(t: Text, text: string, lang: Lang): void {
+  if (defaultFont === null && t.font && t.font !== fontJa && t.font !== fontZh && t.font !== fontLatin) {
     defaultFont = t.font
   }
-  const want = fontFor(lang, role) || defaultFont
+  const want = fontFor(lang) || defaultFont
   if (want && t.font !== want) {
     t.font = want
   }
@@ -448,9 +436,11 @@ export function setLineText(t: Text, text: string, lang: Lang, role: FontRole = 
 
 /**
  * Sets a primary / secondary Text pair from lines(): primary in the selected
- * language's font (Syne, or Manrope for small text), English in Manrope.
+ * language's font. The secondary (English) Text is disabled while its text is
+ * empty, which is always since 5j-13d; callers collapse its layout slot.
  */
-export function setLinePair(primary: Text, secondary: Text, l: Lines, primaryRole: FontRole = "title"): void {
-  setLineText(primary, l.primary, current, primaryRole)
-  setLineText(secondary, l.secondary, "en", "body")
+export function setLinePair(primary: Text, secondary: Text, l: Lines): void {
+  setLineText(primary, l.primary, current)
+  setLineText(secondary, l.secondary, "en")
+  secondary.enabled = l.secondary.length > 0
 }

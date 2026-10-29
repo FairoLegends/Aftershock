@@ -2,7 +2,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {BrutalFrame, drawOnTop} from "./UiBacking"
+import {drawOnTop, SoftFrame} from "./UiBacking"
 
 // DESIGN_BRIEF §5: instruction type is 3.5 cm at 110 cm. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -45,7 +45,7 @@ export class BriefingPanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = new BrutalFrame(this.sceneObject, this.backingColor)
+    const backing = new SoftFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -57,7 +57,7 @@ export class BriefingPanel extends BaseScriptComponent {
     flex.direction = FlexDirection.Column
     flex.alignItems = FlexAlign.Center
     flex.justifyContent = FlexJustify.Center
-    flex.rowGap = ROW_GAP
+    flex.rowGap = 0 // 5j-13d: the English line is collapsed, so no gap is left for it
     flex.paddingTop = PAD
     flex.paddingBottom = PAD
     flex.paddingLeft = PAD
@@ -77,15 +77,16 @@ export class BriefingPanel extends BaseScriptComponent {
   }
 
   /**
-   * Re-renders instr.brief in the selected language (Slice 5L) in Manrope
-   * (5j-12 (b)). Each line's height is measured, so the backing follows the
-   * wrapped text (5j-12 defect 3); English only collapses the second line.
+   * Re-renders instr.brief in the selected language only (5j-13d) in Manrope.
+   * The line's height is measured, so the backing follows the wrapped text
+   * (5j-12 defect 3); the English slot collapses.
    */
   private refresh(): void {
     const l = lines("instr.brief")
-    setLinePair(this.primary, this.secondary, l, "body")
+    setLinePair(this.primary, this.secondary, l)
     this.fitLine(this.primary, this.primaryItem, true, INSTRUCTION_EM_CM)
     this.fitLine(this.secondary, this.secondaryItem, l.secondary.length > 0, INSTRUCTION_EM_CM * ENGLISH_SCALE)
+    this.secondaryItem.marginTop = l.secondary.length > 0 ? ROW_GAP : 0
   }
 
   /** Same as ResultPanel.fitLine: height = measured line count × line height. */

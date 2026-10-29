@@ -54,6 +54,6 @@
     - '// @input AssignableType_1 config {"hint":"DrillConfig component (dangerMargin)"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input string kind = "cabinet" {"hint":"Which hazard this zone guards (its footprint comes from LayoutGenerator)", "widget":"combobox", "values":[{"label":"Cabinet", "value":"cabinet"}, {"label":"Shelf", "value":"shelf"}, {"label":"Glass", "value":"glass"}]}'
-    - '// @input vec4 fillColor = {1,0,0,0.25} {"hint":"Floor fill: alarm red #FF5A4F, faint (DESIGN_BRIEF §5.1). Light colors only: the display is additive.", "widget":"color"}'
-    - '// @input vec4 lineColor = {1,0,0,1} {"hint":"Outline and label: alarm red #FF5A4F", "widget":"color"}'
+    - '// @input vec4 fillColor = {1,0.353,0.31,0.2} {"hint":"Floor fill: alarm red #FF5A4F at 20% (Slice 7A-soft). Light colors only: the display is additive.", "widget":"color"}'
+    - '// @input vec4 lineColor = {1,0.353,0.31,1} {"hint":"Floor outline: alarm red #FF5A4F", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

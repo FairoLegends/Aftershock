@@ -3,13 +3,12 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
-import {fontFor, getLanguage, Lang, LANGS, latinFont, primaryLine, setLineText, STRINGS} from "./Strings"
-import {BrutalFrame, BRUTAL_WHITE, drawOnTop, makeBrutalButton, Marquee, PinchGuard, resetBrutalButton} from "./UiBacking"
+import {Lang, LANGS, setLineText, STRINGS} from "./Strings"
+import {drawOnTop, PinchGuard, SOFT_WHITE, SoftButton, SoftFrame} from "./UiBacking"
 
 // Same type scale as SafetyPanel (size / 43.886 = em-square in cm at 110 cm).
 const TITLE_SIZE = 38 // Caption: five title lines stay small
 const BUTTON_SIZE = 48 // Headline2
-const NUMBER_SIZE = 38
 const WEIGHT = 700
 
 // Panel layout (cm). Not drill tunables: they only shape this panel.
@@ -21,30 +20,15 @@ const BUTTON_GAP = 0.8 // 5h item 2: packed tighter (was 1.2)
 const BUTTON_W = 18
 const BUTTON_H = 4 // 5h item 2 (learner): 4 cm tall so all five fit in view at eye level
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
-const NUMBER_INSET = 1.6 // "01".."05" sit this far in from the button's left edge
-const NUMBER_HALF_W = 1.2 // half the number's box
-// 5j-12 defect 2: the label box starts right of the number and ends inside the
-// button; the label is left-aligned in it and shrinks only if it would not fit.
-const LABEL_LEFT = -BUTTON_W / 2 + NUMBER_INSET + NUMBER_HALF_W + 0.8
-const LABEL_RIGHT = BUTTON_W / 2 - 0.8
+const LABEL_W = BUTTON_W - 2 // the label shrinks only if it would not fit
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
-const BUTTON_FILL = new vec4(1, 1, 1, 0.12)
-
-// Slice 7A marquee.drill strip above the picker (5j-12 defect 5: white, 2 cm Syne).
-const MARQUEE_H = 3.2
-const MARQUEE_EM = 2
-const MARQUEE_GAP = 1.5
-const MARQUEE_SPEED = 4 // cm/s
-const MARQUEE_WORD_GAP = 5 // cm between the end of one copy and the next
-
-const NUMBER_COLOR = new vec4(1, 1, 1, 0.65)
 
 /**
- * Language picker (Slice 5L, R16; Slice 7A look): the picker title in all five
- * languages and five numbered buttons, each line in its own language and font,
- * under a marquee.drill strip. Placed once at start by DrillController, before
- * the safety panel. It owns no drill state: DrillController listens to onPick
- * and sets the language.
+ * Language picker (Slice 5L, R16; Slice 7A-soft look): the picker title in all
+ * five languages (the one place with more than one language, 5j-13d) and five
+ * secondary buttons, each line in its own language and font. Placed once at
+ * start by DrillController, before the safety panel. It owns no drill state:
+ * DrillController listens to onPick and sets the language.
  */
 @component
 export class LanguagePanel extends BaseScriptComponent {
@@ -65,25 +49,19 @@ export class LanguagePanel extends BaseScriptComponent {
 
   private readonly shownTexts: Text[] = []
   private readonly textLangs: Lang[] = []
-  private readonly numberTexts: Text[] = []
-  private readonly buttons: Button[] = []
-  private readonly frames: BrutalFrame[] = []
-  private marquee: Marquee
+  private readonly buttons: SoftButton[] = []
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const frame = new BrutalFrame(this.sceneObject, this.backingColor)
+    const frame = new SoftFrame(this.sceneObject, this.backingColor)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
 
-    const panelW = INNER_W + PAD * 2
-    this.marquee = new Marquee(this.sceneObject, "MarqueeDrill", panelW, MARQUEE_H, MARQUEE_EM, BRUTAL_WHITE, MARQUEE_SPEED, MARQUEE_WORD_GAP)
-
     const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
-    flex.width = panelW
+    flex.width = INNER_W + PAD * 2
     flex.height = -1
     flex.direction = FlexDirection.Column
     flex.alignItems = FlexAlign.Center
@@ -95,7 +73,6 @@ export class LanguagePanel extends BaseScriptComponent {
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
       frame.setSize(r.containerWidth, r.containerHeight)
-      this.marquee.root.getTransform().setLocalPosition(new vec3(0, r.containerHeight / 2 + MARQUEE_GAP + MARQUEE_H / 2, CONTENT_Z))
     })
 
     for (const lang of LANGS) {
@@ -104,12 +81,6 @@ export class LanguagePanel extends BaseScriptComponent {
     for (let i = 0; i < LANGS.length; i++) {
       this.addLanguageButton(content, LANGS[i], i)
     }
-
-    this.createEvent("UpdateEvent").bind(() => {
-      if (this.sceneObject.isEnabledInHierarchy) {
-        this.marquee.tick(getDeltaTime())
-      }
-    })
   }
 
   /**
@@ -130,14 +101,9 @@ export class LanguagePanel extends BaseScriptComponent {
     for (let i = 0; i < this.shownTexts.length; i++) {
       setLineText(this.shownTexts[i], this.shownTexts[i].text, this.textLangs[i])
     }
-    const numberFont = latinFont("title")
-    for (const t of this.numberTexts) {
-      if (numberFont) t.font = numberFont
-    }
-    this.marquee.setText(primaryLine("marquee.drill"), latinFont("title"), fontFor(getLanguage(), "title"))
     this.sceneObject.enabled = true
-    for (let i = 0; i < this.buttons.length; i++) {
-      resetBrutalButton(this.buttons[i], this.frames[i])
+    for (const b of this.buttons) {
+      b.reset()
     }
     drawOnTop(this.sceneObject)
     this.pinchGuard.arm()
@@ -175,36 +141,17 @@ export class LanguagePanel extends BaseScriptComponent {
     item.alignSelf = FlexAlignSelf.Center
     item.marginTop = index === 0 ? BUTTON_GAP * 1.5 : BUTTON_GAP - TITLE_GAP
 
-    const frame = makeBrutalButton(btn, BUTTON_W, BUTTON_H, BUTTON_FILL, () => {
+    // Slice 7A-soft: a secondary button (see-through, thin border), no number.
+    const button = new SoftButton(this, btn, BUTTON_W, BUTTON_H, false, () => {
       if (this.pinchGuard.open) this.pickEvent.invoke(lang)
     })
-    this.buttons.push(btn)
-    this.frames.push(frame)
+    this.buttons.push(button)
 
     const label = global.scene.createSceneObject("lang.name." + lang)
-    label.setParent(frame.face)
-    label.getTransform().setLocalPosition(new vec3((LABEL_LEFT + LABEL_RIGHT) / 2, 0, BUTTON_LABEL_Z))
-    const t = this.addText(label, STRINGS["lang.name"][lang], BUTTON_SIZE, LABEL_RIGHT - LABEL_LEFT, BUTTON_H - 0.5, lang)
-    t.capitilizationOverride = CapitilizationOverride.AllUpper
-    t.horizontalAlignment = HorizontalAlignment.Left
+    label.setParent(button.face)
+    label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
+    const t = this.addText(label, STRINGS["lang.name"][lang], BUTTON_SIZE, LABEL_W, BUTTON_H - 0.5, lang)
     t.horizontalOverflow = HorizontalOverflow.Shrink
-
-    // "01".."05": not a language line, so it stays out of `texts`.
-    const num = global.scene.createSceneObject("lang.num." + lang)
-    num.setParent(frame.face)
-    num.getTransform().setLocalPosition(new vec3(-BUTTON_W / 2 + NUMBER_INSET, 0, BUTTON_LABEL_Z))
-    const n = num.createComponent("Component.Text") as Text
-    n.size = NUMBER_SIZE
-    ;(n as Text & {weight?: number}).weight = WEIGHT
-    n.depthTest = true
-    n.textFill.color = NUMBER_COLOR
-    n.horizontalAlignment = HorizontalAlignment.Center
-    n.verticalAlignment = VerticalAlignment.Center
-    n.horizontalOverflow = HorizontalOverflow.Overflow
-    n.verticalOverflow = VerticalOverflow.Overflow
-    n.layoutRect = Rect.create(-NUMBER_HALF_W, NUMBER_HALF_W, -BUTTON_H / 2, BUTTON_H / 2)
-    n.text = (index + 1 < 10 ? "0" : "") + (index + 1)
-    this.numberTexts.push(n)
   }
 
   private addText(so: SceneObject, text: string, size: number, width: number, height: number, lang: Lang): Text {
@@ -212,7 +159,7 @@ export class LanguagePanel extends BaseScriptComponent {
     t.size = size
     ;(t as Text & {weight?: number}).weight = WEIGHT
     t.depthTest = true
-    t.textFill.color = BRUTAL_WHITE
+    t.textFill.color = SOFT_WHITE
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Overflow

@@ -301,8 +301,8 @@ export class DrillController extends BaseScriptComponent {
     if (!this.config.fontJa || !this.config.fontZh) {
       console.warn(`${LOG} DrillController: config.fontJa or config.fontZh is not assigned; Japanese or Chinese lines will miss glyphs`)
     }
-    // Slice 7A: Syne (titles) and Manrope (body) for id/en/de; unwired falls back to the default font.
-    setLanguageFonts(this.config.fontJa, this.config.fontZh, this.config.fontTitle, this.config.fontBody)
+    // Slice 7A-soft: Manrope for every Latin line; unwired falls back to the default font.
+    setLanguageFonts(this.config.fontJa, this.config.fontZh, this.config.fontBody)
     this.languagePanel.onPick.add((lang) => this.onLanguagePicked(lang))
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())

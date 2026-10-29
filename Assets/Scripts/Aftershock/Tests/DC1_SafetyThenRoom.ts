@@ -66,14 +66,19 @@ export class DC1_SafetyThenRoom extends Scenario {
     expect(zone.contains(controller.headPose.position)).toBe(false)
   }
 
+  /**
+   * Slice 7A-soft (5j item 13d, learner spec change): one language per screen.
+   * The line in the selected language is visible; the English line must not be
+   * shown at all, so its object is missing, disabled, or holds empty text.
+   */
   private expectBilingualVisible(key: StringKey): void {
     const l = lines(key)
-    const parts = {id: l.primary, en: l.secondary}
     const id = findSceneObjectByName(key + ".id")
-    const en = findSceneObjectByName(key + ".en")
-    expect((id.getComponent("Component.Text") as Text).text).toBe(parts.id)
-    expect((en.getComponent("Component.Text") as Text).text).toBe(parts.en)
+    expect((id.getComponent("Component.Text") as Text).text).toBe(l.primary)
     expect(id.isEnabledInHierarchy).toBe(true)
-    expect(en.isEnabledInHierarchy).toBe(true)
+    const en = findSceneObjectByName(key + ".en")
+    const enText = en ? (en.getComponent("Component.Text") as Text) : null
+    const hidden = !en || !en.isEnabledInHierarchy || !enText || !enText.enabled || enText.text.length === 0
+    expect(hidden).toBe(true)
   }
 }

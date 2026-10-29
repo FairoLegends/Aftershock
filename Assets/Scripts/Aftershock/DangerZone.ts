@@ -1,24 +1,26 @@
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, insideRect, LayoutItem} from "./LayoutGenerator"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {BrutalFrame, BRUTAL_RED, BRUTAL_WHITE, createLightBacking} from "./UiBacking"
+import {createLightBacking, SOFT_BORDER_CM, SOFT_RED, SoftFrame} from "./UiBacking"
 
-// DESIGN_BRIEF §5.2: labels use 2.5 cm type. size / 43.886 = em-square in cm.
+// size / 43.886 = em-square in cm. Slice 7A-soft: the danger label is a small
+// red pill (mockup .tag), one language.
 const SIZE_PER_CM = 43.886
-const LABEL_EM_CM = 2.5
-const ENGLISH_SCALE = 0.8
+const LABEL_EM_CM = 2
+const LINE_H_PER_EM = 1.25
 
 // Zone look (cm). Not drill tunables: they only shape the visuals.
 const FILL_LIFT = 0.3 // fill just above the floor
 const OUTLINE_LIFT = 0.6 // outline above the fill (z-fighting)
 const OUTLINE_W = 1.5
-const LINE_GAP = 3 // primary line center to English line center
+const PILL_PAD_Y = 0.6
+const PILL_PAD_X = 1.8
 /** Half the danger label's height (cm), for HazardLabel.attachAbove (ENGINEERING_PLAN 5i item 1). */
-export const DANGER_LABEL_HALF_H = LINE_GAP + 0.5 // half the red-outlined tag (Slice 7A)
-const TAG_BORDER_CM = 0.3
-const TAG_FILL = new vec4(1, 0, 0, 0.15)
-const TAG_TEXT_Z = 0.1
-const LABEL_W = 30
+export const DANGER_LABEL_HALF_H = (LABEL_EM_CM * LINE_H_PER_EM) / 2 + PILL_PAD_Y
+const PILL_FILL = new vec4(SOFT_RED.x, SOFT_RED.y, SOFT_RED.z, 0.16)
+const PILL_BORDER = new vec4(SOFT_RED.x, SOFT_RED.y, SOFT_RED.z, 0.7)
+const PILL_TEXT_Z = 0.1
+const LABEL_W = 30 // widest text slot; the pill shrinks to the text
 const FLAT = quat.angleAxis(-Math.PI / 2, vec3.right()) // a UI rectangle's +Z (its face) turned to +Y
 
 /**
@@ -50,20 +52,21 @@ export class DangerZone extends BaseScriptComponent {
   kind: string = "cabinet"
 
   @input
-  @hint("Floor fill: alarm red #FF5A4F, faint (DESIGN_BRIEF §5.1). Light colors only: the display is additive.")
+  @hint("Floor fill: alarm red #FF5A4F at 20% (Slice 7A-soft). Light colors only: the display is additive.")
   @widget(new ColorWidget())
-  fillColor: vec4 = new vec4(1, 0, 0, 0.25)
+  fillColor: vec4 = new vec4(1, 0.353, 0.31, 0.2)
 
   @input
-  @hint("Outline and label: alarm red #FF5A4F")
+  @hint("Floor outline: alarm red #FF5A4F")
   @widget(new ColorWidget())
-  lineColor: vec4 = new vec4(1, 0, 0, 1)
+  lineColor: vec4 = new vec4(1, 0.353, 0.31, 1)
   @ui.group_end
 
   private visual: SceneObject | null = null
   private _label: SceneObject | null = null
   private labelPrimary: Text
   private labelSecondary: Text
+  private pill: SoftFrame
   private halfX = 0 // cm, zone half-size along the hazard's local X
   private halfZ = 0 // cm, along its local Z
   private restX = 0 // cm, world
@@ -142,6 +145,7 @@ export class DangerZone extends BaseScriptComponent {
     }
     if (this._label) {
       this._label.enabled = shown
+      if (shown) this.refreshLabel() // fonts are registered by now, so measure in the real font
     }
   }
 
@@ -175,47 +179,50 @@ export class DangerZone extends BaseScriptComponent {
     rect.size = new vec2(sizeX, sizeZ)
   }
 
-  /** Upright label.danger, hidden until show(); placed by DrillController under the HazardLabel. */
+  /** Upright label.danger pill, hidden until show(); placed by DrillController above the HazardLabel. */
   private buildLabel(): void {
     const so = global.scene.createSceneObject("DangerLabel")
     so.setParent(this.sceneObject)
     so.createComponent("Component.Canvas")
-    const tag = new BrutalFrame(so, TAG_FILL, BRUTAL_RED, TAG_BORDER_CM)
-    tag.setPlateVisible(false)
-    tag.setSize(LABEL_W, DANGER_LABEL_HALF_H * 2)
-    this.labelPrimary = this.addLine(so, "label.danger.id", 1)
-    this.labelSecondary = this.addLine(so, "label.danger.en", ENGLISH_SCALE)
+    // Slice 7A-soft (mockup .tag): red text on a red 16% pill with a thin red border.
+    this.pill = new SoftFrame(so, PILL_FILL, DANGER_LABEL_HALF_H, PILL_BORDER)
+    this.pill.setBorder(PILL_BORDER, SOFT_BORDER_CM)
+    this.labelPrimary = this.addLine(so, "label.danger.id")
+    this.labelSecondary = this.addLine(so, "label.danger.en")
     so.enabled = false
     this._label = so
     this.refreshLabel()
     onLanguageChanged.add(() => this.refreshLabel())
   }
 
-  /** Selected language on top, English below; with English selected one centered line. */
+  /** The selected language only (5j-13d); the pill shrinks to the measured text. */
   private refreshLabel(): void {
-    const l = lines("label.danger")
-    setLinePair(this.labelPrimary, this.labelSecondary, l, "body")
-    const two = l.secondary.length > 0
-    this.labelPrimary.getSceneObject().getTransform().setLocalPosition(new vec3(0, two ? LINE_GAP / 2 : 0, TAG_TEXT_Z))
-    this.labelSecondary.getSceneObject().getTransform().setLocalPosition(new vec3(0, -LINE_GAP / 2, TAG_TEXT_Z))
+    setLinePair(this.labelPrimary, this.labelSecondary, lines("label.danger"))
+    const t = this.labelPrimary
+    let textW = t.text.length * LABEL_EM_CM * 0.6 // estimate until the text can be measured
+    if (t.text.length > 0 && this._label && this._label.isEnabledInHierarchy) {
+      const box = t.getBoundingBox()
+      if (box.right > box.left) textW = box.right - box.left
+    }
+    this.pill.setSize(Math.min(LABEL_W, textW) + PILL_PAD_X * 2, DANGER_LABEL_HALF_H * 2)
   }
 
-  private addLine(parent: SceneObject, name: string, scale: number): Text {
+  private addLine(parent: SceneObject, name: string): Text {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
+    so.getTransform().setLocalPosition(new vec3(0, 0, PILL_TEXT_Z))
     const t = so.createComponent("Component.Text") as Text
     t.text = ""
-    t.size = LABEL_EM_CM * SIZE_PER_CM * scale
+    t.size = LABEL_EM_CM * SIZE_PER_CM
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
-    t.textFill.color = BRUTAL_WHITE // Slice 7A: white uppercase text on the red-outlined tag
-    t.capitilizationOverride = CapitilizationOverride.AllUpper
-    t.letterSpacing = 0.25
+    t.textFill.color = SOFT_RED
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
-    t.horizontalOverflow = HorizontalOverflow.Overflow
+    t.horizontalOverflow = HorizontalOverflow.Shrink
     t.verticalOverflow = VerticalOverflow.Overflow
-    t.layoutRect = Rect.create(-LABEL_W / 2, LABEL_W / 2, -LINE_GAP / 2, LINE_GAP / 2)
+    const h = LABEL_EM_CM * LINE_H_PER_EM
+    t.layoutRect = Rect.create(-LABEL_W / 2, LABEL_W / 2, -h / 2, h / 2)
     return t
   }
 }
