@@ -310,12 +310,27 @@ export function createLightBacking(host: SceneObject, color: vec4): RoundedRecta
  * the room (5h item 3). UI Kit clones each visual's material, so this never
  * touches the hazard labels. Call on show, not per frame.
  */
+function ignoreDepth(v: RenderMeshVisual, order: number): void {
+  v.renderOrder = order
+  for (let i = 0; i < v.getMaterialsCount(); i++) {
+    v.getMaterial(i).mainPass.depthTest = false
+  }
+}
+
 export function drawOnTop(root: SceneObject, depth: number = 0): void {
-  for (const v of root.getComponents("Component.RenderMeshVisual")) {
-    v.renderOrder = UI_RENDER_ORDER + depth
-    for (let i = 0; i < v.getMaterialsCount(); i++) {
-      v.getMaterial(i).mainPass.depthTest = false
+  const order = UI_RENDER_ORDER + depth
+  // A UI Kit shape (RoundedRectangle) makes its RenderMeshVisual on its own
+  // OnStartEvent, a frame after its object is first enabled, at the shape's
+  // renderOrder (0) with depth test on, so a walk at show() finds no visual.
+  // The shape keeps the order it is given; its visual is tagged once made.
+  for (const s of root.getComponents(RoundedRectangle.getTypeName()) as unknown as RoundedRectangle[]) {
+    s.renderOrder = order
+    if (!s.initialized) {
+      s.onInitialized.add(() => ignoreDepth(s.renderMeshVisual, order))
     }
+  }
+  for (const v of root.getComponents("Component.RenderMeshVisual")) {
+    ignoreDepth(v, order)
   }
   for (const t of root.getComponents("Component.Text")) {
     t.depthTest = false
@@ -324,6 +339,25 @@ export function drawOnTop(root: SceneObject, depth: number = 0): void {
   for (let i = 0; i < root.getChildrenCount(); i++) {
     drawOnTop(root.getChild(i), depth + 1)
   }
+}
+
+// A shape whose object was still disabled at show() can initialize later than
+// the onInitialized hook above covers (the UI Kit re-runs parts of its setup on
+// enable), so the walk is repeated once shortly after. One reusable delayed
+// event per root, so repeated shows (the HUD warning banner) add no events.
+const RETAG_SECONDS = 0.1
+const retagEvents = new Map<SceneObject, DelayedCallbackEvent>()
+
+/** drawOnTop now, and once more after RETAG_SECONDS so late visuals are caught (5h item 3). */
+export function drawOnTopWhenReady(owner: BaseScriptComponent, root: SceneObject): void {
+  drawOnTop(root)
+  let later = retagEvents.get(root)
+  if (!later) {
+    later = owner.createEvent("DelayedCallbackEvent")
+    later.bind(() => drawOnTop(root))
+    retagEvents.set(root, later)
+  }
+  later.reset(RETAG_SECONDS)
 }
 
 /**

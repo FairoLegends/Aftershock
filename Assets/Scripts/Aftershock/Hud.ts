@@ -26,7 +26,7 @@ const SMALL_EM_CM = 2
 const INNER_W = 46
 const PAD = 2
 const ROW_GAP = 0.8
-const INSTR_ID_H = 9 // two wrapped lines; also the step cells' height
+const INSTR_ID_H = 9.5 // two wrapped lines; also the step cells' height (9.5: a two-line step name clears the cell's bottom edge)
 const HIDDEN_H = 0.001
 const ROW_H = 5
 const LABEL_W = 8
@@ -416,7 +416,7 @@ export class Hud extends BaseScriptComponent {
       n.textFill.color = SOFT_DIM
       this.stepNumbers.push(n)
       const name = this.stepText(cell, "Step" + (i + 1) + ".name", STEP_NAME_EM, STEP_NAME_TOP, STEP_NAME_BOTTOM)
-      name.verticalAlignment = VerticalAlignment.Top
+      name.verticalAlignment = VerticalAlignment.Center // one- and two-line names sit alike in the two-line slot
       this.stepNames.push(name)
     }
     root.enabled = false
