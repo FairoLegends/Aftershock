@@ -25,7 +25,7 @@ export class DC6_DangerZoneDrains extends Scenario {
       expect(c.safeZone.contains(inCabinet)).toBe(false)
 
       // At the start spot during the quake: never safe, out of danger, no drain.
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       await sleep(500)
       expect(c.inDanger).toBe(false)
       const healthBefore = c.health

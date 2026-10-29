@@ -20,7 +20,7 @@ export class DC3_ArrowAndTakeCover extends Scenario {
       const start = startSpot(c)
       const aim = c.safeZone.aimPoint
       c.headPose.setOverride(start, levelLook(start, aim, true))
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       await sleep(SETTLE_MS)
 
       // Facing away, outside the zone.

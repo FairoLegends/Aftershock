@@ -1,0 +1,51 @@
+- !<AssetImportMetadata/ecc5d281-f72f-4691-b7f2-df0aa3fd9bfa>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> a6a2751e-2001-4274-a87c-a564677d30ef
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> a6a2751e-2001-4274-a87c-a564677d30ef
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 17436e0c-fa1c-487e-8bc1-e200b7e2519d
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/17436e0c-fa1c-487e-8bc1-e200b7e2519d>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: d0a37658-6371-40bc-a6e2-f3d7aeb6109a
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    config: false
+    headPose: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Scan intro at the start of BRIEFING (5j-4)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component"}'
+    - '// @input AssignableType_2 headPose {"hint":"HeadPose component; the chip hangs under its camera object"}'

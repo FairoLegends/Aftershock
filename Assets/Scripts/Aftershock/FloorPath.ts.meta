@@ -1,0 +1,51 @@
+- !<AssetImportMetadata/9e77f056-fc1c-4eea-8ba7-f3e6da53821d>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> f0f34051-582f-425a-a9b5-33b224897baf
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> f0f34051-582f-425a-a9b5-33b224897baf
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 7c214a50-2995-4609-a8d8-eefddfcb0873
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/7c214a50-2995-4609-a8d8-eefddfcb0873>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: a1d40fee-9ee2-4309-910d-4293b9016ad0
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    config: false
+    headPose: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Floor path to the safe zone (5j-5)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (pathSpacing, pathLift, pathMarchSpeed, pathFaintOpacity)"}'
+    - '// @input AssignableType_2 headPose {"hint":"HeadPose component"}'

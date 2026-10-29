@@ -28,7 +28,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
       c.config.testMode = true
       await press("ContinueButton")
       expect(c.state).toBe("BRIEFING")
-      const runS = c.config.testWaitSeconds + c.config.testDurationSeconds + 3
+      const runS = c.config.testWaitSeconds + c.config.testScanSeconds + c.config.testDurationSeconds + 3
       // Head untouched at the start spot: the quake ends outside the zone, straight to RESULT.
       await expectState(c, "RESULT", runS * 1000)
       const first = copyLayout(c.layout)

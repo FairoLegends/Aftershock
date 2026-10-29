@@ -6,7 +6,7 @@ import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLe
 import {DrillController} from "../DrillController"
 import {SafeZone} from "../SafeZone"
 import {lines, StringKey} from "../Strings"
-import {CLASSIC} from "./DrillTestKit"
+import {CLASSIC, waitFor} from "./DrillTestKit"
 
 const FURNITURE = ["Table", "Cabinet", "Shelf", "GlassWindow"]
 const HAZARD_LABELS = ["CabinetLabel", "ShelfLabel", "GlassLabel"]
@@ -51,6 +51,9 @@ export class DC1_SafetyThenRoom extends Scenario {
     expect(controller.state).toBe("BRIEFING")
     expect(controller.instructionKey).toBe("instr.brief")
     expect(panel.isEnabledInHierarchy).toBe(false)
+
+    // Slice 7B (5j-4): labels and the marker appear as the scan sweep reaches them.
+    await waitFor(() => !controller.scanActive, (controller.config.scanSeconds + 1) * 1000)
 
     for (const name of FURNITURE) {
       expect(findSceneObjectByName(name).isEnabledInHierarchy).toBe(true)

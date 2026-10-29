@@ -23,7 +23,7 @@ export class DC9_TwoTables extends Scenario {
       const d1 = zones[1].distanceTo(start)
       const near = d0 <= d1 ? zones[0] : zones[1]
       const far = d0 <= d1 ? zones[1] : zones[0]
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       await sleep(300)
       expect(c.targetSafeZone === near).toBe(true)
       expect(Math.abs(c.nearestTableDistance - Math.min(d0, d1))).toBeLessThan(15)

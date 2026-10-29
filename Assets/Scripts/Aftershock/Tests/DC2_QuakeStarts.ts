@@ -22,7 +22,7 @@ export class DC2_QuakeStarts extends Scenario {
       expect(c.quakeShaker.isShaking).toBe(false)
       expect(c.rumbleAudio.isPlaying()).toBe(false)
 
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       expect(c.quakeDuration).toBe(c.config.testDurationSeconds)
       expect(c.health).toBe(c.config.healthStart)
       expect(c.rumbleAudio.isPlaying()).toBe(true)

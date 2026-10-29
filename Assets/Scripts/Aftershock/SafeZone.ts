@@ -77,6 +77,22 @@ export class SafeZone extends BaseScriptComponent {
     return distanceToRect(position.x, position.z, c.x, c.z, this.restYaw, this.footprintWidth / 2 + m, this.footprintDepth / 2 + m)
   }
 
+  /** The point of the rest safe zone nearest the position's XZ, at floor level (the floor path end, 5j-5). */
+  nearestPoint(position: vec3): vec3 {
+    const c = this.center
+    const m = this.config.safeZoneMargin
+    const halfX = this.footprintWidth / 2 + m
+    const halfZ = this.footprintDepth / 2 + m
+    const cos = Math.cos(this.restYaw)
+    const sin = Math.sin(this.restYaw)
+    const dx = position.x - c.x
+    const dz = position.z - c.z
+    // local X = (cos yaw, −sin yaw), local Z = (sin yaw, cos yaw)
+    const lx = Math.max(-halfX, Math.min(halfX, dx * cos - dz * sin))
+    const lz = Math.max(-halfZ, Math.min(halfZ, dx * sin + dz * cos))
+    return new vec3(c.x + lx * cos + lz * sin, c.y, c.z - lx * sin + lz * cos)
+  }
+
   /**
    * Table center at floor level (cm), at rest once captureRest() has run
    * (the live position before that). Shared object: do not modify it.

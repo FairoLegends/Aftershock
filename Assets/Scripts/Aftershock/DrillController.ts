@@ -1,6 +1,8 @@
 import {BriefingPanel} from "./BriefingPanel"
 import {DANGER_LABEL_HALF_H, DangerZone} from "./DangerZone"
 import {DrillConfig} from "./DrillConfig"
+import {EdgeWarning} from "./EdgeWarning"
+import {FloorPath} from "./FloorPath"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
@@ -11,6 +13,7 @@ import {QuakeShaker} from "./QuakeShaker"
 import {ResultPanel} from "./ResultPanel"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
+import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, ScoreBreakdown} from "./ScoreCalculator"
 import {getLanguage, Lang, setLanguage, setLanguageFonts, StringKey} from "./Strings"
 
@@ -144,6 +147,20 @@ export class DrillController extends BaseScriptComponent {
   @input
   @hint("ResultPanel component (result / game-over + Restart, under AftershockRoot)")
   resultPanel: ResultPanel
+
+  @ui.group_start("Scan, path and edge warning (Slice 7B)")
+  @input
+  @hint("ScanIntro component: the sweep, hazard brackets and n/N chip at the start of BRIEFING")
+  scanIntro: ScanIntro
+
+  @input
+  @hint("FloorPath component: green chevrons to the target table's safe zone")
+  floorPath: FloorPath
+
+  @input
+  @hint("EdgeWarning component: red view-edge pulse while health drains")
+  edgeWarning: EdgeWarning
+  @ui.group_end
 
   @ui.group_start("Furniture models (Slice 7R)")
   @input
@@ -313,6 +330,25 @@ export class DrillController extends BaseScriptComponent {
   get guidesVisible(): boolean {
     return this._guidesVisible
   }
+  // Slice 7B test getters (5j-4, 5, 6).
+  get scanActive(): boolean {
+    return this.scanIntro.scanActive
+  }
+  get scanCount(): number {
+    return this.scanIntro.scanCount
+  }
+  get scanTotal(): number {
+    return this.scanIntro.scanTotal
+  }
+  get pathVisible(): boolean {
+    return this.floorPath.pathVisible
+  }
+  get pathBright(): boolean {
+    return this.floorPath.pathBright
+  }
+  get edgeWarningActive(): boolean {
+    return this.edgeWarning.edgeWarningActive
+  }
 
   onAwake(): void {
     this.quakeStartTimer = this.createEvent("DelayedCallbackEvent")
@@ -354,7 +390,10 @@ export class DrillController extends BaseScriptComponent {
       ["hud", this.hud],
       ["offscreenArrow", this.offscreenArrow],
       ["rumbleAudio", this.rumbleAudio],
-      ["resultPanel", this.resultPanel]
+      ["resultPanel", this.resultPanel],
+      ["scanIntro", this.scanIntro],
+      ["floorPath", this.floorPath],
+      ["edgeWarning", this.edgeWarning]
     ]
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
     if (missing.length > 0) {
@@ -507,11 +546,15 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} guides ${visible ? "shown" : "hidden"}`)
     if (!visible) {
       this.hideArrow()
+      this.scanIntro.stop() // no scan with guides off (5j-17d)
+      this.scanIntro.hideBrackets()
+      this.floorPath.setMode("off")
       this.setRoomLabelsShown(false)
       this.setDangerZonesShown(false)
     } else if (this._state === "BRIEFING") {
-      this.setRoomLabelsShown(true)
+      this.setRoomLabelsShown(true) // everything at once, no second scan
       this.setDangerZonesShown(true)
+      this.floorPath.setMode("faint")
     } else if (this._state === "QUAKE" || this._state === "POST_QUAKE") {
       this.setMarkersShown(true)
       this.setDangerZonesShown(true)
@@ -573,6 +616,7 @@ export class DrillController extends BaseScriptComponent {
   private enterLanguage(): void {
     this._instructionKey = null
     this.hideArrow()
+    this.hideScanPathEdge()
     this.setRoomLabelsShown(false)
     this.setDangerZonesShown(false)
     this.briefingPanel.hide()
@@ -587,6 +631,7 @@ export class DrillController extends BaseScriptComponent {
     this.languagePanel.hide()
     this._instructionKey = null
     this.hideArrow()
+    this.hideScanPathEdge()
     this.setRoomLabelsShown(false)
     this.setDangerZonesShown(false)
     this.briefingPanel.hide()
@@ -628,8 +673,13 @@ export class DrillController extends BaseScriptComponent {
       this.zones[h].captureRest()
     }
     this.updateTarget(true)
-    this.setRoomLabelsShown(true)
+    // 5j-4/17d: labels and markers appear as the scan sweep reaches them; with guides off, no scan.
+    this.setRoomLabelsShown(false)
     this.setDangerZonesShown(true)
+    const scanSeconds = this.startScan()
+    this.floorPath.setFloorY(this._floorY)
+    this.floorPath.setTarget(this.targetSafeZone)
+    this.floorPath.setMode(this._guidesVisible ? "faint" : "off")
     this.briefingPanel.placeInFront(
       this.headPose.position,
       this.headPose.forward,
@@ -642,8 +692,39 @@ export class DrillController extends BaseScriptComponent {
     const wait = this.config.testMode
       ? this.config.testWaitSeconds
       : randomBetween(this.config.quakeWaitMin, this.config.quakeWaitMax)
-    console.log(`${LOG} BRIEFING: quake in ${fmt(wait)} s`)
-    this.quakeStartTimer.reset(wait)
+    console.log(`${LOG} BRIEFING: scan ${fmt(scanSeconds)} s, then quake in ${fmt(wait)} s`)
+    this.quakeStartTimer.reset(scanSeconds + wait) // the quake wait starts after the scan
+  }
+
+  /**
+   * Starts the scan intro over the active hazards and tables (5j-4/17d) and
+   * returns its length in seconds; 0 with guides off (no scan at all).
+   */
+  private startScan(): number {
+    this.scanIntro.stop()
+    this.scanIntro.hideBrackets()
+    if (!this._guidesVisible) {
+      return 0
+    }
+    const items: ScanItem[] = []
+    for (const h of this.activeHazards) {
+      const zone = this.zones[h]
+      items.push({
+        pos: zone.hazard.getTransform().getWorldPosition(),
+        hazard: true,
+        reveal: () => this.labels[h].show(),
+        bracketParent: zone.getSceneObject(),
+        halfX: FOOTPRINTS[h].halfX,
+        halfZ: FOOTPRINTS[h].halfZ
+      })
+    }
+    for (const z of this.activeTables) {
+      items.push({pos: z.center, hazard: false, reveal: () => z.showMarker()})
+    }
+    const seconds = this.config.testMode ? this.config.testScanSeconds : this.config.scanSeconds
+    const p = this.room.getTransform().getWorldPosition()
+    this.scanIntro.start(new vec3(p.x, this._floorY, p.z), items, seconds)
+    return seconds
   }
 
   private enterQuake(): void {
@@ -663,6 +744,8 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setHealth(this._health)
     this.hud.setElapsed(0)
     this.hud.showWarning()
+    this.scanIntro.stop()
+    this.scanIntro.hideBrackets()
     this.hideHazardLabels()
     for (const z of this.activeTables) {
       z.startBlink() // a hidden marker (guides off) stays hidden: its parts are under it
@@ -691,6 +774,7 @@ export class DrillController extends BaseScriptComponent {
     // ENGINEERING_PLAN 5f item 4: drain while exposed once safe (hasBeenSafe && !(inZone && ducked),
     // TDD §4.1, §7) OR inside a danger zone; one drain, never doubled.
     const exposed = this._hasBeenSafe && !this.isSafe
+    this.edgeWarning.setActive(this._state === "QUAKE" && (exposed || this._inDanger)) // 5j-6
     if (this._state === "QUAKE" && (exposed || this._inDanger)) {
       const dt = getDeltaTime()
       if (exposed) {
@@ -815,8 +899,11 @@ export class DrillController extends BaseScriptComponent {
     const target = this.targetSafeZone
     if (this._inZone || !this._guidesVisible || !target) {
       this.hideArrow() // inside the zone the user is on their own spot (ENGINEERING_PLAN 5a item 8)
+      this.floorPath.setMode("off")
     } else {
       this._arrowVisible = this.offscreenArrow.track(target.aimPoint)
+      this.floorPath.setTarget(target) // 5j-5: bright and marching until the user is in the zone
+      this.floorPath.setMode("bright")
     }
   }
 
@@ -886,6 +973,15 @@ export class DrillController extends BaseScriptComponent {
       z.stopBlink()
     }
     this.hideArrow()
+    this.hideScanPathEdge()
+  }
+
+  /** Ends the scan and hides its brackets, the floor path and the edge warning (Slice 7B). */
+  private hideScanPathEdge(): void {
+    this.scanIntro.stop()
+    this.scanIntro.hideBrackets()
+    this.floorPath.setMode("off")
+    this.edgeWarning.setActive(false)
   }
 
   private enterPostQuake(): void {
@@ -925,6 +1021,7 @@ export class DrillController extends BaseScriptComponent {
   private showResultPanel(): void {
     this.hud.hide()
     this.hideArrow()
+    this.hideScanPathEdge()
     this.setRoomLabelsShown(false)
     this.setDangerZonesShown(false)
     this.room.enabled = true

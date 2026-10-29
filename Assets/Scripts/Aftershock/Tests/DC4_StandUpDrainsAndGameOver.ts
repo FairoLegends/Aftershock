@@ -21,7 +21,7 @@ export class DC4_StandUpDrainsAndGameOver extends Scenario {
       c.config.testDurationSeconds = DURATION_S
       await toFreshBriefing(c)
       pinDucked(c)
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       await waitFor(() => c.hasBeenSafe, (c.config.safeHoldSeconds + 2) * 1000)
       expect(c.hasBeenSafe).toBe(true)
 

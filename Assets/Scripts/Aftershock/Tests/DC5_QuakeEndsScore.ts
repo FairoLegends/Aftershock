@@ -18,7 +18,7 @@ export class DC5_QuakeEndsScore extends Scenario {
       await toFreshBriefing(c)
       const start = startSpot(c)
       pinDucked(c)
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       await waitFor(() => c.hasBeenSafe, (c.config.safeHoldSeconds + 2) * 1000)
       expect(c.hasBeenSafe).toBe(true)
 

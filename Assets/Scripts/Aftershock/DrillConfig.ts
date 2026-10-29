@@ -199,6 +199,36 @@ export class DrillConfig extends BaseScriptComponent {
   walkSpeed: number = 100
   @ui.group_end
 
+  @ui.group_start("Scan, path and edge warning (Slice 7B)")
+  @input
+  @hint("Scan intro length at the start of BRIEFING, in seconds. The quake wait starts after it.")
+  scanSeconds: number = 3
+
+  @input
+  @hint("Floor path chevron spacing (cm)")
+  pathSpacing: number = 25
+
+  @input
+  @hint("Floor path height above the floor (cm)")
+  pathLift: number = 2
+
+  @input
+  @hint("Chevrons march toward the table at this speed during the quake (cm/s)")
+  pathMarchSpeed: number = 60
+
+  @input
+  @hint("Floor path opacity during BRIEFING (0 to 1); full during the quake")
+  pathFaintOpacity: number = 0.35
+
+  @input
+  @hint("Red edge warning pulse while health drains, in Hz")
+  edgePulseHz: number = 1.5
+
+  @input
+  @hint("Share of the view, per axis, the edge warning leaves clear in the middle (0 to 1)")
+  edgeClearFraction: number = 0.7
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")
@@ -211,4 +241,8 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Quake duration when testMode is on, in seconds")
   testDurationSeconds: number = 8
+
+  @input
+  @hint("Scan intro length when testMode is on, in seconds")
+  testScanSeconds: number = 0.5
 }

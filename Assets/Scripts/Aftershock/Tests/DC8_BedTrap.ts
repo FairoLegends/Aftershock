@@ -21,7 +21,7 @@ export class DC8_BedTrap extends Scenario {
       for (const z of c.activeSafeZones) {
         expect(z.contains(onBed)).toBe(false)
       }
-      await expectState(c, "QUAKE", (c.config.testWaitSeconds + 2) * 1000)
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       const before = c.bedWarnCount
       const healthBefore = c.health
       c.headPose.setOverride(onBed, levelLook(startSpot(c), onBed))
