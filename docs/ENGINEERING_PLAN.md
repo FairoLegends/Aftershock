@@ -218,6 +218,25 @@ Slice 1 questions the learner had not answered when Slice 2 started (27 Oct). Th
 12. (Slice 5P) Lens Studio writes a `.gitattributes` that sends `Assets/**` and `Packages/**` to Git LFS. This repo keeps assets as plain git objects, so the file is excluded locally (`.git/info/exclude`) and neutralised in `.git/info/attributes`.
 Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner plugin, scenarios are checked by hand and reported as such. Without Lens Studio sign-in, furniture uses primitives.
 
+### 5k. Slice 8 decisions (learner, 29 Oct, after trying Slice 7: "the glass on its wall looks strange")
+
+Chosen: G-A (window on a real virtual wall), polish P1 P2 P3 P4 P5 P7, features F1 F2 F3 F4 F5 F6 (F6 last, only if time is left). Values marked (default) are Hermes's and open to veto.
+
+1. G-A + F1 walls: four virtual walls around the layout (axis-aligned in Room space: every footprint + 40 cm and the start spot inside; 400–700 cm per side (default)), 250 cm tall, light and semi-transparent (#E8EEF2 at about 25%, brighter top/bottom edge lines) (default). The window is a light-oak frame with a light-blue glass pane (the old box visuals, not the AI model with its wavy wall piece), 120 × 120 cm glass, bottom at 90 cm, mounted flush on a wall facing in. The leftover wall-edge bars go. One exit door (90 × 210 cm frame, label.door) on a wall with 120 cm clear in front, at least 100 cm from the glass and outside every danger zone (default).
+2. P1: panel backings go from 50% to 75% (default), and the briefing and result panels turn up to ±40° (default) toward the direction with the least furniture behind them.
+3. P2: the TV screen gets a light grey face (#9AA3AD) so it shows on the additive display.
+4. P3: during shaking, cabinet, shelf, lamp and TV wobble about their base (lamp most), the lamp shade flickers, and cracks spread over the window glass (default).
+5. P4: falling items use CLAD models (a hardcover book, a small storage box) at real scale; a small dust puff on landing (default).
+6. P5: original sounds synthesized by code: an opening chime (original, not the NHK or BMKG tone), item thud, glass crack, heartbeat below 30 health (default).
+7. P7: duck practice: before the quake wait, "calib.title" until the user ducks once (then calib.done) or pinches btn.skip; every level.
+8. F2 evacuation: after shaking (and any aftershock) stops and the user has left cover, state EVACUATE: walk to the door within 30 s, HUD step 04 "step.evac", instruction instr.evac; danger zones still drain; fallen items stay on the floor and stepping within 25 cm of one shows warn.trip and costs 10 health (default). Arrow and floor path to the door on Easy/Normal, none on Hard. Through the door → RESULT; 30 s → RESULT with result.evacFail.
+9. F3 hold on: each table has grip handles at its front legs; holding = pinch held on a grip of the table you are under (mouse hold in the preview). Normal and Hard: after being safe, not holding for more than 3 s (default) keeps step 03 open (instr.grip) and drains 1 health/s (default). Easy: hint only, no drain.
+10. Score stays 0–1000, rebalanced (learner): cover speed 450 (full at ≤5 s, 0 at ≥30 s, after the walk allowance) + health 300 (health × 3, main quake) + hold 100 (share of safe time spent holding, main quake) + evacuation 150 (reached: full at ≤10 s, 75 at 30 s; −25 per danger-zone entry or trip during the evacuation, floor 0) (default) − 10/s standing after first cover (main quake); clamped 0–1000. The result screen adds result.grip and result.evac or result.evacFail.
+11. F4 education cards after the drill, chosen by what happened; content from BMKG/BNPB guidance with sources; the learner reviews the draft before it is built.
+12. F5 personal best per level, kept on the device (Persistent Storage); result.best and result.newBest on the result screen.
+13. F6 voice instructions: skipped for now; last, only if time is left.
+14. Order: 8A walls + window + door + P1 + P2; 8B evacuation + hold on + score; 8C P3 + P4 + P5; 8D P7 + F5 + F4; then audit. LEAF: DC1–DC13 keep passing; new DC14 walls/door, DC15 evacuation, DC16 hold on + score, DC17 duck practice + best.
+
 ## 6. Status
 
 | Slice | Status | Commit | LEAF | Learner checkpoint |

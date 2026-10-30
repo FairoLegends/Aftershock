@@ -2,7 +2,7 @@
 
 Learner decision, 27 Oct 2026: the user picks the language on a first screen with five big buttons. In-Lens text shows the selected language on top and English smaller below, so judges can always read it. Chinese uses Simplified characters. The German, Japanese and Chinese drafts were written by the orchestrator and approved by the learner for direct use.
 
-Slice 7 keys (learner, 29 Oct; ENGINEERING_PLAN 5j): `step.*`, `scan.*`, `marquee.*`, `warn.aftershock`, `hit.fell`, `level.*`, `result.aftershock`, `result.level`. id and en follow the approved mockup; de, ja and zh are translations (default). `marquee.*` stays in the chosen language only, no English second line; `marquee.dch` is the same in every language (the drill's name). `{level}` takes the `level.easy/normal/hard` string of the same language.
+Slice 8 keys (29 Oct, ENGINEERING_PLAN 5k; DE/JA/ZH default): `label.door`, `step.evac`, `instr.evac`, `instr.grip`, `warn.trip`, `result.grip`, `result.evac`, `result.evacFail`, `calib.*`, `btn.skip`, `result.best`, `result.newBest`. Slice 7 keys (learner, 29 Oct; ENGINEERING_PLAN 5j): `step.*`, `scan.*`, `marquee.*`, `warn.aftershock`, `hit.fell`, `level.*`, `result.aftershock`, `result.level`. id and en follow the approved mockup; de, ja and zh are translations (default). `marquee.*` stays in the chosen language only, no English second line; `marquee.dch` is the same in every language (the drill's name). `{level}` takes the `level.easy/normal/hard` string of the same language.
 
 Learner, 29 Oct (ENGINEERING_PLAN 5j-13): every screen now shows ONE language, the one picked; the English second line is dropped for id, de, ja and zh. Only the picker title keeps all five. The display rule below is superseded.
 
@@ -77,6 +77,19 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `level.hard.3` | Selalu ada gempa susulan | Always an aftershock | Immer ein Nachbeben | 必ず余震あり | 一定有余震 |
 | `result.aftershock` | Gempa susulan: {s} s | Aftershock cover: {s} s | Nachbeben-Deckung: {s} s | 余震で身を守るまで：{s} 秒 | 余震躲避用时：{s} 秒 |
 | `result.reveal` | Lihat ruangan: merah berbahaya, hijau aman | Look around: red is dangerous, green is safe | Sieh dich um: Rot ist gefährlich, Grün ist sicher | 見回そう：赤は危険、緑は安全 | 看看四周：红色危险，绿色安全 |
+| `label.door` | Pintu keluar | Exit door | Ausgang | 出口 | 出口 |
+| `step.evac` | Keluar | Get out | Raus | 外へ | 撤离 |
+| `instr.evac` | Keluar lewat pintu, hindari zona merah | Leave through the door, avoid the red zones | Geh durch die Tür, meide die roten Zonen | ドアから出て、赤いゾーンを避けて | 从门离开，避开红色区域 |
+| `instr.grip` | Pegang kaki meja | Hold the table leg | Halte das Tischbein fest | 机の脚をつかんで | 抓住桌腿 |
+| `warn.trip` | Hati-hati, ada barang di lantai | Careful, something on the floor | Vorsicht, etwas liegt am Boden | 足元に物があります | 小心地上有东西 |
+| `result.grip` | Memegang meja: {p}% | Held the table: {p}% | Tisch festgehalten: {p} % | 机をつかんだ時間：{p}% | 抓住桌子：{p}% |
+| `result.evac` | Keluar dalam {s} s | Got out in {s} s | Draußen nach {s} s | {s} 秒で外へ | {s} 秒内撤离 |
+| `result.evacFail` | Belum sampai pintu | Did not reach the door | Tür nicht erreicht | ドアに着けませんでした | 没有到达门口 |
+| `calib.title` | Coba merunduk sekarang | Try ducking now | Duck dich jetzt einmal | 今、しゃがんでみて | 现在试着蹲下 |
+| `calib.done` | Bagus, begitu caranya | Good, that's how | Gut, so geht's | いいですね、その調子 | 很好，就是这样 |
+| `btn.skip` | Lewati | Skip | Überspringen | スキップ | 跳过 |
+| `result.best` | Rekor: {score} | Best: {score} | Bestwert: {score} | ベスト：{score} | 最佳：{score} |
+| `result.newBest` | Rekor baru! | New best! | Neuer Bestwert! | 自己ベスト更新！ | 新纪录！ |
 | `result.level` | Tingkat: {level} | Level: {level} | Stufe: {level} | レベル：{level} | 难度：{level} |
 | `label.lamp` | Lampu bisa roboh | Lamp can fall over | Die Lampe kann umfallen | ランプが倒れるかも | 落地灯可能倒下 |
 | `label.tv` | TV bisa jatuh | TV can fall | Der Fernseher kann herunterfallen | テレビが落ちるかも | 电视可能掉落 |
