@@ -29,7 +29,7 @@ export const BED_MODEL_HEAD = {x: -100, z: 0}
 // scene anchors use: the first four keep the box fallback's axes, so their
 // models turn by `front` under the anchor. Not drill tunables.
 export const FOOTPRINTS: Record<LayoutItem, Footprint> = {
-  table: {halfX: 60, halfZ: 35, front: 0}, // 120 W × 70 D; the long side faces the start spot
+  table: {halfX: 60, halfZ: 35, front: 0}, // 120 W × 70 D; square to the walls, the long side toward the start spot (5l-7f)
   table2: {halfX: 60, halfZ: 35, front: 0},
   cabinet: {halfX: 22.5, halfZ: 45, front: Math.PI / 2}, // 90 W × 45 D, front +X
   shelf: {halfX: 15, halfZ: 40, front: -Math.PI / 2}, // 80 W × 30 D, front −X
@@ -171,13 +171,15 @@ interface Spot {
  * ROOM_SIDE_MIN..MAX, with the start spot inside at least startClearRadius +
  * START_WALL_CLEAR from every wall (not always centred). Then
  * tableCountMin..Max tables (centers tableDistanceMin..Max from the start spot,
- * TABLE_WALL_CLEAR from the walls, facing the start spot), hazardCountMin..Max
+ * TABLE_WALL_CLEAR from the walls, square to the walls with the long side
+ * toward the start spot as best it can, 5l-7f), hazardCountMin..Max
  * hazards drawn from HAZARDS without repeats, and the bed and chair. The
  * WALL_BACKED items stand back to a wall (WALL_GAP), facing straight in,
  * WALL_CORNER from the corners, centers hazardDistanceMin..Max from the start
  * spot (the max grows to what the wall allows); the bed with its long side or
  * its head end on the wall. The lamp prefers a spot near a wall, any facing;
- * the chair faces a table within CHAIR_TABLE_REACH, else a random way.
+ * the chair, square to the walls too, faces a table within CHAIR_TABLE_REACH
+ * as best it can, else any of the four ways.
  * Valid when no two footprints grown by SPACING overlap, no table, bed, chair
  * or danger zone comes within startClearRadius of the start spot, no danger
  * zone overlaps a safe zone and the bed and chair stay out of every safe zone;
@@ -480,6 +482,7 @@ function drawItem(
   }
   if (isTable(item)) {
     const at = draw(random, item, p.tableDistanceMin, p.tableDistanceMax)
+    at.yaw = squareYaw(at.yaw) // 5l-7f: square to the walls, the long side toward the start spot as best it can
     return insideRoom(footRect(item, at, 0), room, TABLE_WALL_CLEAR) ? {at: at, side: null} : null
   }
   if (item === "lamp" && i < ITEM_TRIES / 2) {
@@ -563,7 +566,7 @@ function alongSpan(random: () => number, room: RoomRect, wallX: boolean, inset: 
   return Math.sqrt(u * u + perp * perp) >= p.hazardDistanceMin ? u : null
 }
 
-/** A chair faces the nearest table whose center is CHAIR_TABLE_REACH or closer, else a random way. */
+/** A chair square to the walls (5l-7f): of the four ways, the one that best faces the nearest table whose center is CHAIR_TABLE_REACH or closer, else any of the four. */
 function chairYaw(random: () => number, at: Placement, items: Partial<Record<LayoutItem, Placement>>): number {
   let best: Placement | null = null
   let bestD = CHAIR_TABLE_REACH
@@ -576,7 +579,12 @@ function chairYaw(random: () => number, at: Placement, items: Partial<Record<Lay
       bestD = d
     }
   }
-  return best ? Math.atan2(best.x - at.x, best.z - at.z) - FOOTPRINTS.chair.front : (random() * 2 - 1) * Math.PI
+  return best ? squareYaw(Math.atan2(best.x - at.x, best.z - at.z) - FOOTPRINTS.chair.front) : wrap((Math.floor(random() * 4) * Math.PI) / 2)
+}
+
+/** 5l-7f: the multiple of 90° nearest `a`, in (−π, π]. */
+function squareYaw(a: number): number {
+  return wrap(Math.round(a / (Math.PI / 2)) * (Math.PI / 2))
 }
 
 /** True when the turned rect `r` lies inside `room` shrunk by `clear` on every side. */

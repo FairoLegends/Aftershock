@@ -21,6 +21,7 @@ import {DC18_TvTopple} from "./DC18_TvTopple"
 import {DC19_EducationCards} from "./DC19_EducationCards"
 import {DC20_VoiceGuide} from "./DC20_VoiceGuide"
 import {DC21_ChangeLanguage} from "./DC21_ChangeLanguage"
+import {DC22_GlassBreak} from "./DC22_GlassBreak"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -46,6 +47,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc18-tv-topple", typename: DC18_TvTopple.getTypeName()},
     {id: "dc19-education-cards", typename: DC19_EducationCards.getTypeName()},
     {id: "dc20-voice-guide", typename: DC20_VoiceGuide.getTypeName()},
-    {id: "dc21-change-language", typename: DC21_ChangeLanguage.getTypeName()}
+    {id: "dc21-change-language", typename: DC21_ChangeLanguage.getTypeName()},
+    {id: "dc22-glass-break", typename: DC22_GlassBreak.getTypeName()}
   ]
 }

@@ -1074,6 +1074,7 @@
     - !<own> de599941-0ca4-4206-bb40-d0b9b2ee84b9
     - !<own> ec07e5c3-7b8a-44df-b2e8-220c449133d4
     - !<own> 2e5b1b77-dada-41ba-8fb7-553fedd7401d
+    - !<own> dda14205-680d-443d-8bce-43bd0cc6f374
   Components:
     - !<own> 3e9f2147-1876-4514-b04c-298e432ea45f
     - !<own> fa96ddb3-29c7-4a6c-a42c-6ed441585277
@@ -1155,6 +1156,23 @@
     []
   Components:
     - !<own> 516ee219-280c-42b4-979c-02addd196e3e
+- !<AudioComponent/28119ab8-d5ca-41de-a764-c53ac6abd9ea>
+  PrefabRemaps:
+    []
+  Name: Audio
+  Enabled: true
+  AudioTrack: !<reference> d17e45aa-6cb5-49bb-8da4-1564c40a8518
+  EnableAutoplayLoop: false
+  Volume: 1.000000
+  EnableMixToSnap: false
+  RecordVolume: 1.000000
+  EnableSpatialAudio: false
+  EnableDistanceEffect: false
+  CurveType: Logarithm
+  MinDistance: 0.000000
+  MaxDistance: 100.000000
+  EnableDirectivityEffect: false
+  EnablePositionEffect: false
 - !<RenderMeshVisual/28439d96-71de-41fd-b6ae-ca38f4de4443>
   PrefabRemaps:
     []
@@ -5256,6 +5274,21 @@
     []
   Components:
     - !<own> b777c273-df7a-46ee-9973-56b8f8e25008
+- !<SceneObject/dda14205-680d-443d-8bce-43bd0cc6f374>
+  PrefabRemaps:
+    []
+  Name: GlassBreakAudio
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 28119ab8-d5ca-41de-a764-c53ac6abd9ea
 - !<ScriptComponent/ddfea2bc-68f8-411a-bd7e-8c352b9663ed>
   PrefabRemaps:
     []
@@ -6068,6 +6101,7 @@
       chimeAudio: !<reference.AudioComponent> 72a520ba-ff49-4041-bfaf-5c1d89e7d08d
       thudAudio: !<reference.AudioComponent> c1cb513c-2374-4d93-812a-7ff59a7bb67b
       crackAudio: !<reference.AudioComponent> cf284b81-6491-4791-9a80-6b89801c0a6e
+      glassBreakAudio: !<reference.AudioComponent> 28119ab8-d5ca-41de-a764-c53ac6abd9ea
       heartbeatAudio: !<reference.AudioComponent> a5bf5d7e-6aa9-4acd-8daa-21ce39c95089
       voiceGuide: !<MappingBased.AssignableType_31> 5a47af25-3595-4b83-9e30-45e86384c58a
       tablePrefab: !<reference.ObjectPrefab> 68a4de7c-d609-40a8-8e70-c31fd9877491

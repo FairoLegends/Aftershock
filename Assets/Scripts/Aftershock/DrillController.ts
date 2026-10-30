@@ -75,6 +75,9 @@ function bestKey(level: Level): string {
 }
 const BED_REVEAL_SIZE = 120 // Slice 7C Hard reveal: the red warn.bed over the bed (about 2.7 cm em)
 const BED_REVEAL_HEIGHT = 120 // cm above the floor, Room-local
+/** 5l-7a: health lost when the breaking pane's shards hit a head in the glass zone, not under cover. */
+export const GLASS_HIT_DAMAGE = 15
+const GLASS_TRIP_ID = -1 // 5l-7a: all shards are one trip hazard (FallingObjects ids start at 1)
 // Slice 10 (5l item 5): the states whose screen changes are spoken; none on LANGUAGE, SAFETY, LEVEL, BRIEFING, RESULT, GAME_OVER.
 const VOICE_STATES: (DrillState | null)[] = ["CALIBRATE", "QUAKE", "POST_QUAKE", "AFTERSHOCK", "EVACUATE"]
 
@@ -253,6 +256,11 @@ export class DrillController extends BaseScriptComponent {
 
   @input
   @allowUndefined
+  @hint("AudioComponent, glass_break.wav: once when the pane breaks (an aftershock's crack stage 4, 5l-7a)")
+  glassBreakAudio: AudioComponent
+
+  @input
+  @allowUndefined
   @hint("AudioComponent, heartbeat_loop.wav: loops while health is below healthAlarmBelow in QUAKE, AFTERSHOCK and EVACUATE")
   heartbeatAudio: AudioComponent
 
@@ -354,6 +362,7 @@ export class DrillController extends BaseScriptComponent {
   private _tSafe: number | null = null // s from quake start
   private safeSince = -1 // s; when inZone && ducked last began, -1 when not safe
   private _fallHits = 0 // Slice 7D: items that hit the head this drill
+  private _glassHits = 0 // 5l-7a: the breaking pane hit the head this drill (0 or 1)
   private fallsDisabled = false // LEAF disableFallsForTest
   // Slice 9A (5l item 2): the TV topples once per drill.
   private tvUpdate: UpdateEvent | null = null
@@ -492,7 +501,7 @@ export class DrillController extends BaseScriptComponent {
   get secondsInDanger(): number {
     return this._secondsInDanger
   }
-  /** Why the last GAME_OVER happened (5l-4f): hit.fell (a fall, the TV topple or a trip), over.why.grip, over.why.stood or over.why.danger; or null. */
+  /** Why the last GAME_OVER happened (5l-4f): hit.fell (a fall, the TV topple or a trip), hit.glass (the breaking pane, 5l-7a), over.why.grip, over.why.stood or over.why.danger; or null. */
   get gameOverReason(): StringKey | null {
     return this._gameOverReason
   }
@@ -639,6 +648,22 @@ export class DrillController extends BaseScriptComponent {
   get fallHits(): number {
     return this._fallHits
   }
+  /** 5l-7a: the pane broke this drill (an aftershock's crack stage 4); false again from the next BRIEFING. */
+  get glassBroken(): boolean {
+    return !!this.shakeFx && this.shakeFx.glassBroken
+  }
+  /** 5l-7a: shards from the broken pane (8-14), 0 from the next BRIEFING. */
+  get shardCount(): number {
+    return this.shakeFx ? this.shakeFx.shardCount : 0
+  }
+  /** 5l-7a: the glass pane is showing (hidden once it breaks). */
+  get glassPaneShown(): boolean {
+    return !!this.shakeFx && this.shakeFx.paneShown
+  }
+  /** 5l-7a: times the breaking pane hit the head (glass zone, not safe) this drill. */
+  get glassHits(): number {
+    return this._glassHits
+  }
   /** Slice 9A: the TV has toppled (or is tipping) this drill; false again from the next BRIEFING. */
   get tvToppled(): boolean {
     return this._tvToppled
@@ -763,7 +788,7 @@ export class DrillController extends BaseScriptComponent {
     this.rumbleAudio.playbackMode = Audio.PlaybackMode.LowPower
     this.rumbleBaseVolume = this.rumbleAudio.volume
     // Slice 8C: the effect sounds are optional; a missing component or track only skips that sound.
-    for (const a of [this.chimeAudio, this.thudAudio, this.crackAudio, this.heartbeatAudio]) {
+    for (const a of [this.chimeAudio, this.thudAudio, this.crackAudio, this.glassBreakAudio, this.heartbeatAudio]) {
       if (a) {
         a.playbackMode = Audio.PlaybackMode.LowPower
       }
@@ -998,6 +1023,7 @@ export class DrillController extends BaseScriptComponent {
     this.postQuakeUpdate.enabled = false
     this.quakeStartTimer.cancel()
     this.resetAftershock()
+    if (this.shakeFx) this.shakeFx.resetGlass() // 5l-7a
     this._lastScore = null
     this._lastCards = []
     this._lastCardFacts = null
@@ -1299,9 +1325,13 @@ export class DrillController extends BaseScriptComponent {
     this._walkAllowance = 0
     this._nearestTableDistance = 0
     this._fallHits = 0
+    this._glassHits = 0
     this.fallingObjects.clear()
     this.resetTvTopple()
-    if (this.shakeFx) this.shakeFx.resetCracks()
+    if (this.shakeFx) {
+      this.shakeFx.resetCracks()
+      this.shakeFx.resetGlass() // 5l-7a: the pane back, the shards gone
+    }
     this.fallingObjects.keepLanded = true // Slice 8B: landed items stay through EVACUATE (trip hazards)
     this._evacTime = null
     this._evacFailed = false
@@ -1440,6 +1470,9 @@ export class DrillController extends BaseScriptComponent {
     // Slice 10 (5l item 5): 60% while a voice clip plays, back the frame after it ends.
     this.rumbleAudio.volume = this._rumbleUnducked * (this.voiceGuide ? this.voiceGuide.rumbleFactor : 1)
     this.updateCracks(now, aftershock)
+    if (this._state !== "QUAKE" && this._state !== "AFTERSHOCK") {
+      return // 5l-7a: the breaking glass emptied health (GAME_OVER)
+    }
     this.updateHeartbeat()
     this.updateCover(now)
     this.updateDanger()
@@ -1746,6 +1779,39 @@ export class DrillController extends BaseScriptComponent {
     if (this.shakeFx.setCrackStage(stage) && this.crackAudio && this.crackAudio.audioTrack) {
       this.crackAudio.play(1)
     }
+    // 5l-7a: stage 4 breaks the pane, only in an aftershock; the shards land in the glass zone (the pane to its front edge).
+    if (aftershock && this.shakeFx.crackStage >= 4 && this.shakeFx.breakGlass(this.config.dangerMargin + FOOTPRINTS.glass.halfZ)) {
+      if (this.glassBreakAudio && this.glassBreakAudio.audioTrack) {
+        this.glassBreakAudio.play(1)
+      }
+      this.onGlassHit()
+    }
+  }
+
+  /**
+   * 5l-7a hit rule, as onItemLanded: when the pane breaks, a head inside the
+   * glass danger zone and not safe (inZone && ducked) loses GLASS_HIT_DAMAGE
+   * and sees hit.glass; at 0 health, game over (hit.glass).
+   */
+  private onGlassHit(): void {
+    if (this._state !== "AFTERSHOCK") {
+      return
+    }
+    this.updateDanger() // this frame's head
+    const inGlass = this.zones.glass.contains(this.headPose.position)
+    if (!inGlass || this.isSafe) {
+      console.log(`${LOG} AFTERSHOCK: the glass broke${this.isSafe ? " (safe under cover)" : " (head outside the glass zone)"}; no hit`)
+      return
+    }
+    this._glassHits++
+    this._health = Math.max(0, this._health - GLASS_HIT_DAMAGE)
+    this.hud.setHealth(this._health)
+    this.hud.showNotice(this.config.fallNoticeSeconds, "hit.glass")
+    console.log(`${LOG} AFTERSHOCK: the breaking glass hit the head; health ${fmt(this._health)}`)
+    if (this._health <= 0) {
+      this._gameOverReason = "hit.glass"
+      this.onHealthDepleted()
+    }
   }
 
   /** Slice 8C: the heartbeat loops while health is below healthAlarmBelow, louder as it drops (35 % at the limit, full at 0). */
@@ -2017,7 +2083,9 @@ export class DrillController extends BaseScriptComponent {
     }
     const drainedOut = this._health <= 0
     const at = this.toRoomLocal(head)
-    for (const p of this.fallingObjects.landedPoints()) {
+    // 5l-7a: the shards on the floor are one more trip hazard (one id, tripDamage once).
+    const shards = this.shakeFx ? this.shakeFx.shardPoints().map((p) => ({id: GLASS_TRIP_ID, x: p.x, z: p.z})) : []
+    for (const p of this.fallingObjects.landedPoints().concat(shards)) {
       if (this.tripped.indexOf(p.id) < 0 && Math.hypot(p.x - at.x, p.z - at.y) < this.config.tripRadius) {
         this.tripped.push(p.id)
         this._tripCount++
@@ -2108,7 +2176,7 @@ export class DrillController extends BaseScriptComponent {
       leftCoverEarly: this._leftCoverEarly,
       neverTookCover: this._tSafe === null, // 5l-4c: never safe in the main quake (aftershock cover does not set it)
       wasInDanger: this._secondsInDanger > 0,
-      wasHit: this._fallHits > 0 || this._tripCount > 0, // 5l-4c: a trip is a hit too
+      wasHit: this._fallHits > 0 || this._glassHits > 0 || this._tripCount > 0, // 5l-4c: a trip is a hit too; 5l-7a: and the glass
       duckedOnBed: this._bedWarnCount > 0,
       hadFurnitureHazard: this.hadFurnitureHazard,
       evacReached: this._evacTime !== null,

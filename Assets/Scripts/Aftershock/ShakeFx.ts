@@ -9,7 +9,9 @@ import {createRoundRect} from "./UiBacking"
 // back to rest within settleSeconds once the shake stops; the lamp's shade glow
 // dims in random steps while shaking; the glass pane collects thin white crack
 // lines, one set per stage. Only the model instances under the anchors move:
-// the anchors, zones, labels and colliders stay still.
+// the anchors, zones, labels and colliders stay still. 5l-7a: at an
+// aftershock's stage 4 the pane breaks; its shards fall into the glass danger
+// zone and stay on the floor until the next BRIEFING.
 
 export type WobbleItem = "cabinet" | "shelf" | "tv" | "lamp"
 export const WOBBLE_ITEMS: WobbleItem[] = ["cabinet", "shelf", "tv", "lamp"]
@@ -32,6 +34,15 @@ const CRACK_W_MAX = 0.5
 const CRACK_POOL = 64 // at most this many lines
 const MAX_TIPS = 8 // line ends extended per stage
 const MAX_STAGE = 4
+const SHARDS_MIN = 8 // 5l-7a: shards when the pane breaks
+const SHARDS_MAX = 14
+const SHARD_MIN = 4 // cm, a shard's side
+const SHARD_MAX = 12
+const SHARD_COLOR = new vec4(0.75, 0.9, 1, 0.55) // light blue, light tint
+const SHARD_GRAVITY = 980 // cm/s², as FallingObjects
+const SHARD_FLOOR_Y = 0.4 // cm, just over the floor so they do not z-fight it
+const SHARD_EDGE = 6 // cm, landing spots stay this far inside the danger zone
+const SHARD_SPIN = 6 // rad/s, the most a shard turns about each axis while falling
 const LOG = "[Aftershock]"
 
 interface Wobbler {
@@ -51,6 +62,19 @@ interface Tip {
 interface Strip {
   so: SceneObject
   rect: RoundedRectangle
+}
+
+interface Shard {
+  so: SceneObject
+  rect: RoundedRectangle
+  from: vec3 // GlassWindow-local, on the pane
+  to: vec3 // GlassWindow-local, on the floor
+  fallSeconds: number
+  yaw0: number // rad
+  tilt0: number
+  spinY: number // rad/s
+  spinX: number
+  landed: boolean
 }
 
 @component
@@ -100,6 +124,11 @@ export class ShakeFx extends BaseScriptComponent {
   private tips: Tip[] = []
   private impacts: vec2[] = []
   private _crackStage = 0
+  private shardsRoot: SceneObject | null = null
+  private shards: Shard[] = []
+  private shardsUsed = 0
+  private breakTime = 0
+  private _glassBroken = false
 
   // Read-only getters for LEAF assertions (TDD §8).
   /** Wobble or flicker running: shaking, or still settling back to rest. */
@@ -113,6 +142,104 @@ export class ShakeFx extends BaseScriptComponent {
   /** Crack lines on the glass. */
   get crackLines(): number {
     return this.stripsUsed
+  }
+  /** 5l-7a: the pane broke this drill (an aftershock's crack stage 4). */
+  get glassBroken(): boolean {
+    return this._glassBroken
+  }
+  /** Shards from the broken pane, falling or on the floor. */
+  get shardCount(): number {
+    return this.shardsUsed
+  }
+  /** The GlassPane child is showing (false once broken). */
+  get paneShown(): boolean {
+    const pane = this.pane()
+    return !!pane && pane.enabled
+  }
+
+  /** Room-local XZ (cm) of the shards on the floor; x, z as FallingObjects.landedPoints. */
+  shardPoints(): {x: number; z: number}[] {
+    const out: {x: number; z: number}[] = []
+    const room = this.glassWindow ? this.glassWindow.getParent() : null
+    if (!room) {
+      return out
+    }
+    const toRoom = room.getTransform().getInvertedWorldTransform()
+    for (let i = 0; i < this.shardsUsed; i++) {
+      const s = this.shards[i]
+      if (s.landed) {
+        const p = toRoom.multiplyPoint(s.so.getTransform().getWorldPosition())
+        out.push({x: p.x, z: p.z})
+      }
+    }
+    return out
+  }
+
+  /**
+   * 5l-7a: the pane breaks. Hides the pane and its cracks; SHARDS_MIN..MAX
+   * shards fall from it under gravity, spinning, into the glass danger zone
+   * (the room side, `zoneDepth` cm deep from the pane) and lie flat there until
+   * resetGlass. Returns false if the glass is already broken or there is none.
+   */
+  breakGlass(zoneDepth: number): boolean {
+    if (this._glassBroken || !this.glassWindow) {
+      return false
+    }
+    this._glassBroken = true
+    const pane = this.pane()
+    if (pane) {
+      pane.enabled = false
+    }
+    if (this.cracksRoot) {
+      this.cracksRoot.enabled = false
+    }
+    if (!this.shardsRoot) {
+      this.shardsRoot = global.scene.createSceneObject("Shards")
+      this.shardsRoot.setParent(this.glassWindow)
+      const t = this.shardsRoot.getTransform()
+      t.setLocalPosition(vec3.zero())
+      t.setLocalRotation(quat.quatIdentity())
+      t.setLocalScale(vec3.one())
+    }
+    this.shardsRoot.enabled = true
+    const near = SHARD_EDGE
+    const far = Math.max(near + 4, zoneDepth - SHARD_EDGE)
+    const n = SHARDS_MIN + Math.floor(Math.random() * (SHARDS_MAX - SHARDS_MIN + 1))
+    for (let i = 0; i < n; i++) {
+      const s = this.takeShard(i)
+      const from = new vec3((Math.random() * 2 - 1) * PANE_HALF, PANE_Y + (Math.random() * 2 - 1) * PANE_HALF, CRACK_Z)
+      const to = new vec3((Math.random() * 2 - 1) * (PANE_HALF - SHARD_EDGE), SHARD_FLOOR_Y + i * 0.02, -(near + Math.random() * (far - near)))
+      s.from = from
+      s.to = to
+      s.fallSeconds = Math.sqrt((2 * (from.y - to.y)) / SHARD_GRAVITY)
+      s.yaw0 = Math.random() * Math.PI * 2
+      s.tilt0 = Math.random() * Math.PI * 2
+      s.spinY = (Math.random() * 2 - 1) * SHARD_SPIN
+      s.spinX = (Math.random() * 2 - 1) * SHARD_SPIN
+      s.landed = false
+      this.placeShard(s, 0)
+      s.so.enabled = true
+    }
+    this.shardsUsed = n
+    this.breakTime = getTime()
+    console.log(`${LOG} glass: broke, ${n} shards`)
+    return true
+  }
+
+  /** BRIEFING and Restart: the pane back, no shards. */
+  resetGlass(): void {
+    for (const s of this.shards) {
+      s.so.enabled = false
+    }
+    this.shardsUsed = 0
+    this._glassBroken = false
+    const pane = this.pane()
+    if (pane) {
+      pane.enabled = true
+    }
+    if (this.cracksRoot) {
+      this.cracksRoot.enabled = true
+    }
   }
 
   onAwake(): void {
@@ -190,6 +317,65 @@ export class ShakeFx extends BaseScriptComponent {
       this.moving = false
     }
     this.updateGlow(now, shaking)
+    this.updateShards(now)
+  }
+
+  private updateShards(now: number): void {
+    const t = now - this.breakTime
+    for (let i = 0; i < this.shardsUsed; i++) {
+      const s = this.shards[i]
+      if (!s.landed) {
+        this.placeShard(s, t)
+      }
+    }
+  }
+
+  /** A shard `t` s after the break: gravity down from the pane, a straight line across, spinning; flat once it lands. */
+  private placeShard(s: Shard, t: number): void {
+    const tr = s.so.getTransform()
+    if (t >= s.fallSeconds) {
+      s.landed = true
+      tr.setLocalPosition(s.to)
+      // Flat on the floor: the rect faces its own +Z, turned to face up, then a random yaw.
+      tr.setLocalRotation(quat.angleAxis(s.yaw0 + s.spinY * s.fallSeconds, vec3.up()).multiply(quat.angleAxis(-Math.PI / 2, vec3.right())))
+      return
+    }
+    const k = t / Math.max(0.01, s.fallSeconds)
+    const y = s.from.y - 0.5 * SHARD_GRAVITY * t * t
+    tr.setLocalPosition(new vec3(s.from.x + (s.to.x - s.from.x) * k, y, s.from.z + (s.to.z - s.from.z) * k))
+    tr.setLocalRotation(quat.angleAxis(s.yaw0 + s.spinY * t, vec3.up()).multiply(quat.angleAxis(s.tilt0 + s.spinX * t, vec3.right())))
+  }
+
+  private takeShard(i: number): Shard {
+    const w = SHARD_MIN + Math.random() * (SHARD_MAX - SHARD_MIN)
+    const h = SHARD_MIN + Math.random() * (SHARD_MAX - SHARD_MIN)
+    const r = Math.min(w, h) * 0.12
+    if (i < this.shards.length) {
+      const s = this.shards[i]
+      s.rect.size = new vec2(w, h)
+      s.rect.cornerRadius = r
+      return s
+    }
+    const so = global.scene.createSceneObject("Shard" + i)
+    so.setParent(this.shardsRoot)
+    const rect = createRoundRect(so, SHARD_COLOR, w, h, r)
+    const s: Shard = {so, rect, from: vec3.zero(), to: vec3.zero(), fallSeconds: 0, yaw0: 0, tilt0: 0, spinY: 0, spinX: 0, landed: false}
+    this.shards.push(s)
+    return s
+  }
+
+  /** The GlassWindow's GlassPane child. */
+  private pane(): SceneObject | null {
+    if (!this.glassWindow) {
+      return null
+    }
+    for (let i = 0; i < this.glassWindow.getChildrenCount(); i++) {
+      const child = this.glassWindow.getChild(i)
+      if (child.name === "GlassPane") {
+        return child
+      }
+    }
+    return null
   }
 
   private wobble(now: number): void {

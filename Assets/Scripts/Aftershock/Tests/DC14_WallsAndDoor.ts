@@ -4,14 +4,25 @@ import {DangerZone} from "../DangerZone"
 import {DrillController} from "../DrillController"
 import {layoutParamsFor} from "../Levels"
 import {
+  BED_TABLE_GAP,
+  BED_WALKWAY,
+  bedWalkways,
   FOOTPRINTS,
+  footprintRect,
   generateLayout,
+  glassClearRect,
+  isLampByBed,
   Layout,
   LayoutItem,
+  overlaps,
+  Placement,
+  rectDistance,
   ROOM_MAX,
   ROOM_MIN,
   RoomRect,
+  TV_BED_GAP,
   WALL_BACKED,
+  WALL_GAP,
   WALL_SIDES,
   wallFronts,
   wallInward,
@@ -25,6 +36,9 @@ import {CLASSIC, getController, itemWorld, restore, sameLayout, copyLayout, star
 // Slice 9A (§5l item 1): every wall-backed item (cabinet, shelf, TV, glass,
 // bed) has its back within 5 cm of a wall line and faces into the room, in the
 // live layout and in 30 pure generateLayout calls with random seeds.
+// Slice 11 (§5l item 7b–f): the same 30 layouts keep the room rules
+// (checkRoomRules), the lamp stands by the bed in 40–80 % of those with a lamp,
+// and fewer than 4 fall back to the fixed layout.
 @component
 export class DC14_WallsAndDoor extends Scenario {
   async run(): Promise<void> {
@@ -33,9 +47,27 @@ export class DC14_WallsAndDoor extends Scenario {
     const prevDuration = c.config.testDurationSeconds
     try {
       const params = layoutParamsFor("normal", c.config)
+      let fallbacks = 0
+      let lamps = 0
+      let byBed = 0
       for (let k = 0; k < 30; k++) {
         const seed = 1 + Math.floor(Math.random() * 2147483646)
-        checkWallBacked(generateLayout({...params, layoutSeed: seed}), `seed ${seed}`)
+        const layout = generateLayout({...params, layoutSeed: seed})
+        checkWallBacked(layout, `seed ${seed}`)
+        checkRoomRules(layout, `seed ${seed}`)
+        if (layout.fallback) fallbacks++
+        if (layout.items.lamp) {
+          lamps++
+          if (isLampByBed(layout.items)) byBed++
+        }
+      }
+      // Slice 11 (5l-7c): the lamp stands by the bed in 40–80 % of the layouts with a lamp; fewer than 4 of 30 fall back.
+      console.log(`[Aftershock] DC14: ${fallbacks} of 30 fell back; lamp by the bed ${byBed} of ${lamps}`)
+      expect(fallbacks).toBeLessThan(4)
+      expect(lamps).toBeGreaterThan(0)
+      if (lamps > 0) {
+        expect(byBed / lamps).toBeGreaterThan(0.4 - 1e-9)
+        expect(byBed / lamps).toBeLessThan(0.8 + 1e-9)
       }
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
@@ -153,4 +185,83 @@ function checkWallBacked(layout: Layout, label: string): void {
 
 function sameRect(a: RoomRect, b: RoomRect): boolean {
   return a.minX === b.minX && a.maxX === b.maxX && a.minZ === b.minZ && a.maxZ === b.maxZ
+}
+
+/**
+ * Slice 11 (5l-7b–f) on a pure layout: the bed's head end on its wall and its
+ * yaw square; a long-side walkway with no footprint in it; tables BED_TABLE_GAP
+ * and the TV TV_BED_GAP from the bed, the TV off the bed's wall; nothing in the
+ * glass's clear rect; tables and the chair square to the walls.
+ */
+function checkRoomRules(layout: Layout, label: string): void {
+  const items = layout.items
+  const bed = items.bed
+  expect(bed !== undefined).toBe(true)
+  if (!bed) {
+    return
+  }
+  const bedRect = footprintRect("bed", bed)
+  // Head end at bed-local −Z; local Z = (sin, cos).
+  const hx = bed.x - Math.sin(bed.yaw) * FOOTPRINTS.bed.halfZ
+  const hz = bed.z - Math.cos(bed.yaw) * FOOTPRINTS.bed.halfZ
+  const side = layout.walls.bed
+  expect(side !== undefined).toBe(true)
+  if (side) {
+    const gap = Math.abs((side === "+x" || side === "-x" ? hx : hz) - wallLine(layout.room, side))
+    if (gap > WALL_GAP + 1) {
+      console.log(`[Aftershock] DC14 ${label}: bed head end ${gap.toFixed(1)} cm from its ${side} wall`)
+    }
+    expect(gap).toBeLessThan(WALL_GAP + 1 + 1e-6)
+  }
+  checkSquare("bed", bed, label)
+  const bedside = isLampByBed(items)
+  let freeWalkway = false
+  for (const strip of bedWalkways(bed, layout.room)) {
+    let clear = true
+    for (const key of Object.keys(items)) {
+      const item = key as LayoutItem
+      if (item === "bed" || (item === "lamp" && bedside)) continue
+      if (overlaps(strip, footprintRect(item, items[item]))) clear = false
+    }
+    if (clear) freeWalkway = true
+  }
+  if (!freeWalkway) {
+    console.log(`[Aftershock] DC14 ${label}: no free ${BED_WALKWAY} cm walkway beside the bed`)
+  }
+  expect(freeWalkway).toBe(true)
+  for (const t of layout.tables) {
+    const at = items[t]
+    if (!at) continue
+    expect(rectDistance(footprintRect(t, at), bedRect)).toBeGreaterThan(BED_TABLE_GAP - 0.01)
+    checkSquare(t, at, label)
+  }
+  if (items.tv) {
+    expect(layout.walls.tv !== layout.walls.bed).toBe(true)
+    expect(rectDistance(footprintRect("tv", items.tv), bedRect)).toBeGreaterThan(TV_BED_GAP - 0.01)
+  }
+  if (items.glass) {
+    const clearRect = glassClearRect(items.glass)
+    for (const key of Object.keys(items)) {
+      const item = key as LayoutItem
+      if (item === "glass") continue
+      const inFront = overlaps(clearRect, footprintRect(item, items[item]))
+      if (inFront) {
+        console.log(`[Aftershock] DC14 ${label}: ${item} in front of the glass`)
+      }
+      expect(inFront).toBe(false)
+    }
+  }
+  if (items.chair) {
+    checkSquare("chair", items.chair, label)
+  }
+}
+
+/** 5l-7b/f: the yaw is a multiple of 90° (±0.5°). */
+function checkSquare(item: LayoutItem, at: Placement, label: string): void {
+  const q = at.yaw / (Math.PI / 2)
+  const offDeg = Math.abs(q - Math.round(q)) * 90
+  if (offDeg > 0.5) {
+    console.log(`[Aftershock] DC14 ${label}: ${item} yaw ${((at.yaw * 180) / Math.PI).toFixed(1)}° not square`)
+  }
+  expect(offDeg).toBeLessThan(0.5 + 1e-6)
 }

@@ -43,6 +43,7 @@
     edgeWarning: false
     fallingObjects: false
     floorPath: false
+    glassBreakAudio: false
     glassDanger: false
     glassLabel: false
     gripHandles: false
@@ -120,6 +121,7 @@
       chimeAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
       thudAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
       crackAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
+      glassBreakAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
       heartbeatAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
       voiceGuide: !<MappingBased.AssignableType_31> 00000000-0000-0000-0000-000000000000
       tablePrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
@@ -175,6 +177,7 @@
     - '// @input Component.AudioComponent chimeAudio {"hint":"AudioComponent, chime_start.wav: once when the quake starts, before the rumble"}'
     - '// @input Component.AudioComponent thudAudio {"hint":"AudioComponent, thud.wav: each item landing (volume falls with distance)"}'
     - '// @input Component.AudioComponent crackAudio {"hint":"AudioComponent, glass_crack.wav: each crack stage"}'
+    - "// @input Component.AudioComponent glassBreakAudio {\"hint\":\"AudioComponent, glass_break.wav: once when the pane breaks (an aftershock's crack stage 4, 5l-7a)\"}"
     - '// @input Component.AudioComponent heartbeatAudio {"hint":"AudioComponent, heartbeat_loop.wav: loops while health is below healthAlarmBelow in QUAKE, AFTERSHOCK and EVACUATE"}'
     - '// @input AssignableType_31 voiceGuide {"hint":"VoiceGuide component: F6 voice instructions (Slice 10, 5l item 5); none: no voice"}'
     - '// @ui {"widget":"group_end"}'
