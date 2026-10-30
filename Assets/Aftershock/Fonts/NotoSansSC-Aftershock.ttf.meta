@@ -17,10 +17,40 @@
 - !<FontAssetData/93454924-a6f9-4563-8318-c044b043fcff>
   VariableFontMetadata:
     axes:
-      []
+      - tag: wght
+        name: Weight
+        minValue: 100.000000
+        defaultValue: 100.000000
+        maxValue: 900.000000
     namedInstances:
-      []
+      - name: Thin
+        coordinates:
+          - 100.000000
+      - name: ExtraLight
+        coordinates:
+          - 200.000000
+      - name: Light
+        coordinates:
+          - 300.000000
+      - name: Regular
+        coordinates:
+          - 400.000000
+      - name: Medium
+        coordinates:
+          - 500.000000
+      - name: SemiBold
+        coordinates:
+          - 600.000000
+      - name: Bold
+        coordinates:
+          - 700.000000
+      - name: ExtraBold
+        coordinates:
+          - 800.000000
+      - name: Black
+        coordinates:
+          - 900.000000
     defaultCoordinates:
-      []
+      - 100.000000
   CustomVariationStyles:
     []
