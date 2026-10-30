@@ -10,6 +10,7 @@ import {
   drawOnTopWhenReady,
   PinchGuard,
   SOFT_DIM,
+  SOFT_GREEN,
   SOFT_GREEN_TEXT,
   SOFT_INNER_RADIUS_CM,
   SoftButton,
@@ -31,7 +32,7 @@ const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (ove
 const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
 const DETAIL_LINES = 9 // Slice 8B: four base rows (speed, health, grip, evac) plus aftershock, level and reveal; Slice 8D: new best and best
-const DETAIL_PAD = 0.5 // above and below a detail row's text
+const DETAIL_PAD = 0.35 // above and below a detail row's text (Slice 9B: 0.5 → 0.35, room for the cards)
 const DETAIL_GAP = 1.0 // above the first detail row
 const VALUE_W = 12 // detail value column, right
 const RULE_H = 0.1
@@ -49,6 +50,24 @@ const BUTTON_EM_CM = 2
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 const ROW_Z = 0.05 // row text above the score row's backing
+// Slice 9B (F4, EDUCATION_CARDS.md): up to two soft education cards under the
+// rows, each a faint green rounded row with a thin green bar on the left.
+const CARD_SLOTS = 2
+const CARD_EM_CM = 2
+const CARD_MAX_LINES = 3 // a longer text shrinks to fit three lines
+const CARD_PAD_Y = 0.7 // above and below the card text
+const CARD_GAP = 1.0 // above the first card
+const CARD_GAP_NEXT = 0.6 // between the cards
+const CARD_TEXT_LEFT = 1.8 // text inset from the card's left edge, clear of the bar
+const CARD_TEXT_RIGHT = 1.0
+const CARD_FILL = new vec4(SOFT_GREEN.x, SOFT_GREEN.y, SOFT_GREEN.z, 0.16)
+const CARD_BAR_W = 0.4
+const CARD_BAR_INSET = 0.7 // bar from the card's left edge
+const CARD_BAR_PAD_Y = 0.6 // bar ends inside the card's top and bottom
+const CARD_BAR_Z = 0.02 // bar above the card face
+// Slice 9B: the whole panel stays within ±FIT_HALF_ANGLE_DEG of eye level at
+// its distance: it moves up from `below` first and shrinks only if still too tall.
+const FIT_HALF_ANGLE_DEG = 18
 
 const WHITE = new vec4(1, 1, 1, 1)
 
@@ -67,6 +86,23 @@ interface Row {
   value: Text | null
   rule: SceneObject | null
   item: FlexItem
+}
+
+/** Slice 9B: one education card slot; `key` is null when the slot is collapsed. */
+interface Card {
+  item: FlexItem
+  frame: SoftFrame
+  bar: ReturnType<typeof createRoundRect>
+  text: Text
+  key: StringKey | null
+}
+
+/** Where placeInFront put the panel, kept so a new layout height can re-fit it. */
+interface Placement {
+  head: vec3
+  flat: vec3
+  distance: number
+  below: number
 }
 
 /**
@@ -112,9 +148,15 @@ export class ResultPanel extends BaseScriptComponent {
   private scoreId: Text
   private scoreEn: Text
   private restart: SoftButton | null = null
+  private cards: Card[] = []
+  private placement: Placement | null = null
+  private panelH = 0 // the last layout's height (local units)
+  private fitScale = 1
+  private baseScale = vec3.one()
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
+    this.baseScale = this.sceneObject.getTransform().getLocalScale()
 
     const backing = new SoftFrame(this.sceneObject, this.backingColor)
 
@@ -135,6 +177,8 @@ export class ResultPanel extends BaseScriptComponent {
     flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
       backing.setSize(r.containerWidth, r.containerHeight)
+      this.panelH = r.containerHeight
+      this.applyPlacement() // Slice 9B: a taller panel (cards) moves up to stay in view
     })
 
     this.title = this.addRow(content, "Title", false)
@@ -142,32 +186,55 @@ export class ResultPanel extends BaseScriptComponent {
     for (let i = 0; i < DETAIL_LINES; i++) {
       this.details.push(this.addRow(content, "Line" + (i + 1), i > 0))
     }
+    for (let i = 0; i < CARD_SLOTS; i++) {
+      this.cards.push(this.addCard(content, "Card" + (i + 1))) // before Restart: its label stays last in texts
+    }
     this.addRestartButton(content)
     this.setRow(this.title, null, BIG_EM_CM)
     for (const row of this.details) {
       this.setRow(row, null, SMALL_EM_CM)
     }
     this.setScore(null)
+    this.setCards([])
   }
 
   /**
    * Places the panel `distance` cm in front of the head along its level look
-   * direction and `below` cm under eye level, facing the head.
+   * direction and `below` cm under eye level, facing the head. Slice 9B: kept,
+   * so each new layout height re-fits it (applyPlacement).
    */
   placeInFront(headPosition: vec3, headForward: vec3, distance: number, below: number): void {
     let flat = new vec3(headForward.x, 0, headForward.z)
     flat = flat.length > 0.0001 ? flat.normalize() : new vec3(0, 0, -1)
-    const position = headPosition.add(flat.uniformScale(distance)).add(new vec3(0, -below, 0))
+    this.placement = {head: headPosition, flat, distance, below}
+    this.applyPlacement()
+  }
+
+  /**
+   * Slice 9B: the panel center goes `below` under eye level, moved up just
+   * enough that the bottom edge stays within ±FIT_HALF_ANGLE_DEG; a panel too
+   * tall even centered on eye level shrinks to fit.
+   */
+  private applyPlacement(): void {
+    const p = this.placement
+    if (!p) return
     const t = this.sceneObject.getTransform()
-    t.setWorldPosition(position)
-    t.setWorldRotation(quat.lookAt(flat.uniformScale(-1), vec3.up()))
+    const unit = t.getWorldScale().y / this.fitScale // world cm per layout unit at full size
+    const height = this.panelH * unit
+    const maxHalf = p.distance * Math.tan((FIT_HALF_ANGLE_DEG * Math.PI) / 180)
+    this.fitScale = height > maxHalf * 2 ? (maxHalf * 2) / height : 1
+    const half = (height * this.fitScale) / 2
+    const below = Math.max(half - maxHalf, Math.min(maxHalf - half, p.below))
+    t.setLocalScale(this.baseScale.uniformScale(this.fitScale))
+    t.setWorldPosition(p.head.add(p.flat.uniformScale(p.distance)).add(new vec3(0, -below, 0)))
+    t.setWorldRotation(quat.lookAt(p.flat.uniformScale(-1), vec3.up()))
   }
 
   /**
    * Drill complete: time to take cover, health left and score (TDD §7).
    * Never took cover (tSafe null): result.never and score 0 (Q6).
    */
-  showResult(b: ScoreBreakdown, extra: ResultLine[] = []): void {
+  showResult(b: ScoreBreakdown, extra: ResultLine[] = [], cards: StringKey[] = []): void {
     this._mode = "result"
     this.sceneObject.enabled = true // measure the rows in the real font
     this.setRow(this.title, lines("result.title"), BIG_EM_CM)
@@ -189,17 +256,63 @@ export class ResultPanel extends BaseScriptComponent {
         extra
       )
     }
+    this.setCards(cards)
     this.showPanel()
   }
 
   /** Out of health: what went wrong (over.why.stood, over.why.danger or hit.fell, 5j-19b), no score (TDD §7). */
-  showGameOver(reason: StringKey, extra: ResultLine[] = []): void {
+  showGameOver(reason: StringKey, extra: ResultLine[] = [], cards: StringKey[] = []): void {
     this._mode = "gameOver"
     this.sceneObject.enabled = true
     this.setRow(this.title, lines("over.title"), BIG_EM_CM)
     this.setScore(null)
     this.setDetails([{text: lines(reason), split: true}], extra)
+    this.setCards(cards)
     this.showPanel()
+  }
+
+  /**
+   * Slice 9B education cards (F4): one soft card per key (EducationCards.pickCards,
+   * at most CARD_SLOTS) under the rows, in the selected language, wrapped to
+   * the card and shrunk past CARD_MAX_LINES; the rest collapse.
+   */
+  private setCards(keys: StringKey[]): void {
+    const lineH = CARD_EM_CM * LINE_H_PER_EM
+    const left = -INNER_W / 2 + CARD_TEXT_LEFT
+    const right = INNER_W / 2 - CARD_TEXT_RIGHT
+    for (let i = 0; i < this.cards.length; i++) {
+      const card = this.cards[i]
+      const key = i < keys.length ? keys[i] : null
+      card.key = key
+      card.frame.face.enabled = key !== null
+      setLineText(card.text, key !== null ? lines(key).primary : "", getLanguage())
+      card.text.verticalOverflow = VerticalOverflow.Overflow
+      card.text.layoutRect = Rect.create(left, right, -lineH / 2, lineH / 2)
+      if (key === null) {
+        card.item.overrideHeight = HIDDEN_H
+        card.item.marginTop = 0
+        continue
+      }
+      // As setRow: one getBoundingBox call gives the wrapped line count.
+      let n = 1
+      if (card.text.getSceneObject().isEnabledInHierarchy) {
+        const box = card.text.getBoundingBox()
+        n = Math.max(1, Math.round((box.top - box.bottom) / lineH))
+      }
+      if (n > CARD_MAX_LINES) {
+        n = CARD_MAX_LINES
+        card.text.verticalOverflow = VerticalOverflow.Shrink
+      }
+      const h = n * lineH
+      card.text.layoutRect = Rect.create(left, right, -h / 2, h / 2)
+      const cardH = h + CARD_PAD_Y * 2
+      card.frame.setSize(INNER_W, cardH)
+      const barH = Math.max(CARD_BAR_W, cardH - CARD_BAR_PAD_Y * 2)
+      card.bar.size = new vec2(CARD_BAR_W, barH)
+      card.bar.cornerRadius = CARD_BAR_W / 2
+      card.item.overrideHeight = cardH
+      card.item.marginTop = i === 0 ? CARD_GAP : CARD_GAP_NEXT
+    }
   }
 
   /** Fills the detail rows with `base` then `extra` and collapses the rest. */
@@ -220,6 +333,7 @@ export class ResultPanel extends BaseScriptComponent {
 
   hide(): void {
     this._mode = null
+    this.setCards([])
     this.sceneObject.enabled = false
   }
 
@@ -234,6 +348,10 @@ export class ResultPanel extends BaseScriptComponent {
   /** Every non-empty text line the panel shows, in order (button label last). */
   get texts(): string[] {
     return this.shownTexts.map((t) => t.text).filter((s) => s.length > 0)
+  }
+  /** Slice 9B: the education card keys shown, in order ([] when none). */
+  get shownCards(): StringKey[] {
+    return this.cards.filter((c) => c.key !== null).map((c) => c.key as StringKey)
   }
 
   /**
@@ -311,6 +429,25 @@ export class ResultPanel extends BaseScriptComponent {
     t.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -HIDDEN_H / 2, HIDDEN_H / 2)
     this.shownTexts.push(t)
     return t
+  }
+
+  /** Slice 9B: a soft, lightly tinted card with a thin green bar on the left; its text left-aligned beside the bar. */
+  private addCard(parent: SceneObject, name: string): Card {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+    item.overrideWidth = INNER_W
+    item.overrideHeight = HIDDEN_H
+    item.alignSelf = FlexAlignSelf.Center
+    const frame = new SoftFrame(so, CARD_FILL, SOFT_INNER_RADIUS_CM, null, name + ".backing")
+    frame.setSize(INNER_W, 1)
+    const barSo = global.scene.createSceneObject(name + ".bar")
+    barSo.setParent(frame.face)
+    barSo.getTransform().setLocalPosition(new vec3(-INNER_W / 2 + CARD_BAR_INSET + CARD_BAR_W / 2, 0, CARD_BAR_Z))
+    const bar = createRoundRect(barSo, SOFT_GREEN, CARD_BAR_W, 1, CARD_BAR_W / 2)
+    const text = this.addText(so, name + ".text", CARD_EM_CM, true)
+    text.horizontalAlignment = HorizontalAlignment.Left
+    return {item, frame, bar, text, key: null}
   }
 
   /** Slice 7A-soft: the primary (green) button; the label rides on the face. */

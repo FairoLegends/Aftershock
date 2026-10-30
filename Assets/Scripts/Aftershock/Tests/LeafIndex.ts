@@ -18,6 +18,7 @@ import {DC15_Evacuation} from "./DC15_Evacuation"
 import {DC16_HoldOn} from "./DC16_HoldOn"
 import {DC17_CalibrateAndBest} from "./DC17_CalibrateAndBest"
 import {DC18_TvTopple} from "./DC18_TvTopple"
+import {DC19_EducationCards} from "./DC19_EducationCards"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -40,6 +41,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc15-evacuation", typename: DC15_Evacuation.getTypeName()},
     {id: "dc16-hold-on", typename: DC16_HoldOn.getTypeName()},
     {id: "dc17-calibrate-and-best", typename: DC17_CalibrateAndBest.getTypeName()},
-    {id: "dc18-tv-topple", typename: DC18_TvTopple.getTypeName()}
+    {id: "dc18-tv-topple", typename: DC18_TvTopple.getTypeName()},
+    {id: "dc19-education-cards", typename: DC19_EducationCards.getTypeName()}
   ]
 }

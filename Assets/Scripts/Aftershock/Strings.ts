@@ -79,6 +79,14 @@ export type StringKey =
   | "btn.skip"
   | "result.best"
   | "result.newBest"
+  // Slice 9B (STRINGS_I18N.md, EDUCATION_CARDS.md): education cards F4.
+  | "card.stayUnder"
+  | "card.falling"
+  | "card.bed"
+  | "card.fasten"
+  | "card.evac"
+  | "card.check"
+  | "card.coast"
 
 export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "safety.drill": {
@@ -416,7 +424,57 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   },
   "btn.skip": {id: "Lewati", en: "Skip", de: "Überspringen", ja: "スキップ", zh: "跳过"},
   "result.best": {id: "Rekor: {score}", en: "Best: {score}", de: "Bestwert: {score}", ja: "ベスト：{score}", zh: "最佳：{score}"},
-  "result.newBest": {id: "Rekor baru!", en: "New best!", de: "Neuer Bestwert!", ja: "自己ベスト更新！", zh: "新纪录！"}
+  "result.newBest": {id: "Rekor baru!", en: "New best!", de: "Neuer Bestwert!", ja: "自己ベスト更新！", zh: "新纪录！"},
+  // Slice 9B (STRINGS_I18N.md, EDUCATION_CARDS.md): education cards F4.
+  "card.stayUnder": {
+    id: "Tetap lindungi kepala dan badan di bawah meja sampai guncangan benar-benar berhenti.",
+    en: "Keep your head and body under the table until the shaking has fully stopped.",
+    de: "Schütze Kopf und Körper unter dem Tisch, bis das Beben ganz aufgehört hat.",
+    ja: "揺れが完全に収まるまで、机の下で頭と体を守りましょう。",
+    zh: "摇晃完全停止前，待在桌子下保护头和身体。"
+  },
+  "card.falling": {
+    id: "Penyebab celaka terbanyak saat gempa adalah kejatuhan benda. Jauhi lemari, rak, lampu, dan kaca.",
+    en: "Most earthquake injuries come from falling objects. Stay away from cabinets, shelves, lamps and glass.",
+    de: "Die meisten Verletzungen entstehen durch fallende Gegenstände. Halte Abstand zu Schränken, Regalen, Lampen und Glas.",
+    ja: "地震のけがの多くは落下物によるものです。棚・ラック・ランプ・ガラスから離れましょう。",
+    zh: "地震中多数受伤来自坠落物。远离柜子、架子、灯和玻璃。"
+  },
+  "card.bed": {
+    id: "Kasur tidak melindungi kepala dari benda yang jatuh. Cari meja yang kokoh.",
+    en: "A bed does not shield your head from falling objects. Find a sturdy table.",
+    de: "Ein Bett schützt den Kopf nicht vor fallenden Gegenständen. Suche einen stabilen Tisch.",
+    ja: "ベッドは落下物から頭を守れません。丈夫な机を探しましょう。",
+    zh: "床不能保护头部免受坠落物。请找结实的桌子。"
+  },
+  "card.fasten": {
+    id: "Ikat atau paku lemari dan rak ke dinding, dan simpan benda berat di bagian bawah.",
+    en: "Fasten cabinets and shelves to the wall, and keep heavy things low.",
+    de: "Befestige Schränke und Regale an der Wand und lagere Schweres unten.",
+    ja: "棚や家具は壁に固定し、重い物は下に置きましょう。",
+    zh: "把柜子和架子固定在墙上，重物放在下层。"
+  },
+  "card.evac": {
+    id: "Setelah guncangan berhenti, keluar dengan tertib. Jangan pakai lift, gunakan tangga biasa.",
+    en: "After the shaking stops, leave calmly. Do not use the lift; take the stairs.",
+    de: "Wenn das Beben aufhört, geh ruhig hinaus. Nimm nicht den Aufzug, sondern die Treppe.",
+    ja: "揺れが収まったら落ち着いて外へ。エレベーターではなく階段を使いましょう。",
+    zh: "摇晃停止后有序离开。不要坐电梯，走楼梯。"
+  },
+  "card.check": {
+    id: "Setelah keluar, periksa yang terluka, kebocoran gas, dan kebakaran. Waspadai gempa susulan.",
+    en: "Once outside, check for injuries, gas leaks and fire. Expect aftershocks.",
+    de: "Draußen: auf Verletzte, Gaslecks und Feuer achten. Rechne mit Nachbeben.",
+    ja: "外に出たら、けが・ガス漏れ・火災を確認。余震に注意しましょう。",
+    zh: "到户外后检查伤情、燃气泄漏和火灾。注意余震。"
+  },
+  "card.coast": {
+    id: "Di dekat pantai: jika gempa sangat kuat atau terasa sekitar 1 menit atau lebih, segera menjauh ke tempat tinggi.",
+    en: "Near the coast: if the shaking is very strong or lasts about a minute or more, move to high ground at once.",
+    de: "An der Küste: Bei sehr starkem Beben oder etwa einer Minute Dauer sofort auf eine Anhöhe gehen.",
+    ja: "海岸の近くでは、強い揺れや約1分以上続く揺れを感じたらすぐ高台へ。",
+    zh: "在海边：如果摇晃很强或持续约一分钟以上，立刻前往高处。"
+  }
 }
 
 // Selected language: "id" until the picker sets it; Restart keeps it.

@@ -35,6 +35,7 @@ import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
 import {ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
 import {getLanguage, getString, Lang, lines, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
+import {buildCardFacts, CardFacts, FURNITURE_HAZARDS, pickCards} from "./EducationCards"
 import {SOFT_RED} from "./UiBacking"
 
 export type DrillState =
@@ -359,6 +360,9 @@ export class DrillController extends BaseScriptComponent {
   private evacPoint: vec3 | null = null // evacDoorOffset cm in front of the door, floor level
   private _evacTime: number | null = null // s from EVACUATE to the door; null if not reached
   private _evacFailed = false
+  private _leftCoverEarly = false // Slice 9B
+  private _lastCards: StringKey[] = []
+  private _lastCardFacts: CardFacts | null = null
   private _evacDangerEntries = 0
   private _tripCount = 0
   private tripped: number[] = [] // landed item ids already tripped over
@@ -429,6 +433,22 @@ export class DrillController extends BaseScriptComponent {
   /** EVACUATE ran out of time (evacSeconds). */
   get evacFailed(): boolean {
     return this._evacFailed
+  }
+  /** Slice 9B: stood up or left the zone after first cover while shaking (card.stayUnder). */
+  get leftCoverEarly(): boolean {
+    return this._leftCoverEarly
+  }
+  /** Slice 9B: the education card keys picked at the last RESULT or GAME_OVER ([] before one). */
+  get lastCards(): StringKey[] {
+    return this._lastCards.slice()
+  }
+  /** Slice 9B: the facts those cards were picked from (null before one). */
+  get lastCardFacts(): CardFacts | null {
+    return this._lastCardFacts
+  }
+  /** Slice 9B: a cabinet, shelf or TV is in this drill's layout (card.fasten). */
+  get hadFurnitureHazard(): boolean {
+    return this.activeHazards.some((h) => FURNITURE_HAZARDS.indexOf(h) >= 0)
   }
   /** Danger-zone entries plus trips during EVACUATE (−25 each in the score). */
   get evacEvents(): number {
@@ -928,6 +948,8 @@ export class DrillController extends BaseScriptComponent {
     this.quakeStartTimer.cancel()
     this.resetAftershock()
     this._lastScore = null
+    this._lastCards = []
+    this._lastCardFacts = null
     this._quakeDuration = 0
     this.resultPanel.hide()
     this.transitionTo("LEVEL")
@@ -1054,6 +1076,8 @@ export class DrillController extends BaseScriptComponent {
     this.quakeStartTimer.cancel()
     this.resetAftershock()
     this._lastScore = null
+    this._lastCards = []
+    this._lastCardFacts = null
     this._quakeDuration = 0
     this._health = this.config.healthStart
     this.resultPanel.hide()
@@ -1207,6 +1231,7 @@ export class DrillController extends BaseScriptComponent {
     this.showReveal(false)
     this._health = this.config.healthStart
     this._secondsStanding = 0
+    this._leftCoverEarly = false
     this.scoreTSafe = null
     this.scoreHealth = this.config.healthStart
     this.scoreStanding = 0
@@ -1389,6 +1414,10 @@ export class DrillController extends BaseScriptComponent {
     const gripDrain = this._gripOverdue && gripDrainOn(this._level) ? this.config.gripDrainPerSecond : 0
     const drain = Math.max(exposureDrain, gripDrain)
     this.edgeWarning.setActive(shaking && (exposed || this._inDanger)) // 5j-6
+    // Slice 9B (card.stayUnder): stood up or left the zone after first cover, while shaking.
+    if (shaking && !this.isSafe && (aftershock ? this._aftershockTimeToCover !== null : this._hasBeenSafe)) {
+      this._leftCoverEarly = true
+    }
     if (shaking && drain > 0) {
       if (exposed && !aftershock) {
         this._secondsStanding += dt
@@ -1965,7 +1994,7 @@ export class DrillController extends BaseScriptComponent {
     )
     this.showResultPanel()
     this.showReveal(true)
-    this.resultPanel.showResult(b, this.resultExtras(this.bestRows(b.score)))
+    this.resultPanel.showResult(b, this.resultExtras(this.bestRows(b.score)), this.pickResultCards(b.score))
   }
 
   private enterGameOver(): void {
@@ -1977,7 +2006,29 @@ export class DrillController extends BaseScriptComponent {
     const reason = this._gameOverReason ? this._gameOverReason : "over.why.stood"
     this.showResultPanel()
     this.showReveal(true)
-    this.resultPanel.showGameOver(reason, this.resultExtras())
+    this.resultPanel.showGameOver(reason, this.resultExtras(), this.pickResultCards(null))
+  }
+
+  /** Slice 9B: what happened in this drill, for the education cards (EducationCards.ts). */
+  private cardFacts(score: number | null): CardFacts {
+    return buildCardFacts(score, {
+      leftCoverEarly: this._leftCoverEarly,
+      wasInDanger: this._secondsInDanger > 0,
+      wasHit: this._fallHits > 0,
+      duckedOnBed: this._bedWarnCount > 0,
+      hadFurnitureHazard: this.hadFurnitureHazard,
+      evacReached: this._evacTime !== null,
+      evacFailed: this._evacFailed,
+      aftershockHappened: this._aftershockHappened
+    })
+  }
+
+  /** Slice 9B: picks and keeps this drill's cards (score null: GAME_OVER). */
+  private pickResultCards(score: number | null): StringKey[] {
+    this._lastCardFacts = this.cardFacts(score)
+    this._lastCards = pickCards(this._lastCardFacts)
+    console.log(`${LOG} cards: ${this._lastCards.join(", ")} (${JSON.stringify(this._lastCardFacts)})`)
+    return this._lastCards.slice()
   }
 
   /** Slice 7C AFTERSHOCK: a second, weaker shake with the same staged instructions, cover and drain rules. Health carries over. */
