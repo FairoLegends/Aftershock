@@ -61,6 +61,7 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `marquee.drill` | AFTERSHOCK · LATIHAN GEMPA | AFTERSHOCK · EARTHQUAKE DRILL | AFTERSHOCK · ERDBEBENÜBUNG | AFTERSHOCK · 地震訓練 | AFTERSHOCK · 地震演练 |
 | `marquee.dch` | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON | DROP · COVER · HOLD ON |
 | `warn.aftershock` | GEMPA SUSULAN! | AFTERSHOCK! | NACHBEBEN! | 余震！ | 余震！ |
+| `hit.glass` | Kamu terkena pecahan kaca | You were hit by broken glass | Dich haben Glasscherben getroffen | ガラスの破片が当たりました | 你被碎玻璃划到了 |
 | `hit.fell` | Kamu kejatuhan barang | Something fell on you | Etwas ist auf dich gefallen | 物が落ちてきました | 有东西砸到了你 |
 | `level.title` | Pilih tingkat | Choose level | Schwierigkeit wählen | レベルを選択 | 选择难度 |
 | `level.easy` | Mudah | Easy | Leicht | かんたん | 简单 |

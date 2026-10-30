@@ -38,6 +38,7 @@ export type StringKey =
   | "result.never"
   | "over.why.stood"
   | "btn.restart"
+  | "btn.changeLang"
   | "over.why.danger"
   | "over.why.grip"
   | "label.danger"
@@ -237,6 +238,7 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     zh: "你在摇晃停止前站了起来"
   },
   "btn.restart": {id: "Ulangi", en: "Restart", de: "Neu starten", ja: "もう一度", zh: "重新开始"},
+  "btn.changeLang": {id: "Ganti bahasa", en: "Change language", de: "Sprache ändern", ja: "言語を変更", zh: "更改语言"},
   "over.why.danger": {
     id: "Kamu berdiri di dekat benda yang bisa jatuh",
     en: "You stayed next to something that can fall",

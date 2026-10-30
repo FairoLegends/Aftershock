@@ -50,6 +50,7 @@ export class LanguagePanel extends BaseScriptComponent {
   private readonly shownTexts: Text[] = []
   private readonly textLangs: Lang[] = []
   private readonly buttons: SoftButton[] = []
+  private _highlighted: Lang | null = null
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -96,15 +97,21 @@ export class LanguagePanel extends BaseScriptComponent {
     t.setWorldRotation(quat.lookAt(flat.uniformScale(-1), vec3.up()))
   }
 
-  /** Shows the picker. Fonts are applied here, after DrillController registered them. */
-  show(): void {
+  /**
+   * Shows the picker. Fonts are applied here, after DrillController registered
+   * them. Slice 10B: `current` (reopened after a drill) keeps the green focus
+   * look, as the level picker does; null at the first start.
+   */
+  show(current: Lang | null = null): void {
     for (let i = 0; i < this.shownTexts.length; i++) {
       setLineText(this.shownTexts[i], this.shownTexts[i].text, this.textLangs[i])
     }
     this.sceneObject.enabled = true
-    for (const b of this.buttons) {
-      b.reset()
+    for (let i = 0; i < this.buttons.length; i++) {
+      this.buttons[i].reset()
+      this.buttons[i].setSelected(LANGS[i] === current)
     }
+    this._highlighted = current
     drawOnTop(this.sceneObject)
     this.pinchGuard.arm()
   }
@@ -116,6 +123,10 @@ export class LanguagePanel extends BaseScriptComponent {
   // Read-only getters for LEAF assertions (TDD §8).
   get isShown(): boolean {
     return this.sceneObject.isEnabledInHierarchy
+  }
+  /** Slice 10B: the language show() highlighted, or null. */
+  get highlighted(): Lang | null {
+    return this._highlighted
   }
   /** Every text line the panel shows, in order (five title lines, then five button labels). */
   get texts(): string[] {

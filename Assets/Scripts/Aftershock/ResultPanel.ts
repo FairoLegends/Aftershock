@@ -27,7 +27,8 @@ const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the pane
 
 // Panel layout (cm). Not drill tunables: they only shape the panel.
 // Slice 7A-soft (mockup .score, .stats): title, a rounded score row, detail
-// rows (label left dimmed, value right bold, thin rule between), Restart.
+// rows (label left dimmed, value right bold, thin rule between), then a row
+// of two buttons: Change language (secondary) and Restart (primary).
 const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood); longer lines wrap
 const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
@@ -43,9 +44,11 @@ const SCORE_ROW_GAP = 1.2 // above the score row
 const SCORE_EM_CM = 4 // the number, right
 const SCORE_LABEL_EM_CM = 2.5 // "Skor", left
 const SCORE_INSET = 1.4 // text inset from the row's ends
-const BUTTON_GAP = 1.6 // above Restart
-const BUTTON_W = 14 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm
+const BUTTON_GAP = 1.6 // above the button row
+const BUTTON_W = 17 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm; Slice 10B: 14 → 17 so "Change language" fits at 2 cm em
 const BUTTON_H = 5
+const BUTTON_ROW_GAP = 3 // Slice 10B: between Change language (left) and Restart (right)
+const BUTTON_X = BUTTON_W / 2 + BUTTON_ROW_GAP / 2 // each button's center, either side of the panel's
 const BUTTON_EM_CM = 2
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
@@ -107,9 +110,10 @@ interface Placement {
 
 /**
  * Result and game-over panel (TDD §3.1, §7, R12, R13): a title, the score,
- * up to two detail rows and one Restart button. Text comes from Strings.ts
- * only. It owns no drill state: DrillController fills it and listens to
- * onRestart.
+ * up to two detail rows, a Restart button and (Slice 10B, 5l item 6) a
+ * Change language button beside it. Text comes from Strings.ts only. It owns
+ * no drill state: DrillController fills it and listens to onRestart and
+ * onChangeLanguage.
  */
 @component
 export class ResultPanel extends BaseScriptComponent {
@@ -135,6 +139,9 @@ export class ResultPanel extends BaseScriptComponent {
   private readonly restartEvent = new Event()
   /** Raised when Restart is pressed (pinch or click). */
   readonly onRestart: PublicApi<void> = this.restartEvent.publicApi()
+  private readonly changeLanguageEvent = new Event()
+  /** Slice 10B: raised when Change language is pressed (pinch or click). */
+  readonly onChangeLanguage: PublicApi<void> = this.changeLanguageEvent.publicApi()
   /** 5h item 1: presses are ignored for pinchGuard.seconds after the panel shows. */
   readonly pinchGuard = new PinchGuard()
 
@@ -148,6 +155,7 @@ export class ResultPanel extends BaseScriptComponent {
   private scoreId: Text
   private scoreEn: Text
   private restart: SoftButton | null = null
+  private changeLang: SoftButton | null = null
   private cards: Card[] = []
   private placement: Placement | null = null
   private panelH = 0 // the last layout's height (local units)
@@ -187,9 +195,9 @@ export class ResultPanel extends BaseScriptComponent {
       this.details.push(this.addRow(content, "Line" + (i + 1), i > 0))
     }
     for (let i = 0; i < CARD_SLOTS; i++) {
-      this.cards.push(this.addCard(content, "Card" + (i + 1))) // before Restart: its label stays last in texts
+      this.cards.push(this.addCard(content, "Card" + (i + 1))) // before the buttons: the Restart label stays last in texts
     }
-    this.addRestartButton(content)
+    this.addButtonRow(content)
     this.setRow(this.title, null, BIG_EM_CM)
     for (const row of this.details) {
       this.setRow(row, null, SMALL_EM_CM)
@@ -327,6 +335,7 @@ export class ResultPanel extends BaseScriptComponent {
   private showPanel(): void {
     this.sceneObject.enabled = true
     if (this.restart) this.restart.reset()
+    if (this.changeLang) this.changeLang.reset()
     drawOnTopWhenReady(this, this.sceneObject) // 5j-19f: again once the layout settles
     this.pinchGuard.arm()
   }
@@ -450,38 +459,63 @@ export class ResultPanel extends BaseScriptComponent {
     return {item, frame, bar, text, key: null}
   }
 
-  /** Slice 7A-soft: the primary (green) button; the label rides on the face. */
-  private addRestartButton(parent: SceneObject): void {
-    const so = global.scene.createSceneObject("RestartButton")
-    so.setParent(parent)
-    const btn = so.createComponent(Button.getTypeName()) as Button
-    btn.size = new vec3(BUTTON_W, BUTTON_H, 1)
-    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+  /**
+   * Slice 10B (5l item 6): one flex row, as wide as the text, holding two
+   * buttons of the same size: Change language (secondary, left) and Restart
+   * (primary green, right). The row is BUTTON_H tall like the old Restart
+   * slot, so the panel height and its fit are unchanged.
+   */
+  private addButtonRow(parent: SceneObject): void {
+    const row = global.scene.createSceneObject("Buttons")
+    row.setParent(parent)
+    const item = row.createComponent(FlexItem.getTypeName()) as FlexItem
     item.alignSelf = FlexAlignSelf.Center
     item.marginTop = BUTTON_GAP
+    item.overrideWidth = INNER_W // a naked item: the row declares its size (scale stays 1)
+    item.overrideHeight = BUTTON_H
 
-    this.restart = new SoftButton(this, btn, BUTTON_W, BUTTON_H, true, () => {
+    this.changeLang = this.addButton(row, "ChangeLang", -BUTTON_X, false, "btn.changeLang", () => {
+      if (this.pinchGuard.open) this.changeLanguageEvent.invoke()
+    })
+    this.restart = this.addButton(row, "Restart", BUTTON_X, true, "btn.restart", () => {
       if (this.pinchGuard.open) this.restartEvent.invoke()
     })
-
-    const label = global.scene.createSceneObject("RestartLabel")
-    label.setParent(this.restart.face)
-    label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
-    const primary = this.addButtonLine(label, "btn.restart.id")
-    const secondary = this.addButtonLine(label, "btn.restart.en")
-    const refreshRestart = (): void => setLinePair(primary, secondary, lines("btn.restart"))
-    refreshRestart()
-    onLanguageChanged.add(refreshRestart)
   }
 
-  private addButtonLine(parent: SceneObject, name: string): Text {
+  /**
+   * Slice 7A-soft: a soft button ("<name>Button") at `x` in the row, the label
+   * riding on the face. Primary: green fill, dark label. Secondary: the light
+   * fill and soft outline, label in the normal text color.
+   */
+  private addButton(row: SceneObject, name: string, x: number, primary: boolean, key: StringKey, action: () => void): SoftButton {
+    const so = global.scene.createSceneObject(name + "Button")
+    so.setParent(row)
+    so.getTransform().setLocalPosition(new vec3(x, 0, 0))
+    const btn = so.createComponent(Button.getTypeName()) as Button
+    btn.size = new vec3(BUTTON_W, BUTTON_H, 1)
+    const soft = new SoftButton(this, btn, BUTTON_W, BUTTON_H, primary, action)
+
+    const label = global.scene.createSceneObject(name + "Label")
+    label.setParent(soft.face)
+    label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
+    const first = this.addButtonLine(label, key + ".id", primary)
+    const second = this.addButtonLine(label, key + ".en", primary)
+    const refresh = (): void => setLinePair(first, second, lines(key))
+    refresh()
+    onLanguageChanged.add(refresh)
+    return soft
+  }
+
+  private addButtonLine(parent: SceneObject, name: string, primary: boolean): Text {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
     t.text = ""
     this.styleText(t, BUTTON_EM_CM * SIZE_PER_CM, false)
-    t.textFill.color = SOFT_GREEN_TEXT
-    t.outlineSettings.enabled = false // dark text on solid green
+    if (primary) {
+      t.textFill.color = SOFT_GREEN_TEXT
+      t.outlineSettings.enabled = false // dark text on solid green
+    }
     t.horizontalOverflow = HorizontalOverflow.Shrink
     const w = BUTTON_W - 1
     const h = BUTTON_EM_CM * LINE_H_PER_EM

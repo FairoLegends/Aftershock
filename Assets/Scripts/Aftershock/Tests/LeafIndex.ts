@@ -20,6 +20,7 @@ import {DC17_CalibrateAndBest} from "./DC17_CalibrateAndBest"
 import {DC18_TvTopple} from "./DC18_TvTopple"
 import {DC19_EducationCards} from "./DC19_EducationCards"
 import {DC20_VoiceGuide} from "./DC20_VoiceGuide"
+import {DC21_ChangeLanguage} from "./DC21_ChangeLanguage"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -44,6 +45,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc17-calibrate-and-best", typename: DC17_CalibrateAndBest.getTypeName()},
     {id: "dc18-tv-topple", typename: DC18_TvTopple.getTypeName()},
     {id: "dc19-education-cards", typename: DC19_EducationCards.getTypeName()},
-    {id: "dc20-voice-guide", typename: DC20_VoiceGuide.getTypeName()}
+    {id: "dc20-voice-guide", typename: DC20_VoiceGuide.getTypeName()},
+    {id: "dc21-change-language", typename: DC21_ChangeLanguage.getTypeName()}
   ]
 }

@@ -54,7 +54,7 @@ export type DrillState =
 
 // USER_FLOW_DIAGRAM §2. Any transition not listed here is refused.
 const ALLOWED: Record<DrillState, DrillState[]> = {
-  LANGUAGE: ["SAFETY"],
+  LANGUAGE: ["SAFETY", "LEVEL"], // Slice 10B: LEVEL once the safety panel was seen this session
   SAFETY: ["LEVEL"],
   LEVEL: ["CALIBRATE"], // Slice 8D (5k item 7): duck practice before the quake wait, every level
   CALIBRATE: ["BRIEFING"],
@@ -63,8 +63,8 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
   POST_QUAKE: ["EVACUATE", "AFTERSHOCK"], // Slice 7C: the aftershock comes after leaving cover; 8B: then the door
   AFTERSHOCK: ["GAME_OVER", "POST_QUAKE"],
   EVACUATE: ["RESULT", "GAME_OVER"], // Slice 8B (5k item 8): the door, the time limit, or health 0
-  RESULT: ["LEVEL"], // 5j-19a: Restart opens the level picker
-  GAME_OVER: ["LEVEL"]
+  RESULT: ["LEVEL", "LANGUAGE"], // 5j-19a: Restart opens the level picker; Slice 10B: Change language
+  GAME_OVER: ["LEVEL", "LANGUAGE"]
 }
 
 const LOG = "[Aftershock]"
@@ -89,7 +89,8 @@ const VOICE_STATES: (DrillState | null)[] = ["CALIBRATE", "QUAKE", "POST_QUAKE",
  * the off-screen arrow. Health drains while exposed after first cover or
  * inside a danger zone (0 → GAME_OVER); leaving the zone after the quake →
  * RESULT with the TDD §7 score; Restart → LEVEL (current level preselected,
- * 5j-19a) with a full reset.
+ * 5j-19a) with a full reset. Slice 10B: Change language → the same reset →
+ * LANGUAGE (current language highlighted) → LEVEL; SAFETY shows once a session.
  */
 @component
 export class DrillController extends BaseScriptComponent {
@@ -323,6 +324,7 @@ export class DrillController extends BaseScriptComponent {
   private _lastScore: ScoreBreakdown | null = null
   // Slice 7C: level and aftershock (ENGINEERING_PLAN 5j items 7, 18).
   private _level: Level = DEFAULT_LEVEL
+  private safetySeen = false // Slice 10B: a later language pick skips SAFETY
   private levelHidGuides = false // Hard turned the guides off; another level turns them back on
   private aftershockTimer: DelayedCallbackEvent | null = null // the quiet wait before the aftershock
   private aftershockPending = false
@@ -801,6 +803,7 @@ export class DrillController extends BaseScriptComponent {
     this.languagePanel.onPick.add((lang) => this.onLanguagePicked(lang))
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())
+    this.resultPanel.onChangeLanguage.add(() => this.onChangeLanguagePressed())
     // 5h item 1: each panel ignores presses for its first pinchGuardSeconds.
     this.languagePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.safetyPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
@@ -812,14 +815,17 @@ export class DrillController extends BaseScriptComponent {
     this.transitionTo("LANGUAGE")
   }
 
-  /** A picker button: set the language (every panel refreshes), then SAFETY. */
+  /**
+   * A picker button: set the language (every panel refreshes), then SAFETY,
+   * or LEVEL when reopened after a drill (Slice 10B).
+   */
   private onLanguagePicked(lang: Lang): void {
     if (this._state !== "LANGUAGE") {
       return
     }
     setLanguage(lang)
     console.log(`${LOG} language: ${lang}`)
-    this.transitionTo("SAFETY")
+    this.transitionTo(this.safetySeen ? "LEVEL" : "SAFETY")
   }
 
   private onContinuePressed(): void {
@@ -963,8 +969,28 @@ export class DrillController extends BaseScriptComponent {
    * health, cover, standing time, arrow); the language stays.
    */
   onRestartPressed(): void {
-    if (this._state !== "RESULT" && this._state !== "GAME_OVER") {
+    if (!this.endOfDrillReset()) {
       return
+    }
+    this.transitionTo("LEVEL")
+  }
+
+  /**
+   * Slice 10B (5l item 6): Change language on RESULT or GAME_OVER. The same
+   * reset as Restart (the stored bests stay), then the picker with the
+   * current language highlighted; a pick goes straight to LEVEL.
+   */
+  onChangeLanguagePressed(): void {
+    if (!this.endOfDrillReset()) {
+      return
+    }
+    this.transitionTo("LANGUAGE")
+  }
+
+  /** Restart and Change language: stops voice and effects, clears the drill; false outside RESULT and GAME_OVER. */
+  private endOfDrillReset(): boolean {
+    if (this._state !== "RESULT" && this._state !== "GAME_OVER") {
+      return false
     }
     this.stopQuakeEffects()
     this.stopEvacuate()
@@ -977,7 +1003,7 @@ export class DrillController extends BaseScriptComponent {
     this._lastCardFacts = null
     this._quakeDuration = 0
     this.resultPanel.hide()
-    this.transitionTo("LEVEL")
+    return true
   }
 
   /** LEAF test hook only (TDD §8): sets the level the next BRIEFING uses (Slice 7C). */
@@ -1108,6 +1134,7 @@ export class DrillController extends BaseScriptComponent {
     this._health = this.config.healthStart
     this.resultPanel.hide()
     this._state = null // a reset, not a drill transition
+    if (toLanguage) this.safetySeen = false // Slice 10B: the opening picker leads to SAFETY again
     this.transitionTo(toLanguage ? "LANGUAGE" : "BRIEFING")
   }
 
@@ -1174,10 +1201,11 @@ export class DrillController extends BaseScriptComponent {
     this.calibratePanel.hide()
     this.showReveal(false)
     this.languagePanel.placeInFront(this.headPose.position, this.headPose.forward, this.config.hudDistance, 0)
-    this.languagePanel.show()
+    this.languagePanel.show(this.safetySeen ? getLanguage() : null) // Slice 10B: reopened → current marked
   }
 
   private enterSafety(): void {
+    this.safetySeen = true
     this.languagePanel.hide()
     this.levelPanel.hide()
     this._instructionKey = null
@@ -1203,6 +1231,7 @@ export class DrillController extends BaseScriptComponent {
    * here too, so the Hard reveal's bed label hides).
    */
   private enterLevel(): void {
+    this.languagePanel.hide() // Slice 10B: LANGUAGE → LEVEL after Change language
     this.safetyPanel.hide()
     this._instructionKey = null
     this.hideArrow()
