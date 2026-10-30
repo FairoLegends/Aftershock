@@ -107,13 +107,23 @@ export class FloorPath extends BaseScriptComponent {
     const offset = this.mode === "bright" ? ((getTime() - this.marchStart) * this.config.pathMarchSpeed) % spacing : 0
     const rot = quat.angleAxis(Math.atan2(ux, uz), vec3.up()) // local +Z (the V's tip) along the path
     let n = 0
-    for (let s = spacing * 0.5 + offset; s <= len && n < POOL; s += spacing) {
-      const t = this.chevrons[n].getTransform()
-      t.setWorldPosition(new vec3(head.x + ux * s, y, head.z + uz * s))
-      t.setWorldRotation(rot)
-      n++
+    if (len < spacing) {
+      // Shorter than one step, so the marching line would place nothing: one
+      // chevron at the midpoint, so a real gap always shows a path (5j-5).
+      this.placeChevron(n++, head, ux, uz, len / 2, y, rot)
+    } else {
+      for (let s = spacing * 0.5 + offset; s <= len && n < POOL; s += spacing) {
+        this.placeChevron(n++, head, ux, uz, s, y, rot)
+      }
     }
     this.showCount(n)
+  }
+
+  /** Chevron `i` at `s` cm along the path from `head`, facing the target. */
+  private placeChevron(i: number, head: vec3, ux: number, uz: number, s: number, y: number, rot: quat): void {
+    const t = this.chevrons[i].getTransform()
+    t.setWorldPosition(new vec3(head.x + ux * s, y, head.z + uz * s))
+    t.setWorldRotation(rot)
   }
 
   private showCount(n: number): void {

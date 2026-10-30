@@ -15,11 +15,15 @@ export class DC10_ScanPathEdge extends Scenario {
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     const prevWait = c.config.testWaitSeconds
+    const prevScan = c.config.testScanSeconds
+    const prevSeed = c.config.layoutSeed
     try {
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.config.testMode = true
       c.config.testWaitSeconds = 3 // BRIEFING outlasts the scan check below
+      c.config.testScanSeconds = 2 // the scan outlasts the press latency before the first check (0.5 s lost the race once)
+      c.config.layoutSeed = 1155577471 // fixed layout: table 136 cm from start, its zone edge 67 cm away (3 chevrons)
       await toFreshBriefing(c)
       const start = startSpot(c)
       c.headPose.setOverride(start, levelLook(start, c.safeZone.center))
@@ -62,6 +66,8 @@ export class DC10_ScanPathEdge extends Scenario {
     } finally {
       c.setGuidesVisible(true)
       c.config.testWaitSeconds = prevWait
+      c.config.testScanSeconds = prevScan
+      c.config.layoutSeed = prevSeed
       restore(c, prevTestMode, prevDuration)
     }
   }
