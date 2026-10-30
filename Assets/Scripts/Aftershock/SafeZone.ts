@@ -101,6 +101,11 @@ export class SafeZone extends BaseScriptComponent {
     return this.restCenter ? this.restCenter : this.table.getTransform().getWorldPosition()
   }
 
+  /** The table's world yaw at rest, radians: local X = (cos yaw, 0, −sin yaw). GripHandles places the legs with it (Slice 8B). */
+  get yaw(): number {
+    return this.restYaw
+  }
+
   /**
    * Where the off-screen arrow aims (ENGINEERING_PLAN 5a item 6): the marker
    * label's rest position, captured with the rest center; the center if

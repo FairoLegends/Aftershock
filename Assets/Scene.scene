@@ -1670,6 +1670,15 @@
     fallHitRadius: true
     fallHitDamage: true
     fallNoticeSeconds: true
+    evacSeconds: true
+    evacDoorOffset: true
+    tripRadius: true
+    tripDamage: true
+    tripNoticeSeconds: true
+    gripGraceSeconds: true
+    gripDrainPerSecond: true
+    gripHandleSize: true
+    gripHandleHeight: true
     testMode: true
     testWaitSeconds: true
     testDurationSeconds: true
@@ -1677,6 +1686,8 @@
     testAftershockDelaySeconds: true
     testAftershockDurationSeconds: true
     testAftershockGraceSeconds: true
+    testEvacSeconds: true
+    testGripGraceSeconds: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
@@ -1747,6 +1758,15 @@
       fallHitRadius: !<float> 40.000000
       fallHitDamage: !<float> 15.000000
       fallNoticeSeconds: !<float> 2.000000
+      evacSeconds: !<float> 30.000000
+      evacDoorOffset: !<float> 40.000000
+      tripRadius: !<float> 25.000000
+      tripDamage: !<float> 10.000000
+      tripNoticeSeconds: !<float> 2.000000
+      gripGraceSeconds: !<float> 3.000000
+      gripDrainPerSecond: !<float> 1.000000
+      gripHandleSize: !<float> 8.000000
+      gripHandleHeight: !<float> 40.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -1754,6 +1774,8 @@
       testAftershockDelaySeconds: 0.500000
       testAftershockDurationSeconds: !<float> 4.000000
       testAftershockGraceSeconds: !<float> 1.000000
+      testEvacSeconds: !<float> 6.000000
+      testGripGraceSeconds: 0.500000
   ScriptTypes:
     "":
       {}
@@ -2440,6 +2462,7 @@
     - !<own> 235565ea-925a-4995-be27-32921680800c
     - !<own> 046839bf-5d5c-4a5f-be26-ae8a9c7a4b9b
     - !<own> 96df5061-5813-46a2-883e-3fad098e183f
+    - !<own> e81d1b5a-1aac-43c0-8077-4932059b9b89
   Components:
     - !<own> 30de3aec-07f9-441e-8f20-3c0a7158ba47
 - !<SceneObject/6a7a67db-5675-49bb-8f31-ba0588e3cffc>
@@ -4556,6 +4579,23 @@
     - !<own> bb9036be-541f-49e7-9554-c297d354da21
   Components:
     []
+- !<ScriptComponent/d0bc74cb-bcef-47e4-b922-42223e4fa2a0>
+  PrefabRemaps:
+    []
+  Name: GripHandles
+  Enabled: true
+  ScriptAsset: !<reference> d560c01d-2468-42f0-a91f-621a66d524f2
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
+      headPose: !<MappingBased.AssignableType_2> fa96ddb3-29c7-4a6c-a42c-6ed441585277
+  ScriptTypes:
+    "":
+      {}
 - !<ScriptComponent/d32ea2bd-a740-49d9-b50b-2aa2320a6778>
   PrefabRemaps:
     []
@@ -5087,6 +5127,21 @@
     - !<own> 0f983d21-20bc-4d89-a991-fbb95bacbd64
   Components:
     []
+- !<SceneObject/e81d1b5a-1aac-43c0-8077-4932059b9b89>
+  PrefabRemaps:
+    []
+  Name: GripHandles
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> d0bc74cb-bcef-47e4-b922-42223e4fa2a0
 - !<SceneObject/e9454e66-5d09-4a8a-bcd7-dea762326a48>
   PrefabRemaps:
     []
@@ -5675,6 +5730,7 @@
       edgeWarning: !<MappingBased.AssignableType_25> 0735a83d-fdd5-4d23-ba88-ba52fe8a35bd
       fallingObjects: !<MappingBased.AssignableType_26> c8e0f0db-1d48-4afb-a033-26eaa0dd3227
       roomWalls: !<MappingBased.AssignableType_27> dc0ebf08-b693-4388-8074-35fa7a16d58a
+      gripHandles: !<MappingBased.AssignableType_28> d0bc74cb-bcef-47e4-b922-42223e4fa2a0
       tablePrefab: !<reference.ObjectPrefab> 68a4de7c-d609-40a8-8e70-c31fd9877491
       cabinetPrefab: !<reference.ObjectPrefab> 1c8bc680-a962-43dc-8449-ab4fe5c708b5
       shelfPrefab: !<reference.ObjectPrefab> ff246972-5993-4e77-bf50-fe5c3c0cf985

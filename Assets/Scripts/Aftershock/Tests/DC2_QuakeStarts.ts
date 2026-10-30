@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {lines} from "../Strings"
-import {expectState, getController, restore, toFreshBriefing} from "./DrillTestKit"
+import {expectState, getController, restore, toFreshBriefing, walkOut} from "./DrillTestKit"
 
 const SHAKE_SAMPLES = 15
 
@@ -51,10 +51,11 @@ export class DC2_QuakeStarts extends Scenario {
       expect(c.hud.timerText).not.toBe("00:00")
       expect(c.health).toBe(c.config.healthStart) // standing at the start spot, never safe: no drain
 
-      // Unattended, the quake ends with the head outside the zone: straight to RESULT.
-      await expectState(c, "RESULT", (c.config.testDurationSeconds + 2) * 1000)
+      // Unattended, the quake ends with the head outside the zone: straight to EVACUATE (Slice 8B), then the door.
+      await expectState(c, "EVACUATE", (c.config.testDurationSeconds + 2) * 1000)
       expect(c.quakeShaker.isShaking).toBe(false)
       expect(c.rumbleAudio.isPlaying()).toBe(false)
+      await walkOut(c)
     } finally {
       restore(c, prevTestMode, prevDuration)
     }

@@ -68,3 +68,8 @@ export function labelsStayInQuake(level: Level): boolean {
 export function fallsOn(level: Level): boolean {
   return level !== "easy"
 }
+
+/** Normal and Hard: not holding the table leg drains health (5k item 9). Easy shows instr.grip as a hint only. */
+export function gripDrainOn(level: Level): boolean {
+  return level !== "easy"
+}

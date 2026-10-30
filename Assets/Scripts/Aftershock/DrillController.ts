@@ -4,6 +4,7 @@ import {DrillConfig} from "./DrillConfig"
 import {EdgeWarning} from "./EdgeWarning"
 import {FALL_SOURCES, FallFrom, FallingObjects, FallSource} from "./FallingObjects"
 import {FloorPath} from "./FloorPath"
+import {GripHandles} from "./GripHandles"
 import {HazardLabel} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
@@ -15,6 +16,7 @@ import {
   DEFAULT_LEVEL,
   drainMultiplier,
   fallsOn,
+  gripDrainOn,
   guidesOn,
   labelsStayInQuake,
   layoutParamsFor,
@@ -29,7 +31,7 @@ import {RoomWalls} from "./RoomWalls"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
-import {computeScore, ScoreBreakdown} from "./ScoreCalculator"
+import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
 import {getLanguage, getString, Lang, lines, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {SOFT_RED} from "./UiBacking"
 
@@ -41,6 +43,7 @@ export type DrillState =
   | "QUAKE"
   | "POST_QUAKE"
   | "AFTERSHOCK"
+  | "EVACUATE"
   | "RESULT"
   | "GAME_OVER"
 
@@ -51,8 +54,9 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
   LEVEL: ["BRIEFING"],
   BRIEFING: ["QUAKE"],
   QUAKE: ["GAME_OVER", "POST_QUAKE"],
-  POST_QUAKE: ["RESULT", "AFTERSHOCK"], // Slice 7C: the aftershock comes after leaving cover
+  POST_QUAKE: ["EVACUATE", "AFTERSHOCK"], // Slice 7C: the aftershock comes after leaving cover; 8B: then the door
   AFTERSHOCK: ["GAME_OVER", "POST_QUAKE"],
+  EVACUATE: ["RESULT", "GAME_OVER"], // Slice 8B (5k item 8): the door, the time limit, or health 0
   RESULT: ["LEVEL"], // 5j-19a: Restart opens the level picker
   GAME_OVER: ["LEVEL"]
 }
@@ -204,6 +208,10 @@ export class DrillController extends BaseScriptComponent {
   @hint("RoomWalls component (under the Room): the four walls and the exit door (Slice 8A)")
   roomWalls: RoomWalls
 
+  @input
+  @hint("GripHandles component: the grip handles at the table legs, HOLD ON (Slice 8B)")
+  gripHandles: GripHandles
+
   @ui.group_start("Furniture models (Slice 7R)")
   @input
   @hint("Table model (both tables): root at bottom center, cm, front +Z")
@@ -287,6 +295,20 @@ export class DrillController extends BaseScriptComponent {
   private safeSince = -1 // s; when inZone && ducked last began, -1 when not safe
   private _fallHits = 0 // Slice 7D: items that hit the head this drill
   private fallsDisabled = false // LEAF disableFallsForTest
+  // Slice 8B EVACUATE and HOLD ON (ENGINEERING_PLAN 5k items 8, 9).
+  private evacUpdate: UpdateEvent | null = null
+  private evacStart = 0 // s
+  private evacPoint: vec3 | null = null // evacDoorOffset cm in front of the door, floor level
+  private _evacTime: number | null = null // s from EVACUATE to the door; null if not reached
+  private _evacFailed = false
+  private _evacDangerEntries = 0
+  private _tripCount = 0
+  private tripped: number[] = [] // landed item ids already tripped over
+  private notHoldingSeconds = 0 // s safe without holding a handle, since the last hold
+  private _gripOverdue = false
+  private safeSecondsMain = 0 // s safe in the main QUAKE
+  private holdSecondsMain = 0 // s of those holding a handle
+  private scoreHoldShare = 0 // 5j-19c snapshot
   // Read-only getters for LEAF assertions (TDD §8).
   get state(): DrillState | null {
     return this._state
@@ -341,6 +363,38 @@ export class DrillController extends BaseScriptComponent {
     return this._inDanger
   }
   /** Seconds inside a danger zone during this drill's QUAKE and AFTERSHOCK. */
+  // Slice 8B (5k items 8, 9).
+  /** s from EVACUATE to the door; null until reached. */
+  get evacTime(): number | null {
+    return this._evacTime
+  }
+  /** EVACUATE ran out of time (evacSeconds). */
+  get evacFailed(): boolean {
+    return this._evacFailed
+  }
+  /** Danger-zone entries plus trips during EVACUATE (−25 each in the score). */
+  get evacEvents(): number {
+    return this._evacDangerEntries + this._tripCount
+  }
+  get tripCount(): number {
+    return this._tripCount
+  }
+  /** The floor point the arrow and path lead to in EVACUATE (null outside it or without a door). Shared object: do not modify it. */
+  get evacTarget(): vec3 | null {
+    return this.evacPoint
+  }
+  get isHolding(): boolean {
+    return !!this.gripHandles && this.gripHandles.isHolding
+  }
+  /** Safe longer than the grip grace without holding: instr.grip (and the drain on Normal and Hard). */
+  get gripOverdue(): boolean {
+    return this._gripOverdue
+  }
+  /** Seconds holding while safe ÷ seconds safe, main quake so far (0..1). */
+  get holdShare(): number {
+    return this.safeSecondsMain > 0 ? Math.min(1, this.holdSecondsMain / this.safeSecondsMain) : 0
+  }
+
   get secondsInDanger(): number {
     return this._secondsInDanger
   }
@@ -469,6 +523,9 @@ export class DrillController extends BaseScriptComponent {
     this.quakeUpdate.enabled = false
     this.postQuakeUpdate = this.createEvent("UpdateEvent")
     this.postQuakeUpdate.bind(() => this.onPostQuakeUpdate())
+    this.evacUpdate = this.createEvent("UpdateEvent")
+    this.evacUpdate.bind(() => this.onEvacUpdate())
+    this.evacUpdate.enabled = false
     this.postQuakeUpdate.enabled = false
     this.briefingUpdate = this.createEvent("UpdateEvent")
     this.briefingUpdate.bind(() => this.onBriefingUpdate())
@@ -507,7 +564,8 @@ export class DrillController extends BaseScriptComponent {
       ["floorPath", this.floorPath],
       ["edgeWarning", this.edgeWarning],
       ["levelPanel", this.levelPanel],
-      ["fallingObjects", this.fallingObjects]
+      ["fallingObjects", this.fallingObjects],
+      ["gripHandles", this.gripHandles]
     ]
     const missing = inputs.filter((entry) => !entry[1]).map((entry) => entry[0])
     if (missing.length > 0) {
@@ -651,7 +709,7 @@ export class DrillController extends BaseScriptComponent {
       this.aftershockTimer.reset(delay)
       return
     }
-    this.transitionTo("RESULT")
+    this.transitionTo("EVACUATE") // Slice 8B: the door, then RESULT
   }
 
   private rollAftershock(): boolean {
@@ -686,6 +744,7 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     this.stopQuakeEffects()
+    this.stopEvacuate()
     this.postQuakeUpdate.enabled = false
     this.quakeStartTimer.cancel()
     this.resetAftershock()
@@ -788,7 +847,9 @@ export class DrillController extends BaseScriptComponent {
     this.forceLayoutForTest(null)
     this.forceAftershockForTest(null)
     this.disableFallsForTest(false)
+    if (this.gripHandles) this.gripHandles.setHoldingForTest(null) // Slice 8B hook
     this.stopQuakeEffects()
+    this.stopEvacuate()
     this.postQuakeUpdate.enabled = false
     this.briefingUpdate.enabled = false
     this.quakeStartTimer.cancel()
@@ -830,6 +891,9 @@ export class DrillController extends BaseScriptComponent {
         break
       case "AFTERSHOCK":
         this.enterAftershock()
+        break
+      case "EVACUATE":
+        this.enterEvacuate()
         break
       case "RESULT":
         this.enterResult()
@@ -917,6 +981,17 @@ export class DrillController extends BaseScriptComponent {
     this._nearestTableDistance = 0
     this._fallHits = 0
     this.fallingObjects.clear()
+    this.fallingObjects.keepLanded = true // Slice 8B: landed items stay through EVACUATE (trip hazards)
+    this._evacTime = null
+    this._evacFailed = false
+    this._evacDangerEntries = 0
+    this._tripCount = 0
+    this.tripped = []
+    this.notHoldingSeconds = 0
+    this._gripOverdue = false
+    this.safeSecondsMain = 0
+    this.holdSecondsMain = 0
+    this.scoreHoldShare = 0
     this.resetCover()
     this._instructionKey = "instr.brief"
     // ENGINEERING_PLAN 5f item 1: never the current head height (restarting while ducked broke ducking).
@@ -932,6 +1007,8 @@ export class DrillController extends BaseScriptComponent {
       this.zones[h].captureRest()
     }
     if (this.roomWalls) this.roomWalls.captureRest() // Slice 8A: door getters at rest
+    this.gripHandles.place(this.activeTables, this.room, this._floorY) // Slice 8B: after the tables' captureRest
+    this.gripHandles.visualsOn = guidesOn(this._level) // Hard: no markers, holding still works
     this.updateTarget(true)
     // 5j-4/17d: labels and markers appear as the scan sweep reaches them; with guides off, no scan.
     this.applyLevelGuides()
@@ -1025,6 +1102,7 @@ export class DrillController extends BaseScriptComponent {
     this.updateCover(this.quakeStartTime) // first instruction (goUnder unless already under cover)
     this.quakeEndTimer.reset(this._quakeDuration)
     this.quakeUpdate.enabled = true
+    this.gripHandles.setActive(true)
   }
 
   private onQuakeUpdate(): void {
@@ -1041,21 +1119,38 @@ export class DrillController extends BaseScriptComponent {
     // not being safe drains once under cover again there OR after aftershockGraceSeconds, so
     // ignoring it is never better than taking cover; its standing time is not scored.
     const shaking = this._state === "QUAKE" || aftershock
+    const dt = getDeltaTime()
     const grace = this.config.testMode ? this.config.testAftershockGraceSeconds : this.config.aftershockGraceSeconds
     const covered = aftershock
       ? this._aftershockTimeToCover !== null || now - this.aftershockStartTime > grace
       : this._hasBeenSafe
     const exposed = covered && !this.isSafe
+    // Slice 8B HOLD ON (5k item 9): safe longer than gripGraceSeconds without holding a handle keeps
+    // step 03 open on instr.grip and, on Normal and Hard, drains gripDrainPerSecond. The larger drain
+    // wins, never both. holdShare is the main quake's share of safe seconds spent holding.
+    const holding = this.gripHandles.isHolding
+    if (shaking && this._hasBeenSafe && this.isSafe && !holding) {
+      this.notHoldingSeconds += dt
+    } else {
+      this.notHoldingSeconds = 0
+    }
+    this._gripOverdue = this.notHoldingSeconds > (this.config.testMode ? this.config.testGripGraceSeconds : this.config.gripGraceSeconds)
+    if (shaking && !aftershock && this.isSafe) {
+      this.safeSecondsMain += dt
+      if (holding) this.holdSecondsMain += dt
+    }
+    const exposureDrain = exposed || this._inDanger ? this.config.healthDrainPerSecond * drainMultiplier(this._level, this.config) : 0
+    const gripDrain = this._gripOverdue && gripDrainOn(this._level) ? this.config.gripDrainPerSecond : 0
+    const drain = Math.max(exposureDrain, gripDrain)
     this.edgeWarning.setActive(shaking && (exposed || this._inDanger)) // 5j-6
-    if (shaking && (exposed || this._inDanger)) {
-      const dt = getDeltaTime()
+    if (shaking && drain > 0) {
       if (exposed && !aftershock) {
         this._secondsStanding += dt
       }
       if (this._inDanger) {
         this._secondsInDanger += dt
       }
-      this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * drainMultiplier(this._level, this.config) * dt)
+      this._health = Math.max(0, this._health - drain * dt)
       this.hud.setHealth(this._health)
       if (this._health <= 0) {
         this._gameOverReason = this._inDanger ? "over.why.danger" : "over.why.stood"
@@ -1222,10 +1317,12 @@ export class DrillController extends BaseScriptComponent {
     this.updateDucked(head.y)
     this.updateSafeHold(now)
     // 5j-19d: on Hard the step leaves 01 only once safe, so it does not reveal the zone.
+    // Slice 8B: under cover, instr.grip once the grip grace runs out without holding (every level; Easy does not drain).
+    const hold: StringKey = this._gripOverdue ? "instr.grip" : "instr.hold"
     this.showInstruction(
       !guidesOn(this._level)
-        ? this.isSafe ? "instr.hold" : "instr.goUnder"
-        : !this._inZone ? "instr.goUnder" : this._ducked ? "instr.hold" : "instr.duck"
+        ? this.isSafe ? hold : "instr.goUnder"
+        : !this._inZone ? "instr.goUnder" : this._ducked ? hold : "instr.duck"
     )
     this.updateTarget(false)
     const target = this.targetSafeZone
@@ -1313,6 +1410,9 @@ export class DrillController extends BaseScriptComponent {
     for (const z of this.safeZones) {
       z.stopBlink()
     }
+    this.gripHandles.setActive(false)
+    this.notHoldingSeconds = 0
+    this._gripOverdue = false
     this.hideArrow()
     this.hideScanPathEdge()
   }
@@ -1332,22 +1432,124 @@ export class DrillController extends BaseScriptComponent {
       this.scoreTSafe = this._tSafe
       this.scoreHealth = this._health
       this.scoreStanding = this._secondsStanding
+      this.scoreHoldShare = this.holdShare // Slice 8B
     }
     this._instructionKey = "instr.comeOut"
     this.hud.setInstruction(this._instructionKey)
     if (!this.inAnySafeZone(this.headPose.position)) {
-      this.onHeadLeftSafeZone() // already outside: straight to RESULT
+      this.onHeadLeftSafeZone() // already outside: straight to EVACUATE
       return
     }
     this.postQuakeUpdate.enabled = true
   }
 
+  /**
+   * Slice 8B EVACUATE (5k item 8): out of cover after the last shake, walk to
+   * the exit door. Easy and Normal: arrow and floor path to evacDoorOffset cm
+   * in front of it; Hard: neither. Danger zones still drain; landed items stay
+   * and trip (tripDamage, once each). The door ends it (RESULT with the time),
+   * so does evacSeconds (RESULT, evacuation failed); health 0 is GAME_OVER.
+   */
+  private enterEvacuate(): void {
+    this.postQuakeUpdate.enabled = false
+    this.evacStart = getTime()
+    this._evacTime = null
+    this._evacFailed = false
+    this._evacDangerEntries = 0
+    this._tripCount = 0
+    this.tripped = []
+    const w = this.roomWalls
+    const door = w ? w.doorCenter : null
+    const normal = w ? w.doorNormal : null
+    this.evacPoint = door && normal ? new vec3(door.x + normal.x * this.config.evacDoorOffset, this._floorY, door.z + normal.z * this.config.evacDoorOffset) : null
+    this.hud.show()
+    this.hud.setHealth(this._health)
+    this.hud.setElapsed(0)
+    this.showInstruction("instr.evac")
+    this.hideArrow()
+    this.edgeWarning.setActive(false)
+    if (this.evacPoint && this.evacGuides) {
+      this.floorPath.setPointTarget(this.evacPoint)
+      this.floorPath.setMode("bright")
+    } else {
+      this.floorPath.setMode("off")
+    }
+    this.updateDanger() // already in a danger zone is not an entry
+    this.evacUpdate.enabled = true
+    console.log(`${LOG} EVACUATE: ${this.evacPoint ? "door target (" + fmt(this.evacPoint.x) + ", " + fmt(this.evacPoint.z) + ")" : "no door"}, ${fmt(this.config.testMode ? this.config.testEvacSeconds : this.config.evacSeconds)} s, guides ${this.evacGuides}`)
+  }
+
+  /** Arrow and path in EVACUATE: Easy and Normal, and only while the guides are on. */
+  private get evacGuides(): boolean {
+    return this._guidesVisible && guidesOn(this._level)
+  }
+
+  private onEvacUpdate(): void {
+    const now = getTime()
+    const dt = getDeltaTime()
+    const head = this.headPose.position
+    this.hud.setElapsed(now - this.evacStart)
+    const wasInDanger = this._inDanger
+    this.updateDanger()
+    if (this._inDanger && !wasInDanger) {
+      this._evacDangerEntries++
+      console.log(`${LOG} EVACUATE: entered a danger zone (${this._evacDangerEntries})`)
+    }
+    this.edgeWarning.setActive(this._inDanger)
+    if (this._inDanger) {
+      this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * drainMultiplier(this._level, this.config) * dt)
+    }
+    const at = this.toRoomLocal(head)
+    for (const p of this.fallingObjects.landedPoints()) {
+      if (this.tripped.indexOf(p.id) < 0 && Math.hypot(p.x - at.x, p.z - at.y) < this.config.tripRadius) {
+        this.tripped.push(p.id)
+        this._tripCount++
+        this._health = Math.max(0, this._health - this.config.tripDamage)
+        this.hud.showNotice(this.config.tripNoticeSeconds, "warn.trip")
+        console.log(`${LOG} EVACUATE: tripped over a fallen item (${this._tripCount}), health ${fmt(this._health)}`)
+      }
+    }
+    this.hud.setHealth(this._health)
+    if (this._health <= 0) {
+      this._gameOverReason = "over.why.danger"
+      this.transitionTo("GAME_OVER")
+      return
+    }
+    if (this.roomWalls && this.roomWalls.doorContains(head)) {
+      this._evacTime = now - this.evacStart
+      console.log(`${LOG} EVACUATE: reached the door in ${fmt(this._evacTime)} s, ${this.evacEvents} event(s)`)
+      this.transitionTo("RESULT")
+      return
+    }
+    if (now - this.evacStart >= (this.config.testMode ? this.config.testEvacSeconds : this.config.evacSeconds)) {
+      this._evacFailed = true
+      console.log(`${LOG} EVACUATE: time is up before the door`)
+      this.transitionTo("RESULT")
+      return
+    }
+    if (this.evacPoint && this.evacGuides) {
+      this._arrowVisible = this.offscreenArrow.track(new vec3(this.evacPoint.x, this._floorY + this.config.eyeHeight, this.evacPoint.z))
+    }
+  }
+
+  /** Ends EVACUATE's update, path, arrow and edge warning; the landed items shrink now (5k item 8). Safe to call twice. */
+  private stopEvacuate(): void {
+    this.evacUpdate.enabled = false
+    this.floorPath.setPointTarget(null)
+    this.floorPath.setMode("off")
+    this.hideArrow()
+    this.edgeWarning.setActive(false)
+    this.fallingObjects.releaseLanded()
+  }
+
   private enterResult(): void {
     this.postQuakeUpdate.enabled = false
-    this._lastScore = computeScore(this.scoreTSafe, this.scoreHealth, this.scoreStanding, this._walkAllowance) // 5j-19c
+    this.stopEvacuate()
+    const evac: EvacInput | null = this._evacTime !== null ? {reached: true, seconds: this._evacTime, events: this.evacEvents} : null
+    this._lastScore = computeScore(this.scoreTSafe, this.scoreHealth, this.scoreStanding, this._walkAllowance, this.scoreHoldShare, evac) // 5j-19c, 5k item 10
     const b = this._lastScore
     console.log(
-      `${LOG} RESULT: tSafe ${b.tSafe === null ? "never" : fmt(b.tSafe) + " s"}, walk allowance ${fmt(b.walkAllowance)} s, speedTime ${b.speedTime === null ? "never" : fmt(b.speedTime) + " s"}, speed ${b.speedPoints}, health ${fmt(b.healthLeft)} (${b.healthPoints}), standing ${fmt(b.secondsStanding)} s (-${b.penalty}), score ${b.score}`
+      `${LOG} RESULT: tSafe ${b.tSafe === null ? "never" : fmt(b.tSafe) + " s"}, walk allowance ${fmt(b.walkAllowance)} s, speedTime ${b.speedTime === null ? "never" : fmt(b.speedTime) + " s"}, speed ${b.speedPoints}, health ${fmt(b.healthLeft)} (${b.healthPoints}), hold ${fmt(b.holdShare)} (${b.holdPoints}), evac ${b.evacTime === null ? "failed" : fmt(b.evacTime) + " s, " + b.evacEvents + " event(s)"} (${b.evacPoints}), standing ${fmt(b.secondsStanding)} s (-${b.penalty}), score ${b.score}`
     )
     this.showResultPanel()
     this.showReveal(true)
@@ -1356,6 +1558,7 @@ export class DrillController extends BaseScriptComponent {
 
   private enterGameOver(): void {
     this.stopQuakeEffects()
+    this.stopEvacuate()
     this.aftershockTimer.cancel()
     this.aftershockPending = false
     this._lastScore = null
@@ -1372,6 +1575,8 @@ export class DrillController extends BaseScriptComponent {
     this._aftershockTimeToCover = null
     this.aftershockStartTime = getTime()
     this.safeSince = -1
+    this.notHoldingSeconds = 0
+    this._gripOverdue = false
     this._instructionKey = null
     this._nearBed = false
     const c = this.config
@@ -1393,6 +1598,7 @@ export class DrillController extends BaseScriptComponent {
     this.updateCover(this.aftershockStartTime)
     this.quakeEndTimer.reset(d)
     this.quakeUpdate.enabled = true
+    this.gripHandles.setActive(true)
     console.log(`${LOG} AFTERSHOCK: ${fmt(d)} s at strength ${fmt(c.aftershockStrength)}, health ${fmt(this._health)}`)
   }
 

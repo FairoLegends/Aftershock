@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName} from "Leaf.lspkg/Utils/common/Utils"
 import {getLanguage, getString, lines} from "../Strings"
-import {copyLayout, expectState, getController, press, restore, sameLayout} from "./DrillTestKit"
+import {copyLayout, expectState, getController, press, restore, sameLayout, walkOut} from "./DrillTestKit"
 
 // DC7: picking ja shows the safety screen in Japanese; after a drill, Restart
 // opens the level picker in ja (5j-19a), and with layoutSeed 0 two Restarts
@@ -38,8 +38,10 @@ export class DC7_LanguagesAndRestart extends Scenario {
       await press("LevelButton.normal")
       expect(c.state).toBe("BRIEFING")
       const runS = c.config.testWaitSeconds + c.config.testScanSeconds + c.config.testDurationSeconds + 3
-      // Head untouched at the start spot: the quake ends outside the zone, straight to RESULT.
-      await expectState(c, "RESULT", runS * 1000)
+      // Head untouched at the start spot: the quake ends outside the zone, straight to EVACUATE (Slice 8B).
+      await expectState(c, "EVACUATE", runS * 1000) // Slice 8B: EVACUATE, then the door
+      await walkOut(c)
+      c.headPose.clearOverride() // the next run starts at the start spot again
       const first = copyLayout(c.layout)
 
       await press("RestartButton")
@@ -50,7 +52,9 @@ export class DC7_LanguagesAndRestart extends Scenario {
       expect(getLanguage()).toBe("ja")
       const second = copyLayout(c.layout)
       expect(sameLayout(first, second)).toBe(false)
-      await expectState(c, "RESULT", runS * 1000)
+      await expectState(c, "EVACUATE", runS * 1000) // Slice 8B: EVACUATE, then the door
+      await walkOut(c)
+      c.headPose.clearOverride() // the next run starts at the start spot again
 
       await press("RestartButton")
       expect(c.state).toBe("LEVEL")
@@ -59,7 +63,9 @@ export class DC7_LanguagesAndRestart extends Scenario {
       expect(c.language).toBe("ja")
       const third = copyLayout(c.layout)
       expect(sameLayout(second, third)).toBe(false)
-      await expectState(c, "RESULT", runS * 1000)
+      await expectState(c, "EVACUATE", runS * 1000) // Slice 8B: EVACUATE, then the door
+      await walkOut(c)
+      c.headPose.clearOverride() // the next run starts at the start spot again
     } finally {
       c.config.testWaitSeconds = prevWait
       restore(c, prevTestMode, prevDuration)

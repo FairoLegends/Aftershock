@@ -37,6 +37,7 @@ type Phase = "fall" | "hop" | "rest" | "shrink"
 
 interface Item {
   so: SceneObject
+  id: number // unique per drop
   size: vec3
   busy: boolean
   phase: Phase
@@ -75,9 +76,13 @@ export class FallingObjects extends BaseScriptComponent {
   /** Set by DrillController: an item touched the floor at Room-local (x, z). */
   onLanded: ((source: FallSource, x: number, z: number) => void) | null = null
 
+  /** Set by DrillController (5k item 8): while on, landed items stay on the floor (they can be tripped over during EVACUATE); releaseLanded() lets them shrink. */
+  keepLanded: boolean = false
+
   private items: Item[] = []
   private pending: Pending[] = []
   private nextItem = 0
+  private nextId = 1
   private _fallsScheduled = 0
   private _fallsLanded = 0
 
@@ -95,6 +100,23 @@ export class FallingObjects extends BaseScriptComponent {
     return this.items.filter((i) => i.busy).length
   }
 
+  /** Items on the floor (hopping or resting), Room-local cm; `id` is unique per drop, so a trip counts once per item. */
+  landedPoints(): {id: number; x: number; z: number}[] {
+    return this.items.filter((i) => i.busy && (i.phase === "hop" || i.phase === "rest")).map((i) => ({id: i.id, x: i.to.x, z: i.to.z}))
+  }
+
+  /** RESULT / GAME_OVER: keepLanded off and resting items shrink away. */
+  releaseLanded(): void {
+    this.keepLanded = false
+    const now = getTime()
+    for (const item of this.items) {
+      if (item.busy && item.phase === "rest" && !this.holdForReview) {
+        item.phase = "shrink"
+        item.t0 = now
+      }
+    }
+  }
+
   onAwake(): void {
     // Audit (29 Oct): a runtime clone with mainPass.baseColor drew dark grey in the
     // preview (near invisible on the floor); the material as authored draws light oak.
@@ -110,6 +132,7 @@ export class FallingObjects extends BaseScriptComponent {
       so.enabled = false
       this.items.push({
         so,
+        id: 0,
         size,
         busy: false,
         phase: "rest",
@@ -189,6 +212,7 @@ export class FallingObjects extends BaseScriptComponent {
     item.yaw0 = theta + (Math.random() - 0.5) * 0.6
     item.spin = (Math.random() * 2 - 1) * SPIN_MAX
     item.source = from.source
+    item.id = this.nextId++
     item.busy = true
     item.phase = "fall"
     item.t0 = getTime()
@@ -266,8 +290,9 @@ export class FallingObjects extends BaseScriptComponent {
       }
     } else if (item.phase === "rest") {
       // An item is on the floor only ~4.7 s (rest + shrink), shorter than one
-      // query-aim-screenshot round trip; holdForReview keeps it there.
-      if (e >= REST_SECONDS && !this.holdForReview) {
+      // query-aim-screenshot round trip; holdForReview keeps it there. keepLanded
+      // keeps it for the evacuation's trip rule (5k item 8).
+      if (e >= REST_SECONDS && !this.holdForReview && !this.keepLanded) {
         item.phase = "shrink"
         item.t0 = now
       }

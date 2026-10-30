@@ -45,6 +45,13 @@ export type StringKey =
   | "step.goUnder"
   | "step.duck"
   | "step.hold"
+  | "step.evac"
+  | "instr.evac"
+  | "instr.grip"
+  | "warn.trip"
+  | "result.grip"
+  | "result.evac"
+  | "result.evacFail"
   | "scan.title"
   | "marquee.drill"
   | "marquee.dch"
@@ -249,6 +256,26 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   },
   "step.duck": {id: "Merunduk", en: "Duck down", de: "Ducken", ja: "身を低く", zh: "蹲下"},
   "step.hold": {id: "Tahan", en: "Hold on", de: "Festhalten", ja: "そのまま待つ", zh: "坚持住"},
+  // Slice 8B (STRINGS_I18N.md): evacuation and hold on.
+  "step.evac": {id: "Keluar", en: "Get out", de: "Raus", ja: "外へ", zh: "撤离"},
+  "instr.evac": {
+    id: "Keluar lewat pintu, hindari zona merah",
+    en: "Leave through the door, avoid the red zones",
+    de: "Geh durch die Tür, meide die roten Zonen",
+    ja: "ドアから出て、赤いゾーンを避けて",
+    zh: "从门离开，避开红色区域"
+  },
+  "instr.grip": {id: "Pegang kaki meja", en: "Hold the table leg", de: "Halte das Tischbein fest", ja: "机の脚をつかんで", zh: "抓住桌腿"},
+  "warn.trip": {
+    id: "Hati-hati, ada barang di lantai",
+    en: "Careful, something on the floor",
+    de: "Vorsicht, etwas liegt am Boden",
+    ja: "足元に物があります",
+    zh: "小心地上有东西"
+  },
+  "result.grip": {id: "Memegang meja: {p}%", en: "Held the table: {p}%", de: "Tisch festgehalten: {p} %", ja: "机をつかんだ時間：{p}%", zh: "抓住桌子：{p}%"},
+  "result.evac": {id: "Keluar dalam {s} s", en: "Got out in {s} s", de: "Draußen nach {s} s", ja: "{s} 秒で外へ", zh: "{s} 秒内撤离"},
+  "result.evacFail": {id: "Belum sampai pintu", en: "Did not reach the door", de: "Tür nicht erreicht", ja: "ドアに着けませんでした", zh: "没有到达门口"},
   "scan.title": {
     id: "Memindai ruangan",
     en: "Scanning room",

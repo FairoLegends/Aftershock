@@ -138,4 +138,20 @@ export function restore(c: DrillController, testMode: boolean, testDurationSecon
   c.forceLayoutForTest(null)
   c.forceAftershockForTest(null) // Slice 7C: back to the level's chance
   c.disableFallsForTest(false) // Slice 7D: falls on again
+  c.gripHandles.setHoldingForTest(null) // Slice 8B: holding back to the pinch
+}
+
+/** Slice 8B: a head point inside doorContains, 30 cm in front of the exit door at eye height (the start spot if there is no door). */
+export function doorPoint(c: DrillController): vec3 {
+  const d = c.doorCenter
+  const n = c.doorNormal
+  if (!d || !n) return startSpot(c)
+  return new vec3(d.x + n.x * 30, c.floorY + c.config.eyeHeight, d.z + n.z * 30)
+}
+
+/** Slice 8B (5k item 8): after leaving cover, expect EVACUATE, walk the head to the door and expect RESULT. */
+export async function walkOut(c: DrillController): Promise<void> {
+  await expectState(c, "EVACUATE", 2000)
+  c.headPose.setOverride(doorPoint(c), levelLook(startSpot(c), doorPoint(c)))
+  await expectState(c, "RESULT", 2000)
 }

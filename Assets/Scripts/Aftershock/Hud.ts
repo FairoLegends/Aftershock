@@ -42,21 +42,22 @@ const WARN_RAISE = 2 // banner sits this far above eye level so it clears the HU
 const WARN_FILL = new vec4(1, 0.353, 0.31, 0.88) // mockup .banner: rgba(255,90,79,.88), no border
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
-// Numbered steps (01 goUnder, 02 duck, 03 hold): three rounded cells over the
+// Numbered steps (01 goUnder, 02 duck, 03 hold, 04 evac): four rounded cells over the
 // instruction area (mockup .st): a small number on top, the name below.
-const STEP_KEYS: StringKey[] = ["step.goUnder", "step.duck", "step.hold"]
-const STEP_W = 14
+// Slice 8B (5k item 8): a fourth cell; the cells shrink to fit the same width.
+const STEP_KEYS: StringKey[] = ["step.goUnder", "step.duck", "step.hold", "step.evac"]
+const STEP_W = 10
 const STEP_H = INSTR_ID_H
-const STEP_GAP = 2 // 3 x 14 + 2 x 2 = INNER_W
+const STEP_GAP = 2 // 4 x 10 + 3 x 2 = INNER_W
 const STEP_RADIUS_CM = 1.3
-const STEP_TEXT_W = 13
+const STEP_TEXT_W = 9.2
 const STEP_FIT_W = STEP_TEXT_W - 0.4 // a word wider than this would break mid-word
 const STEP_PAD = 0.7
 const STEP_NUMBER_EM = 1.6
 const STEP_NUMBER_H = STEP_NUMBER_EM * 1.25
 const STEP_NUMBER_Y = STEP_H / 2 - STEP_PAD - STEP_NUMBER_H / 2
 const STEP_NAME_EM = 2 // Manrope bold; wraps at word boundaries, two lines at most
-const STEP_NAME_MIN_EM = 1.6
+const STEP_NAME_MIN_EM = 1.3
 const STEP_NAME_TOP = STEP_NUMBER_Y - STEP_NUMBER_H / 2 - 0.3
 const STEP_NAME_BOTTOM = -STEP_H / 2 + STEP_PAD
 const LINE_H_PER_EM = 1.25 // as ResultPanel
@@ -137,8 +138,8 @@ export class Hud extends BaseScriptComponent {
   private readonly stepFrames: SoftFrame[] = []
   private readonly stepNumbers: Text[] = []
   private readonly stepNames: Text[] = []
-  private readonly stepNameText: string[] = ["", "", ""] // last fitted name per step
-  private readonly stepNameEm: number[] = [STEP_NAME_EM, STEP_NAME_EM, STEP_NAME_EM]
+  private readonly stepNameText: string[] = STEP_KEYS.map(() => "") // last fitted name per step
+  private readonly stepNameEm: number[] = STEP_KEYS.map(() => STEP_NAME_EM)
   private readonly followPos = new vec3(0, 0, 0)
   private readonly followRot = quat.quatIdentity()
   private snapNext = true
@@ -225,11 +226,14 @@ export class Hud extends BaseScriptComponent {
   }
 
   /**
-   * goUnder / duck / hold show the numbered steps (that step active, earlier
-   * ones done); any other key (instr.brief, instr.comeOut) the single line.
+   * goUnder / duck / hold / evac show the numbered steps (that step active,
+   * earlier ones done); any other key (instr.brief, instr.comeOut, instr.grip)
+   * the single line. Slice 8B: instr.grip is a single line so "Hold the table
+   * leg" can be read; step 03 is still the open step while it shows.
    */
   setInstruction(key: StringKey): void {
-    const step = key === "instr.goUnder" ? 0 : key === "instr.duck" ? 1 : key === "instr.hold" ? 2 : -1
+    const step =
+      key === "instr.goUnder" ? 0 : key === "instr.duck" ? 1 : key === "instr.hold" ? 2 : key === "instr.evac" ? 3 : -1
     this.stepsRoot.enabled = step >= 0
     this.instructionId.enabled = step < 0
     this.instructionEn.enabled = step < 0

@@ -1,8 +1,8 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {computeScore} from "../ScoreCalculator"
-import {DUCKED_HEAD_CM, atHeight, expectState, getController, levelLook, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {computeScore, evacOf} from "../ScoreCalculator"
+import {DUCKED_HEAD_CM, atHeight, expectState, getController, levelLook, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 // DC9 (5j-15a/c): with two tables, the arrow targets the nearer one, cover
 // under the farther one counts too, and the speed score forgives the walk.
@@ -41,14 +41,14 @@ export class DC9_TwoTables extends Scenario {
       await sleep(500)
       expect(c.state).toBe("POST_QUAKE")
       c.headPose.setOverride(start, levelLook(start, far.center))
-      await expectState(c, "RESULT", 3000)
+      await walkOut(c) // Slice 8B: EVACUATE, the door, then RESULT
       const s = c.lastScore
       expect(s !== null).toBe(true)
       expect(Math.abs(s.walkAllowance - c.walkAllowance)).toBeLessThan(0.001)
       expect(Math.abs(s.speedTime - Math.max(0, s.tSafe - s.walkAllowance))).toBeLessThan(0.001)
-      const expected = computeScore(s.tSafe, s.healthLeft, s.secondsStanding, s.walkAllowance)
+      const expected = computeScore(s.tSafe, s.healthLeft, s.secondsStanding, s.walkAllowance, s.holdShare, evacOf(s))
       expect(s.score).toBe(expected.score)
-      const without = computeScore(s.tSafe, s.healthLeft, s.secondsStanding, 0)
+      const without = computeScore(s.tSafe, s.healthLeft, s.secondsStanding, 0, s.holdShare, evacOf(s))
       expect(s.score).toBeGreaterThan(without.score - 1)
     } finally {
       restore(c, prevTestMode, prevDuration)

@@ -42,6 +42,7 @@
     floorPath: false
     glassDanger: false
     glassLabel: false
+    gripHandles: false
     headPose: false
     hud: false
     lampDanger: false
@@ -106,6 +107,7 @@
       edgeWarning: !<MappingBased.AssignableType_25> 00000000-0000-0000-0000-000000000000
       fallingObjects: !<MappingBased.AssignableType_26> 00000000-0000-0000-0000-000000000000
       roomWalls: !<MappingBased.AssignableType_27> 00000000-0000-0000-0000-000000000000
+      gripHandles: !<MappingBased.AssignableType_28> 00000000-0000-0000-0000-000000000000
       tablePrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       cabinetPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       shelfPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
@@ -152,6 +154,7 @@
     - '// @ui {"widget":"group_end"}'
     - '// @input AssignableType_26 fallingObjects {"hint":"FallingObjects component (under the Room): items that fall off the shelf, cabinet and TV (Slice 7D)"}'
     - '// @input AssignableType_27 roomWalls {"hint":"RoomWalls component (under the Room): the four walls and the exit door (Slice 8A)"}'
+    - '// @input AssignableType_28 gripHandles {"hint":"GripHandles component: the grip handles at the table legs, HOLD ON (Slice 8B)"}'
     - '// @ui {"widget":"group_start", "label":"Furniture models (Slice 7R)"}'
     - '// @input Asset.ObjectPrefab tablePrefab {"hint":"Table model (both tables): root at bottom center, cm, front +Z"}'
     - // @input Asset.ObjectPrefab cabinetPrefab

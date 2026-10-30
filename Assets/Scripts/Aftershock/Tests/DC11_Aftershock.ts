@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {ScoreBreakdown} from "../ScoreCalculator"
 import {lines} from "../Strings"
-import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 // DC11 (Slice 7C, ENGINEERING_PLAN 5j items 7, 18): on Normal with the
 // aftershock forced, leaving the zone after the main quake starts a quiet
@@ -47,7 +47,7 @@ export class DC11_Aftershock extends Scenario {
       // The aftershock ends; leaving gives RESULT.
       await expectState(c, "POST_QUAKE", (c.config.testAftershockDurationSeconds + 2) * 1000)
       c.headPose.setOverride(start, levelLook(start, c.safeZone.center))
-      await expectState(c, "RESULT", 2000)
+      await walkOut(c) // Slice 8B: EVACUATE, the door, then RESULT
       expect(c.aftershockHappened).toBe(true)
       expect((c.lastScore as ScoreBreakdown).secondsStanding).toBe(standingAtQuakeEnd)
       const s = (c.aftershockTimeToCover as number).toFixed(1)

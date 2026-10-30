@@ -1,0 +1,51 @@
+- !<AssetImportMetadata/d0672750-85b5-4418-80f8-b5c5adef2255>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> d560c01d-2468-42f0-a91f-621a66d524f2
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> d560c01d-2468-42f0-a91f-621a66d524f2
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 965ba38a-6d47-4b88-8a28-b7f4f7bbc70a
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/965ba38a-6d47-4b88-8a28-b7f4f7bbc70a>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: c39a33d4-b772-48b1-a8ec-35a0c1d8ebb3
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    config: false
+    headPose: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - config: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      headPose: !<MappingBased.AssignableType_2> 00000000-0000-0000-0000-000000000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Grip handles at the table legs (Slice 8B, 5k item 9)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (gripHandleSize, gripHandleHeight)"}'
+    - '// @input AssignableType_2 headPose {"hint":"HeadPose component"}'

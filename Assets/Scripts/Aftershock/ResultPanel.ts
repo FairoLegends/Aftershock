@@ -30,7 +30,7 @@ const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the pane
 const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood); longer lines wrap
 const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
-const DETAIL_LINES = 5 // Slice 7C: two base rows plus aftershock, level and reveal
+const DETAIL_LINES = 7 // Slice 8B: four base rows (speed, health, grip, evac) plus aftershock, level and reveal
 const DETAIL_PAD = 0.5 // above and below a detail row's text
 const DETAIL_GAP = 1.0 // above the first detail row
 const VALUE_W = 12 // detail value column, right
@@ -172,13 +172,19 @@ export class ResultPanel extends BaseScriptComponent {
     this.sceneObject.enabled = true // measure the rows in the real font
     this.setRow(this.title, lines("result.title"), BIG_EM_CM)
     this.setScore(b.score)
+    // Slice 8B (5k item 10): the grip share and the evacuation, after speed and health.
+    const evac: ResultLine = b.evacReached
+      ? {text: fill("result.evac", "{s}", (b.evacTime as number).toFixed(1)), split: true}
+      : {text: lines("result.evacFail"), split: true}
     if (b.tSafe === null) {
-      this.setDetails([{text: lines("result.never"), split: true}], extra)
+      this.setDetails([{text: lines("result.never"), split: true}, evac], extra)
     } else {
       this.setDetails(
         [
           {text: fill("result.speed", "{s}", b.tSafe.toFixed(1)), split: true},
-          {text: fill("result.health", "{h}", "" + Math.round(b.healthLeft)), split: true}
+          {text: fill("result.health", "{h}", "" + Math.round(b.healthLeft)), split: true},
+          {text: fill("result.grip", "{p}", "" + Math.round(b.holdShare * 100)), split: true},
+          evac
         ],
         extra
       )

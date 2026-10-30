@@ -16,6 +16,7 @@ const CHEVRON_DEPTH_CM = 7 // tip to arm ends
 const ARM_THICK_CM = 2.5
 const ARM_RENDER_ORDER = 3 // after the danger zone fills and outlines (0) and the scan brackets (2)
 const PARKED = new vec3(0, -100000, 0) // the pool is built here, out of sight, while its shapes initialize
+const POINT_DONE_CM = 10 // a point target (the door, 5k item 8) hides the path this close
 
 export type PathMode = "off" | "faint" | "bright"
 
@@ -35,6 +36,7 @@ export class FloorPath extends BaseScriptComponent {
   private readonly chevrons: SceneObject[] = []
   private readonly arms: RoundedRectangle[] = []
   private target: SafeZone | null = null
+  private point: vec3 | null = null
   private floorY = 0
   private mode: PathMode = "off"
   private shown = 0
@@ -63,6 +65,13 @@ export class FloorPath extends BaseScriptComponent {
 
   setTarget(zone: SafeZone | null): void {
     this.target = zone
+    this.point = null
+  }
+
+  /** EVACUATE (5k item 8): the path ends at a world point (in front of the door) instead of a table. Null clears it. */
+  setPointTarget(p: vec3 | null): void {
+    this.point = p
+    if (p) this.target = null
   }
 
   setMode(mode: PathMode): void {
@@ -79,16 +88,16 @@ export class FloorPath extends BaseScriptComponent {
 
   private onUpdate(): void {
     const head = this.headPose.position
-    if (this.mode === "off" || !this.target || this.target.contains(head)) {
+    if (this.mode === "off" || (!this.target && !this.point) || (this.target && this.target.contains(head))) {
       this.showCount(0)
       return
     }
     const y = this.floorY + this.config.pathLift
-    const end = this.target.nearestPoint(head)
+    const end = this.point ? this.point : this.target.nearestPoint(head)
     const dx = end.x - head.x
     const dz = end.z - head.z
     const len = Math.hypot(dx, dz)
-    if (len < 1) {
+    if (len < (this.point ? POINT_DONE_CM : 1)) {
       this.showCount(0)
       return
     }

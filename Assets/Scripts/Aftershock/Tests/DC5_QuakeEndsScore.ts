@@ -1,8 +1,8 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {computeScore} from "../ScoreCalculator"
-import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {computeScore, evacOf} from "../ScoreCalculator"
+import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 // DC5: staying safe until the quake ends gives POST_QUAKE with instr.comeOut;
 // leaving the zone gives RESULT with the ScoreCalculator score for the
@@ -38,10 +38,14 @@ export class DC5_QuakeEndsScore extends Scenario {
       expect(tSafe).not.toBe(null)
 
       c.headPose.setOverride(start, levelLook(start, c.safeZone.center))
-      await expectState(c, "RESULT", 2000)
-      const want = computeScore(tSafe, health, standing)
+      await walkOut(c) // Slice 8B: EVACUATE, the door, then RESULT
       const got = c.lastScore
       expect(got).not.toBe(null)
+      // Slice 8B (5k item 10): the same POST_QUAKE snapshot plus the walk allowance, hold share and evacuation it recorded.
+      const want = computeScore(tSafe, health, standing, got.walkAllowance, got.holdShare, evacOf(got))
+      expect(got.evacReached).toBe(true)
+      expect(got.holdPoints).toBe(want.holdPoints)
+      expect(got.evacPoints).toBe(want.evacPoints)
       expect(got.tSafe).toBe(want.tSafe)
       expect(got.healthLeft).toBe(want.healthLeft)
       expect(got.secondsStanding).toBe(want.secondsStanding)

@@ -294,6 +294,46 @@ export class DrillConfig extends BaseScriptComponent {
   fallNoticeSeconds: number = 2
   @ui.group_end
 
+  @ui.group_start("Evacuation (Slice 8B, ENGINEERING_PLAN 5k item 8)")
+  @input
+  @hint("Time to reach the door after the last shake before the evacuation fails, in seconds")
+  evacSeconds: number = 30
+
+  @input
+  @hint("The floor path and arrow aim at a point this far in front of the door (cm)")
+  evacDoorOffset: number = 40
+
+  @input
+  @hint("Stepping within this distance (XZ) of a fallen item is a trip (cm)")
+  tripRadius: number = 25
+
+  @input
+  @hint("Health lost per trip, once per item (points)")
+  tripDamage: number = 10
+
+  @input
+  @hint("How long the warn.trip notice stays up, in seconds")
+  tripNoticeSeconds: number = 2
+  @ui.group_end
+
+  @ui.group_start("Hold on (Slice 8B, ENGINEERING_PLAN 5k item 9)")
+  @input
+  @hint("Normal and Hard: safe but not holding the table leg longer than this starts the grip drain, in seconds")
+  gripGraceSeconds: number = 3
+
+  @input
+  @hint("Health lost per second while safe and not holding (points per second). Never stacks: the bigger drain wins.")
+  gripDrainPerSecond: number = 1
+
+  @input
+  @hint("Grip handle marker size (cm)")
+  gripHandleSize: number = 8
+
+  @input
+  @hint("Grip handle height above the floor (cm)")
+  gripHandleHeight: number = 40
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")
@@ -321,4 +361,12 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Aftershock grace (aftershockGraceSeconds) when testMode is on, in seconds")
   testAftershockGraceSeconds: number = 1
+
+  @input
+  @hint("Evacuation time (evacSeconds) when testMode is on, in seconds")
+  testEvacSeconds: number = 6
+
+  @input
+  @hint("Grip grace (gripGraceSeconds) when testMode is on, in seconds")
+  testGripGraceSeconds: number = 0.5
 }

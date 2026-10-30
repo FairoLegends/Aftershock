@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {getString, lines} from "../Strings"
-import {CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 // DC12 (Slice 7C, ENGINEERING_PLAN 5j item 18): SAFETY Continue opens the
 // level picker. Hard: no guides (no scan, arrow or path), drain x1.5, and the
@@ -62,7 +62,7 @@ export class DC12_Levels extends Scenario {
       pinDucked(c)
       await expectState(c, "POST_QUAKE", (c.config.testDurationSeconds + 2) * 1000)
       c.headPose.setOverride(start, levelLook(start, c.safeZone.center))
-      await expectState(c, "RESULT", 2000)
+      await walkOut(c) // Slice 8B: EVACUATE, the door, then RESULT
       expect(c.guidesVisible).toBe(true)
       expect(c.revealShown).toBe(true)
       expect(c.hazardLabelsShown).toBe(true)
