@@ -17,3 +17,5 @@ Sources:
 | `card.coast` | general tip, shown on a perfect drill (nothing else to say) | Di dekat pantai: jika gempa sangat kuat atau terasa sekitar 1 menit atau lebih, segera menjauh ke tempat tinggi. | Near the coast: if the shaking is very strong or lasts about a minute or more, move to high ground at once. | [BMKG-JICA] tanda peringatan tsunami (i) |
 
 Rules (default): the first matching card in table order is shown; a second card only if it is `card.fasten` or `card.check`; `card.coast` only when no other card applies.
+
+Rule update (learner, 30 Oct): a user who never took cover gets `card.stayUnder`. `card.fasten` is a first card only when the user was hit by a falling item, a toppled TV or a trip; otherwise it can only be the second card. `card.evac` can be the first card.
