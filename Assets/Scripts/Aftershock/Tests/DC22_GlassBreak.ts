@@ -8,7 +8,7 @@ import {CLASSIC, expectState, getController, itemWorld, levelLook, pinDucked, pr
 // and breaks at the aftershock's crack stage 4: 8–14 shards, the pane hidden,
 // the shards on the floor in the glass danger zone. A head standing in that
 // zone (not under a table) at the break loses GLASS_HIT_DAMAGE on top of the
-// zone drain, with the hit.glass notice; a head under the table loses nothing.
+// zone drain, with the hit.glass notice; a head under the table, holding on, loses nothing.
 // Restart puts the pane back and clears the shards.
 @component
 export class DC22_GlassBreak extends Scenario {
@@ -73,6 +73,7 @@ export class DC22_GlassBreak extends Scenario {
 
       // (b) Under the table at the break: no hit.
       await toFreshBriefing(c, CLASSIC)
+      c.gripHandles.setHoldingForTest(true) // hooks after toFreshBriefing (5j-19f): holding the leg, so no grip drain — under the table nothing drains
       expect(c.layout.items.glass !== undefined).toBe(true)
       expectWhole(c)
       await throughMainQuake(c)
@@ -84,6 +85,7 @@ export class DC22_GlassBreak extends Scenario {
       const h2 = c.health
       const hits2 = c.glassHits
       await waitFor(() => c.glassBroken, c.config.testAftershockDurationSeconds * 1000)
+      console.log(`[Aftershock] DC22 (b): glassBroken ${c.glassBroken}, isSafe ${c.isSafe}, glassHits ${c.glassHits} (was ${hits2}), lost ${(h2 - c.health).toFixed(2)}; holding ${c.isHolding}, grip overdue ${c.gripOverdue}`)
       expect(c.glassBroken).toBe(true)
       expect(c.isSafe).toBe(true)
       expect(c.glassHits).toBe(hits2)

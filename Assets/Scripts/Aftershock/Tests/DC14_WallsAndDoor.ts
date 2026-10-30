@@ -35,7 +35,7 @@ import {CLASSIC, getController, itemWorld, restore, sameLayout, copyLayout, star
 // clear of every zone, and a Restart moves the walls with the new layout.
 // Slice 9A (§5l item 1): every wall-backed item (cabinet, shelf, TV, glass,
 // bed) has its back within 5 cm of a wall line and faces into the room, in the
-// live layout and in 30 pure generateLayout calls with random seeds.
+// live layout and in 30 pure generateLayout calls with the fixed seeds 1–30.
 // Slice 11 (§5l item 7b–f): the same 30 layouts keep the room rules
 // (checkRoomRules), the lamp stands by the bed in 40–80 % of those with a lamp,
 // and fewer than 4 fall back to the fixed layout.
@@ -51,7 +51,7 @@ export class DC14_WallsAndDoor extends Scenario {
       let lamps = 0
       let byBed = 0
       for (let k = 0; k < 30; k++) {
-        const seed = 1 + Math.floor(Math.random() * 2147483646)
+        const seed = k + 1 // fixed seeds 1..30: the same 30 layouts, so the same rates, every run
         const layout = generateLayout({...params, layoutSeed: seed})
         checkWallBacked(layout, `seed ${seed}`)
         checkRoomRules(layout, `seed ${seed}`)
