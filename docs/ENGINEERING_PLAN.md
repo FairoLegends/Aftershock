@@ -223,7 +223,7 @@ Also: Q6 (never took cover) uses its default, score 0. Without the LEAF runner p
 Chosen: G-A (window on a real virtual wall), polish P1 P2 P3 P4 P5 P7, features F1 F2 F3 F4 F5 F6 (F6 last, only if time is left). Values marked (default) are Hermes's and open to veto.
 
 1. G-A + F1 walls: four virtual walls around the layout (axis-aligned in Room space: every footprint + 40 cm and the start spot inside; 400–700 cm per side (default)), 250 cm tall, light and semi-transparent (#E8EEF2 at about 25%, brighter top/bottom edge lines) (default). The window is a light-oak frame with a light-blue glass pane (the old box visuals, not the AI model with its wavy wall piece), 120 × 120 cm glass, bottom at 90 cm, mounted flush on a wall facing in. The leftover wall-edge bars go. One exit door (90 × 210 cm frame, label.door) on a wall with 120 cm clear in front, at least 100 cm from the glass and outside every danger zone (default).
-2. P1: panel backings go from 50% to 75% (default), and the briefing and result panels turn up to ±40° (default) toward the direction with the least furniture behind them.
+2. P1: panel backings go from 50% to 75% (default), and the briefing and result panels turn up to ±8° (Hermes, 30 Oct: ±40° pushed panels off the ±16° Specs view) toward the direction with the least furniture behind them; the 75% backing does the rest.
 3. P2: the TV screen gets a light grey face (#9AA3AD) so it shows on the additive display.
 4. P3: during shaking, cabinet, shelf, lamp and TV wobble about their base (lamp most), the lamp shade flickers, and cracks spread over the window glass (default).
 5. P4: falling items use CLAD models (a hardcover book, a small storage box) at real scale; a small dust puff on landing (default).

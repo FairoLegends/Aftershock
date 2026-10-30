@@ -5,7 +5,9 @@ import {FOOTPRINTS, Layout, LayoutItem} from "./LayoutGenerator"
 // Room-local cm and radians, no scene access.
 
 /** Yaw offsets tried, in order (degrees about +Y); a tie keeps the earlier one. */
-export const PANEL_AIM_OFFSETS_DEG = [0, 20, -20, 40, -40]
+// Audit (30 Oct): Specs shows only about ±16° across; a 20° turn put the briefing panel half
+// off the view. Offsets stay inside the view so the panel is always fully seen.
+export const PANEL_AIM_OFFSETS_DEG = [0, 8, -8]
 const RAY_CM = 400
 
 /**

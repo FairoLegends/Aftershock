@@ -36,10 +36,13 @@ export class DC15_Evacuation extends Scenario {
       expect(c.evacTarget !== null || c.pathVisible).toBe(true)
 
       const before = c.health
+      const dangerBefore = c.secondsInDanger
       c.headPose.setOverride(mid, levelLook(start, door))
       expect(await waitFor(() => c.tripCount === 1, 2000)).toBe(true)
       expect(c.hud.noticeKey).toBe("warn.trip")
-      expect(before - c.health).toBeGreaterThan(c.config.tripDamage - 0.01)
+      // Audit: exact. Lost = the trip + any danger drain for the seconds actually in a zone (Normal x1).
+      const drained = (c.secondsInDanger - dangerBefore) * c.config.healthDrainPerSecond
+      expect(Math.abs(before - c.health - (c.config.tripDamage + drained))).toBeLessThan(0.5)
       await sleep(500)
       expect(c.tripCount).toBe(1) // once per item
 
