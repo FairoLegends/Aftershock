@@ -73,6 +73,7 @@
     tvDanger: false
     tvLabel: false
     tvPrefab: false
+    voiceGuide: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -120,6 +121,7 @@
       thudAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
       crackAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
       heartbeatAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
+      voiceGuide: !<MappingBased.AssignableType_31> 00000000-0000-0000-0000-000000000000
       tablePrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       cabinetPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       shelfPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
@@ -174,6 +176,7 @@
     - '// @input Component.AudioComponent thudAudio {"hint":"AudioComponent, thud.wav: each item landing (volume falls with distance)"}'
     - '// @input Component.AudioComponent crackAudio {"hint":"AudioComponent, glass_crack.wav: each crack stage"}'
     - '// @input Component.AudioComponent heartbeatAudio {"hint":"AudioComponent, heartbeat_loop.wav: loops while health is below healthAlarmBelow in QUAKE, AFTERSHOCK and EVACUATE"}'
+    - '// @input AssignableType_31 voiceGuide {"hint":"VoiceGuide component: F6 voice instructions (Slice 10, 5l item 5); none: no voice"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Furniture models (Slice 7R)"}'
     - '// @input Asset.ObjectPrefab tablePrefab {"hint":"Table model (both tables): root at bottom center, cm, front +Z"}'

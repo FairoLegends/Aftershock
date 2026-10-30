@@ -37,6 +37,7 @@ import {ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
 import {getLanguage, getString, Lang, lines, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {buildCardFacts, CardFacts, FURNITURE_HAZARDS, pickCards} from "./EducationCards"
 import {SOFT_RED} from "./UiBacking"
+import {VoiceGuide} from "./VoiceGuide"
 
 export type DrillState =
   | "LANGUAGE"
@@ -74,6 +75,8 @@ function bestKey(level: Level): string {
 }
 const BED_REVEAL_SIZE = 120 // Slice 7C Hard reveal: the red warn.bed over the bed (about 2.7 cm em)
 const BED_REVEAL_HEIGHT = 120 // cm above the floor, Room-local
+// Slice 10 (5l item 5): the states whose screen changes are spoken; none on LANGUAGE, SAFETY, LEVEL, BRIEFING, RESULT, GAME_OVER.
+const VOICE_STATES: (DrillState | null)[] = ["CALIBRATE", "QUAKE", "POST_QUAKE", "AFTERSHOCK", "EVACUATE"]
 
 /**
  * The only owner of drill state (TDD §4). LANGUAGE (picker, Slice 5L; Restart
@@ -251,6 +254,11 @@ export class DrillController extends BaseScriptComponent {
   @allowUndefined
   @hint("AudioComponent, heartbeat_loop.wav: loops while health is below healthAlarmBelow in QUAKE, AFTERSHOCK and EVACUATE")
   heartbeatAudio: AudioComponent
+
+  @input
+  @allowUndefined
+  @hint("VoiceGuide component: F6 voice instructions (Slice 10, 5l item 5); none: no voice")
+  voiceGuide: VoiceGuide
   @ui.group_end
   @ui.group_start("Furniture models (Slice 7R)")
   @input
@@ -303,6 +311,7 @@ export class DrillController extends BaseScriptComponent {
   private quakeStartTime = 0 // s
   private _quakeDuration = 0 // s
   private rumbleBaseVolume = 1
+  private _rumbleUnducked = 0 // the rumble loop's volume before the voice ducking (Slice 10)
   private thudBaseVolume = 1
   private heartbeatBaseVolume = 1
   private _heartbeatOn = false
@@ -385,6 +394,10 @@ export class DrillController extends BaseScriptComponent {
   }
   get instructionKey(): StringKey | null {
     return this._instructionKey
+  }
+  /** Slice 10: the rumble loop's volume in QUAKE / AFTERSHOCK before the voice ducking (rumbleAudio.volume is this × VoiceGuide.rumbleFactor). */
+  get rumbleUnducked(): number {
+    return this._rumbleUnducked
   }
   get arrowVisible(): boolean {
     return this._arrowVisible
@@ -855,6 +868,7 @@ export class DrillController extends BaseScriptComponent {
       this.calibUpdate.enabled = false
       this._calibDucked = true
       this.calibratePanel.setDone(true)
+      this.speak("calib.done")
       console.log(`${LOG} CALIBRATE: ducked (head ${fmt(this.headPose.position.y)} <= ${fmt(duckLine)} cm)`)
       this.calibDoneTimer.reset(this.config.calibDoneSeconds)
     }
@@ -872,6 +886,7 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     console.log(`${LOG} CALIBRATE: skipped`)
+    this.stopVoice()
     this.transitionTo("BRIEFING")
   }
 
@@ -953,6 +968,7 @@ export class DrillController extends BaseScriptComponent {
     }
     this.stopQuakeEffects()
     this.stopEvacuate()
+    this.stopVoice()
     this.postQuakeUpdate.enabled = false
     this.quakeStartTimer.cancel()
     this.resetAftershock()
@@ -1078,6 +1094,7 @@ export class DrillController extends BaseScriptComponent {
     if (this.gripHandles) this.gripHandles.setHoldingForTest(null) // Slice 8B hook
     this.stopQuakeEffects()
     this.stopEvacuate()
+    this.stopVoice() // Slice 10
     this.postQuakeUpdate.enabled = false
     this.briefingUpdate.enabled = false
     this.stopCalibrate() // Slice 8D
@@ -1224,6 +1241,7 @@ export class DrillController extends BaseScriptComponent {
       this.config.hudBelowEye
     )
     this.calibratePanel.show()
+    this.speak("calib.title")
     console.log(
       `${LOG} CALIBRATE: duck line ${fmt(this._floorY + this.config.eyeHeight - this.config.duckDrop)} cm, hold ${fmt(this.config.calibHoldSeconds)} s`
     )
@@ -1356,6 +1374,7 @@ export class DrillController extends BaseScriptComponent {
     }
     if (this.rumbleAudio.audioTrack) {
       this.rumbleAudio.volume = 0 // ramps with the shake (DESIGN_BRIEF §6.2)
+      this._rumbleUnducked = 0
       this.rumbleAudio.play(-1)
     }
 
@@ -1363,6 +1382,7 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setHealth(this._health)
     this.hud.setElapsed(0)
     this.hud.showWarning()
+    this.speak("warn.quake")
     this.scanIntro.stop()
     this.scanIntro.hideBrackets()
     if (!labelsStayInQuake(this._level)) this.hideHazardLabels() // Slice 7C: Easy keeps them
@@ -1387,7 +1407,9 @@ export class DrillController extends BaseScriptComponent {
     const now = getTime()
     const aftershock = this._state === "AFTERSHOCK"
     this.hud.setElapsed(now - (aftershock ? this.aftershockStartTime : this.quakeStartTime))
-    this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
+    this._rumbleUnducked = this.rumbleBaseVolume * this.quakeShaker.envelope
+    // Slice 10 (5l item 5): 60% while a voice clip plays, back the frame after it ends.
+    this.rumbleAudio.volume = this._rumbleUnducked * (this.voiceGuide ? this.voiceGuide.rumbleFactor : 1)
     this.updateCracks(now, aftershock)
     this.updateHeartbeat()
     this.updateCover(now)
@@ -1478,6 +1500,7 @@ export class DrillController extends BaseScriptComponent {
     if (near && !this._nearBed) {
       this._bedWarnCount++
       this.hud.showNotice(this.config.bedWarnSeconds)
+      this.speak("warn.bed")
       console.log(`${LOG} QUAKE: ducked on the bed: warn.bed (${this._bedWarnCount}x); a bed is not cover`)
     }
     this._nearBed = near
@@ -1820,6 +1843,25 @@ export class DrillController extends BaseScriptComponent {
     }
     this._instructionKey = key
     this.hud.setInstruction(key)
+    this.speak(key)
+  }
+
+  /**
+   * Slice 10 F6 (5l item 5): says `key` in the current language where the
+   * screen shows it; only in CALIBRATE, QUAKE, POST_QUAKE, AFTERSHOCK and
+   * EVACUATE (VoiceGuide skips keys without a clip). Every level.
+   */
+  private speak(key: StringKey): void {
+    if (this.voiceGuide && VOICE_STATES.indexOf(this._state) >= 0) {
+      this.voiceGuide.say(key, getLanguage())
+    }
+  }
+
+  /** Slice 10: stops the voice (Restart, RESULT, GAME_OVER, a reset, a skipped practice). */
+  private stopVoice(): void {
+    if (this.voiceGuide) {
+      this.voiceGuide.stopAll()
+    }
   }
 
   /** Back to "not under cover" for a new drill (BRIEFING). */
@@ -1848,6 +1890,7 @@ export class DrillController extends BaseScriptComponent {
       this.rumbleAudio.stop(false)
     }
     this.rumbleAudio.volume = this.rumbleBaseVolume
+    this._rumbleUnducked = this.rumbleBaseVolume
     for (const z of this.safeZones) {
       z.stopBlink()
     }
@@ -1877,6 +1920,7 @@ export class DrillController extends BaseScriptComponent {
     }
     this._instructionKey = "instr.comeOut"
     this.hud.setInstruction(this._instructionKey)
+    this.speak(this._instructionKey)
     if (!this.inAnySafeZone(this.headPose.position)) {
       this.onHeadLeftSafeZone() // already outside: straight to EVACUATE
       return
@@ -1950,6 +1994,7 @@ export class DrillController extends BaseScriptComponent {
         this._tripCount++
         this._health = Math.max(0, this._health - this.config.tripDamage)
         this.hud.showNotice(this.config.tripNoticeSeconds, "warn.trip")
+        this.speak("warn.trip")
         console.log(`${LOG} EVACUATE: tripped over a fallen item (${this._tripCount}), health ${fmt(this._health)}`)
       }
     }
@@ -2003,6 +2048,7 @@ export class DrillController extends BaseScriptComponent {
   private enterResult(): void {
     this.postQuakeUpdate.enabled = false
     this.stopEvacuate()
+    this.stopVoice() // Slice 10: nothing is said on the result screen
     const evac: EvacInput | null = this._evacTime !== null ? {reached: true, seconds: this._evacTime, events: this.evacEvents} : null
     this._lastScore = computeScore(this.scoreTSafe, this.scoreHealth, this.scoreStanding, this._walkAllowance, this.scoreHoldShare, evac) // 5j-19c, 5k item 10
     const b = this._lastScore
@@ -2017,6 +2063,7 @@ export class DrillController extends BaseScriptComponent {
   private enterGameOver(): void {
     this.stopQuakeEffects()
     this.stopEvacuate()
+    this.stopVoice() // Slice 10
     this.aftershockTimer.cancel()
     this.aftershockPending = false
     this._lastScore = null
@@ -2067,6 +2114,7 @@ export class DrillController extends BaseScriptComponent {
     this.scheduleFalls(d)
     this.scheduleTvTopple(d, "AFTERSHOCK") // only when the quake did not topple it
     this.rumbleAudio.volume = 0
+    this._rumbleUnducked = 0
     if (this.rumbleAudio.audioTrack) {
       this.rumbleAudio.play(-1)
     }
@@ -2074,6 +2122,7 @@ export class DrillController extends BaseScriptComponent {
     this.hud.setHealth(this._health)
     this.hud.setElapsed(0)
     this.hud.showWarning("warn.aftershock")
+    this.speak("warn.aftershock")
     for (const z of this.activeTables) {
       z.startBlink()
     }

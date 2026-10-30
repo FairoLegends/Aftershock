@@ -1,0 +1,74 @@
+- !<AssetImportMetadata/d874f269-e5f1-4713-81b6-5a0490b76f2c>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 9ab2f5e4-aeb5-4a76-a93a-ec2449788a76
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 9ab2f5e4-aeb5-4a76-a93a-ec2449788a76
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 1e9072f7-0dde-4ec5-900d-080d2299a7d8
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/1e9072f7-0dde-4ec5-900d-080d2299a7d8>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 0d1b7ad7-4723-4891-b25e-6a287c0e80c0
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    repeatSeconds: false
+    rumbleDuck: false
+    tracksDe: false
+    tracksEn: false
+    tracksId: false
+    tracksJa: false
+    tracksZh: false
+    voiceAudio: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - voiceAudio: !<reference.AudioComponent> 00000000-0000-0000-0000-000000000000
+      tracksId: !<reference.AudioTrackAsset[]>
+        []
+      tracksEn: !<reference.AudioTrackAsset[]>
+        []
+      tracksDe: !<reference.AudioTrackAsset[]>
+        []
+      tracksJa: !<reference.AudioTrackAsset[]>
+        []
+      tracksZh: !<reference.AudioTrackAsset[]>
+        []
+      repeatSeconds: !<float> 4.000000
+      rumbleDuck: 0.600000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"F6 voice instructions (ENGINEERING_PLAN 5l item 5)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input Component.AudioComponent voiceAudio {"hint":"AudioComponent that plays the voice clips (volume 1.0)"}'
+    - '// @input Asset.AudioTrackAsset[] tracksId {"hint":"Bahasa Indonesia clips (Voice/id), 12 in VOICE_KEYS order: warn.quake, instr.goUnder, instr.duck, instr.grip, instr.hold, instr.comeOut, warn.aftershock, instr.evac, warn.trip, warn.bed, calib.title, calib.done"}'
+    - '// @input Asset.AudioTrackAsset[] tracksEn {"hint":"English clips (Voice/en), 12 in VOICE_KEYS order (as tracksId)"}'
+    - '// @input Asset.AudioTrackAsset[] tracksDe {"hint":"German clips (Voice/de), 12 in VOICE_KEYS order (as tracksId)"}'
+    - '// @input Asset.AudioTrackAsset[] tracksJa {"hint":"Japanese clips (Voice/ja), 12 in VOICE_KEYS order (as tracksId)"}'
+    - '// @input Asset.AudioTrackAsset[] tracksZh {"hint":"Chinese clips (Voice/zh), 12 in VOICE_KEYS order (as tracksId)"}'
+    - '// @input float repeatSeconds = 4 {"hint":"The same key is not said again within this many seconds"}'
+    - '// @input float rumbleDuck = 0.6 {"hint":"While a clip plays, the rumble loop is at this share of its volume (DrillController applies it)"}'
