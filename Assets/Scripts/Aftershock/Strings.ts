@@ -59,6 +59,7 @@ export type StringKey =
   | "marquee.dch"
   | "warn.aftershock"
   | "hit.fell"
+  | "hit.glass"
   | "level.title"
   | "level.easy"
   | "level.normal"
@@ -321,6 +322,13 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     zh: "DROP · COVER · HOLD ON"
   },
   "warn.aftershock": {id: "GEMPA SUSULAN!", en: "AFTERSHOCK!", de: "NACHBEBEN!", ja: "余震！", zh: "余震！"},
+  "hit.glass": {
+    id: "Kamu terkena pecahan kaca",
+    en: "You were hit by broken glass",
+    de: "Dich haben Glasscherben getroffen",
+    ja: "ガラスの破片が当たりました",
+    zh: "你被碎玻璃划到了"
+  },
   "hit.fell": {
     id: "Kamu kejatuhan barang",
     en: "Something fell on you",

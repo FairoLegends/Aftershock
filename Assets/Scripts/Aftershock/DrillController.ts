@@ -2434,7 +2434,7 @@ export class DrillController extends BaseScriptComponent {
     const so = prefab.instantiate(anchor)
     const t = so.getTransform()
     t.setLocalPosition(vec3.zero())
-    t.setLocalRotation(quat.angleAxis(FOOTPRINTS[item].front, vec3.up()).multiply(t.getLocalRotation()))
+    t.setLocalRotation(quat.angleAxis(FOOTPRINTS[item].front + (FOOTPRINTS[item].model || 0), vec3.up()).multiply(t.getLocalRotation()))
     this.instances.push(so)
     if (this.shakeFx && WOBBLE_ITEMS.indexOf(item as WobbleItem) >= 0) {
       this.shakeFx.setModel(item as WobbleItem, so) // Slice 8C: the model rocks, the anchor stays

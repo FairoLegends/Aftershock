@@ -19,7 +19,11 @@ export interface Footprint {
   halfX: number // cm, along the item's local X
   halfZ: number // cm, along the item's local Z
   front: number // radians: yaw of the item's front in its own frame (0 = +Z, π/2 = +X)
+  model?: number // radians: extra turn of the model under its anchor when the prefab's mesh is not on the footprint's axes
 }
+
+/** Slice 11 (5l-7b): the headboard end's center in the Bed prefab's own frame (cm): its mesh lies along X, headboard at −X. */
+export const BED_MODEL_HEAD = {x: -100, z: 0}
 
 // The real model sizes (Assets/Aftershock/Prefabs, front +Z), on the axes the
 // scene anchors use: the first four keep the box fallback's axes, so their
@@ -32,7 +36,7 @@ export const FOOTPRINTS: Record<LayoutItem, Footprint> = {
   glass: {halfX: 68, halfZ: 5, front: Math.PI}, // 136 W × 10 D: 120 cm pane in an 8 cm frame (Slice 8A); front −Z, back on a wall
   lamp: {halfX: 20, halfZ: 20, front: 0}, // 40 × 40
   tv: {halfX: 60, halfZ: 20, front: 0}, // 120 W × 40 D
-  bed: {halfX: 45, halfZ: 100, front: 0}, // 90 W × 200 L, foot end at +Z
+  bed: {halfX: 45, halfZ: 100, front: 0, model: -Math.PI / 2}, // 90 W × 200 L, head end at −Z (on its wall), foot end at +Z; the model turns −90° so BED_MODEL_HEAD lands at −Z
   chair: {halfX: 22.5, halfZ: 25, front: 0} // 45 W × 50 D
 }
 
@@ -54,6 +58,8 @@ export interface Layout {
   room: RoomRect
   /** The wall the glass stands on, or null without glass. */
   glassWall: WallSide | null
+  /** Slice 11: the wall each wall-backed item stands on (the bed's head wall). */
+  walls: Partial<Record<LayoutItem, WallSide>>
   door: DoorPlacement
 }
 
@@ -98,6 +104,16 @@ const LAMP_NEAR_WALL = 40 // cm: the lamp prefers a spot within this of a wall
 const CHAIR_TABLE_REACH = 150 // cm: a chair faces a table whose center is this close
 const RELAX = 60 // cm: a wall item's max distance grows to reach its wall's center line + this
 
+// Slice 11 room rules (ENGINEERING_PLAN §5l item 7b–e). Not drill tunables.
+export const BED_WALKWAY = 60 // cm kept free of footprints and danger zones beside each long side not on a wall
+export const BED_TABLE_GAP = 100 // cm: least distance from a table's footprint to the bed's
+export const TV_BED_GAP = 150 // cm: least distance from the TV's footprint to the bed's
+export const GLASS_FRONT_CLEAR = 80 // cm in front of the glass kept free of footprints
+export const GLASS_SIDE_CLEAR = 30 // cm beside the glass frame kept free of footprints
+export const LAMP_HEAD_BAND = 30 // cm: a bedside lamp's near edge is this close to the bed's head wall or closer
+const BED_CORNER = 0.4 // odds the bed stands in a corner, a long side WALL_GAP from the other wall
+const LAMP_BY_BED = 0.6 // odds the lamp stands beside the bed's head end when both are in the layout
+
 /** The DrillConfig fields the layout reads (cm). DrillConfig satisfies this. */
 export interface LayoutParams {
   tableDistanceMin: number
@@ -129,17 +145,20 @@ const PLACE_ORDER: LayoutItem[] = ["bed", "glass", "tv", "cabinet", "shelf", "la
 
 // Slice 2 fixed layout (DESIGN_BRIEF §6), used when no draw is valid, plus the
 // bed and chair (§5j-15): 1 table, cabinet, shelf, glass, bed, chair. Slice 9A:
-// the cabinet (−X wall), shelf (+X wall), glass (+Z wall) and bed (long side on
-// the +X wall) stand with their backs WALL_GAP from FIXED_ROOM's walls.
+// the cabinet (−X wall), shelf (+X wall), glass (+Z wall) and bed stand with
+// their backs WALL_GAP from FIXED_ROOM's walls. Slice 11: the bed's head on the
+// +X wall, its long side on the +Z wall (a corner), its walkway at z 68..128;
+// the glass and chair moved clear of the bed and the glass front.
 const FIXED_ROOM: RoomRect = {minX: -250, maxX: 250, minZ: -300, maxZ: 220}
 const FIXED_LAYOUT: Partial<Record<LayoutItem, Placement>> = {
   table: {x: 0, z: -150, yaw: 0},
   cabinet: {x: -225.5, z: -60, yaw: 0},
   shelf: {x: 233, z: -150, yaw: 0},
-  glass: {x: 0, z: 213, yaw: 0},
-  bed: {x: 203, z: 95, yaw: 0},
-  chair: {x: -170, z: 120, yaw: 0}
+  glass: {x: -120, z: 213, yaw: 0},
+  bed: {x: 148, z: 173, yaw: -Math.PI / 2},
+  chair: {x: -170, z: 60, yaw: 0}
 }
+const FIXED_WALLS: Partial<Record<LayoutItem, WallSide>> = {cabinet: "-x", shelf: "+x", glass: "+z", bed: "+x"}
 const FIXED_DOOR: DoorPlacement = {x: -150, z: -300, nx: 0, nz: 1, wall: "-z"} // on the fixed room's −Z wall; used only if placeDoor finds no spot
 
 interface Spot {
@@ -176,12 +195,13 @@ export function generateLayout(p: LayoutParams, force: LayoutForce | null = null
   const hazards = forced ? HAZARDS.filter((h) => forced.indexOf(h) >= 0) : pickHazards(random, drawCount(random, p.hazardCountMin, p.hazardCountMax, 0, HAZARDS.length))
   const present = hazards.concat(FURNITURE)
   const order = tables.concat(PLACE_ORDER.filter((i) => present.indexOf(i) >= 0))
+  const lampByBed = present.indexOf("lamp") >= 0 && random() < LAMP_BY_BED // Slice 11 (5l-7c): once per layout
   for (let tries = 1; tries <= MAX_TRIES; tries++) {
     const room = drawRoom(random, p)
-    const placed = placeAll(random, order, room, p)
+    const placed = placeAll(random, order, room, lampByBed, p)
     const door = placed ? placeDoor(random, placed.items, order, room, placed.glassWall, p) : null
     if (placed && door) {
-      return {seed: seed, tries: tries, fallback: false, items: placed.items, tables: tables, hazards: hazards, room: room, glassWall: placed.glassWall, door: door}
+      return {seed: seed, tries: tries, fallback: false, items: placed.items, tables: tables, hazards: hazards, room: room, glassWall: placed.glassWall, walls: placed.walls, door: door}
     }
   }
   const items = copyItems(FIXED_LAYOUT)
@@ -196,6 +216,7 @@ export function generateLayout(p: LayoutParams, force: LayoutForce | null = null
     hazards: ["cabinet", "shelf", "glass"],
     room: rect,
     glassWall: "+z",
+    walls: {...FIXED_WALLS},
     door: placeDoor(mulberry32(seed), items, fixedOrder, rect, "+z", p) || FIXED_DOOR
   }
 }
@@ -216,11 +237,84 @@ export function yawFacingStart(x: number, z: number, front: number): number {
 
 /**
  * Slice 9A: the item-frame yaws that may face into the room when the item is
- * wall-backed. The bed: its head end (front 0, foot end out) or either long
- * side; the rest: their footprint front.
+ * wall-backed: their footprint front. Slice 11 (5l-7b): the bed only with its
+ * head end on the wall (front 0, foot end out), never a long side.
  */
 export function wallFronts(item: LayoutItem): number[] {
-  return item === "bed" ? [0, Math.PI / 2, -Math.PI / 2] : [FOOTPRINTS[item].front]
+  return [FOOTPRINTS[item].front]
+}
+
+/** Slice 11: rect `r`'s four corners (Room-local cm). */
+function corners(r: Rect): {x: number; z: number}[] {
+  const c = Math.cos(r.yaw)
+  const s = Math.sin(r.yaw)
+  const out: {x: number; z: number}[] = []
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      out.push({x: r.x + sx * r.hx * c + sz * r.hz * s, z: r.z - sx * r.hx * s + sz * r.hz * c})
+    }
+  }
+  return out
+}
+
+/** Slice 11: the shortest distance between two floor rects (0 when they overlap); exact for convex shapes: a corner of one is always in the closest pair. */
+export function rectDistance(a: Rect, b: Rect): number {
+  if (overlaps(a, b)) {
+    return 0
+  }
+  let d = Infinity
+  for (const [r, o] of [[a, b], [b, a]]) {
+    for (const k of corners(r)) {
+      d = Math.min(d, distanceToRect(k.x, k.z, o.x, o.z, o.yaw, o.hx, o.hz))
+    }
+  }
+  return d
+}
+
+/** Slice 11: an item's footprint rect, grown by `grow` cm. */
+export function footprintRect(item: LayoutItem, at: Placement, grow: number = 0): Rect {
+  return footRect(item, at, grow)
+}
+
+/** Slice 11 (5l-7b): the BED_WALKWAY strips beside the bed's long sides that are inside the room (a side on a wall has none). */
+export function bedWalkways(bed: Placement, room: RoomRect): Rect[] {
+  const f = FOOTPRINTS.bed
+  const out: Rect[] = []
+  for (const side of [-1, 1]) {
+    const off = side * (f.halfX + BED_WALKWAY / 2) // bed-local X; local X = (cos, −sin)
+    const strip = {x: bed.x + off * Math.cos(bed.yaw), z: bed.z - off * Math.sin(bed.yaw), yaw: bed.yaw, hx: BED_WALKWAY / 2 - 0.5, hz: f.halfZ}
+    if (insideRoom(strip, room, 0)) out.push(strip)
+  }
+  return out
+}
+
+/** Slice 11 (5l-7e): the rect kept free of footprints at the glass: GLASS_SIDE_CLEAR beside its frame, from its wall to GLASS_FRONT_CLEAR in front. */
+export function glassClearRect(glass: Placement): Rect {
+  const f = FOOTPRINTS.glass // front −Z in its frame (front π)
+  const oz = (WALL_GAP - GLASS_FRONT_CLEAR) / 2 // the center moves toward the room; local Z = (sin, cos)
+  return {
+    x: glass.x + oz * Math.sin(glass.yaw),
+    z: glass.z + oz * Math.cos(glass.yaw),
+    yaw: glass.yaw,
+    hx: f.halfX + GLASS_SIDE_CLEAR,
+    hz: f.halfZ + (WALL_GAP + GLASS_FRONT_CLEAR) / 2
+  }
+}
+
+/** Slice 11 (5l-7c): true when the lamp stands beside the bed's head end: its near edge LAMP_HEAD_BAND or less from the head wall, beside a long side (within 100 cm). */
+export function isLampByBed(items: Partial<Record<LayoutItem, Placement>>): boolean {
+  const bed = items.bed
+  const lamp = items.lamp
+  if (!bed || !lamp) {
+    return false
+  }
+  const dx = lamp.x - bed.x
+  const dz = lamp.z - bed.z
+  const lx = dx * Math.cos(bed.yaw) - dz * Math.sin(bed.yaw) // bed-local
+  const lz = dx * Math.sin(bed.yaw) + dz * Math.cos(bed.yaw)
+  const b = FOOTPRINTS.bed
+  const edge = lz - FOOTPRINTS.lamp.halfZ + b.halfZ + WALL_GAP // the lamp's near edge from the head wall
+  return Math.abs(lx) > b.halfX && Math.abs(lx) <= b.halfX + 100 && edge >= 0 && edge <= LAMP_HEAD_BAND
 }
 
 /** Slice 9A: the wall's line, x for "+x"/"-x" and z for "+z"/"-z" (Room-local cm). */
@@ -330,26 +424,45 @@ function placeAll(
   random: () => number,
   order: LayoutItem[],
   room: RoomRect,
+  lampByBed: boolean,
   p: LayoutParams
-): {items: Partial<Record<LayoutItem, Placement>>; glassWall: WallSide | null} | null {
+): {items: Partial<Record<LayoutItem, Placement>>; glassWall: WallSide | null; walls: Partial<Record<LayoutItem, WallSide>>} | null {
   const items: Partial<Record<LayoutItem, Placement>> = {}
+  const walls: Partial<Record<LayoutItem, WallSide>> = {}
   const placed: LayoutItem[] = []
   let glassWall: WallSide | null = null
   for (const item of order) {
     let ok = false
     for (let i = 0; i < ITEM_TRIES && !ok; i++) {
-      const spot = drawItem(random, item, i, items, room, p)
+      const spot = item === "lamp" && lampByBed && items.bed ? drawBedside(random, items.bed, room) : drawItem(random, item, i, items, walls, room, p)
       if (!spot) continue
       items[item] = spot.at
-      ok = fits(items, item, placed, p)
+      ok = fits(items, item, placed, room, lampByBed, p)
       if (ok && item === "glass") glassWall = spot.side
+      if (ok && spot.side) walls[item] = spot.side
     }
     if (!ok) {
       return null
     }
     placed.push(item)
   }
-  return {items: items, glassWall: glassWall}
+  return {items: items, glassWall: glassWall, walls: walls}
+}
+
+/** Slice 11 (5l-7c): the lamp beside the bed's head end, on a free long side, 61-75 cm out (SPACING both ways), its near edge WALL_GAP..LAMP_HEAD_BAND from the head wall. */
+function drawBedside(random: () => number, bed: Placement | undefined, room: RoomRect): Spot | null {
+  if (!bed) {
+    return null
+  }
+  const b = FOOTPRINTS.bed
+  const f = FOOTPRINTS.lamp
+  const side = random() < 0.5 ? -1 : 1
+  const lx = side * (b.halfX + 2 * SPACING + f.halfX + 1 + random() * 14) // bed-local
+  const lz = -b.halfZ + f.halfZ + random() * (LAMP_HEAD_BAND - WALL_GAP - 2)
+  const c = Math.cos(bed.yaw)
+  const s = Math.sin(bed.yaw)
+  const at = {x: bed.x + lx * c + lz * s, z: bed.z - lx * s + lz * c, yaw: bed.yaw}
+  return insideRoom(footRect("lamp", at, 0), room, WALL_GAP) ? {at: at, side: null} : null
 }
 
 /** One candidate spot for `item` (attempt `i` of ITEM_TRIES), or null when the draw missed the room. */
@@ -358,11 +471,12 @@ function drawItem(
   item: LayoutItem,
   i: number,
   items: Partial<Record<LayoutItem, Placement>>,
+  walls: Partial<Record<LayoutItem, WallSide>>,
   room: RoomRect,
   p: LayoutParams
 ): Spot | null {
   if (WALL_BACKED.indexOf(item) >= 0) {
-    return drawOnWall(random, item, room, p)
+    return drawOnWall(random, item, room, p, item === "tv" ? walls.bed : undefined) // 5l-7d: never on the bed's wall
   }
   if (isTable(item)) {
     const at = draw(random, item, p.tableDistanceMin, p.tableDistanceMax)
@@ -383,25 +497,33 @@ function drawItem(
  * hazardDistanceMin..max from the start spot, where max is hazardDistanceMax or,
  * when that cannot reach this wall, the wall's center-line distance + RELAX.
  */
-function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams): Spot | null {
+function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams, avoid?: WallSide): Spot | null {
   const f = FOOTPRINTS[item]
-  const side = WALL_SIDES[Math.floor(random() * WALL_SIDES.length)]
-  const fronts = wallFronts(item)
-  // The bed: head end or a long side, even odds; then either long side.
-  const front = fronts.length === 1 ? fronts[0] : random() < 0.5 ? fronts[0] : fronts[1 + Math.floor(random() * 2)]
+  const sides = WALL_SIDES.filter((w) => w !== avoid)
+  const side = sides[Math.floor(random() * sides.length)]
+  const front = wallFronts(item)[0]
   const sideways = Math.abs(Math.sin(front)) > 0.5 // front along the item's X
   const depth = sideways ? f.halfX : f.halfZ
   const width = sideways ? f.halfZ : f.halfX
   const n = wallInward(side)
   const wallX = side === "+x" || side === "-x" // the wall line is x = const
   const perp = wallLine(room, side) + (wallX ? n.x : n.z) * (WALL_GAP + depth)
-  const along = alongSpan(random, room, wallX, WALL_CORNER + width, perp, p)
+  const along = item === "bed" ? bedAlong(random, room, wallX, width, perp, p) : alongSpan(random, room, wallX, WALL_CORNER + width, perp, p)
   if (along === null) {
     return null
   }
   const yaw = wrap(Math.atan2(n.x, n.z) - front)
   const at = wallX ? {x: perp, z: along, yaw: yaw} : {x: along, z: perp, yaw: yaw}
   return {at: at, side: side}
+}
+
+/** Slice 11 (5l-7b): the bed along its head wall: with odds BED_CORNER in a corner (a long side WALL_GAP from the other wall), else BED_WALKWAY free beside both long sides. */
+function bedAlong(random: () => number, room: RoomRect, wallX: boolean, width: number, perp: number, p: LayoutParams): number | null {
+  if (random() < BED_CORNER) {
+    const u = random() < 0.5 ? (wallX ? room.minZ : room.minX) + WALL_GAP + width : (wallX ? room.maxZ : room.maxX) - WALL_GAP - width
+    return Math.sqrt(u * u + perp * perp) >= p.hazardDistanceMin ? u : null
+  }
+  return alongSpan(random, room, wallX, WALL_GAP + BED_WALKWAY + width, perp, p)
 }
 
 /** The lamp near a wall or corner: its footprint LAMP_NEAR_WALL or less from a random wall, any facing. */
@@ -554,7 +676,14 @@ function shuffle<T>(random: () => number, list: T[]): T[] {
 }
 
 /** True when `item` (already in `items`) keeps every rule against the `placed` items. */
-function fits(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, placed: LayoutItem[], p: LayoutParams): boolean {
+function fits(
+  items: Partial<Record<LayoutItem, Placement>>,
+  item: LayoutItem,
+  placed: LayoutItem[],
+  room: RoomRect,
+  lampByBed: boolean,
+  p: LayoutParams
+): boolean {
   // Hazards keep their whole danger zone clear of the start spot; the rest their footprint.
   const own = isHazard(item) ? zoneOf(items, item, p) : rectOf(items, item, 0)
   if (distanceFrom(own) < p.startClearRadius) {
@@ -565,6 +694,9 @@ function fits(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, p
     if (overlaps(spaced, rectOf(items, other, SPACING))) {
       return false
     }
+    if (!roomRules(items, item, other)) {
+      return false
+    }
     if (isTable(item) !== isTable(other)) {
       // A danger zone, the bed or the chair may not reach into any safe zone.
       const table = isTable(item) ? item : other
@@ -573,6 +705,42 @@ function fits(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, p
       if (overlaps(safe, isHazard(thing) ? zoneOf(items, thing, p) : rectOf(items, thing, 0))) {
         return false
       }
+    }
+  }
+  return walkwaysClear(items, placed.concat([item]), room, lampByBed, p)
+}
+
+/** Slice 11 (5l-7b, d, e): tables BED_TABLE_GAP and the TV TV_BED_GAP from the bed; no footprint in the glass's clear rect. */
+function roomRules(items: Partial<Record<LayoutItem, Placement>>, a: LayoutItem, b: LayoutItem): boolean {
+  const pair = (x: LayoutItem, y: LayoutItem): boolean => (a === x && b === y) || (a === y && b === x)
+  const gap = (): number => rectDistance(rectOf(items, a, 0), rectOf(items, b, 0))
+  if ((a === "bed" && isTable(b)) || (b === "bed" && isTable(a))) {
+    if (gap() < BED_TABLE_GAP) return false
+  }
+  if (pair("bed", "tv") && gap() < TV_BED_GAP) {
+    return false
+  }
+  if (a === "glass" || b === "glass") {
+    const other = a === "glass" ? b : a
+    if (overlaps(glassClearRect(items.glass as Placement), rectOf(items, other, 0))) return false
+  }
+  return true
+}
+
+/** Slice 11 (5l-7b): the bed has a walkway, and no footprint or danger zone of `present` reaches into one (the bedside lamp stands just past it). */
+function walkwaysClear(items: Partial<Record<LayoutItem, Placement>>, present: LayoutItem[], room: RoomRect, lampByBed: boolean, p: LayoutParams): boolean {
+  if (present.indexOf("bed") < 0) {
+    return true
+  }
+  const strips = bedWalkways(items.bed as Placement, room)
+  if (strips.length === 0) {
+    return false
+  }
+  const bedside = lampByBed && isLampByBed(items)
+  for (const strip of strips) {
+    for (const other of present) {
+      if (other === "bed" || (other === "lamp" && bedside)) continue
+      if (overlaps(strip, rectOf(items, other, 0)) || (isHazard(other) && overlaps(strip, zoneOf(items, other, p)))) return false
     }
   }
   return true
@@ -636,7 +804,7 @@ function distanceFrom(r: Rect): number {
 }
 
 /** Separating-axis test for two turned rectangles on the floor. */
-function overlaps(a: Rect, b: Rect): boolean {
+export function overlaps(a: Rect, b: Rect): boolean {
   const axes = [a.yaw, a.yaw + Math.PI / 2, b.yaw, b.yaw + Math.PI / 2]
   const dx = b.x - a.x
   const dz = b.z - a.z
