@@ -2,6 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {DrillController} from "../DrillController"
 import {buildCardFacts, CardFacts, isPerfect, MAX_CARDS, pickCards} from "../EducationCards"
+import {computeScore} from "../ScoreCalculator"
 import {lines} from "../Strings"
 import {CLASSIC, expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
@@ -15,7 +16,8 @@ function facts(score: number | null, on: Partial<Omit<CardFacts, "perfect">>): C
     hadFurnitureHazard: on.hadFurnitureHazard === true,
     evacReached: on.evacReached === true,
     evacFailed: on.evacFailed === true,
-    aftershockHappened: on.aftershockHappened === true
+    aftershockHappened: on.aftershockHappened === true,
+    neverTookCover: on.neverTookCover === true
   })
 }
 
@@ -31,7 +33,13 @@ export class DC19_EducationCards extends Scenario {
   async run(): Promise<void> {
     // Pure selector.
     expect(cards(facts(700, {leftCoverEarly: true, hadFurnitureHazard: true}))).toBe(JSON.stringify(["card.stayUnder", "card.fasten"]))
-    expect(pickCards(facts(800, {wasHit: true, hadFurnitureHazard: true}))[0]).toBe("card.falling")
+    // 5l-4c: never took cover → stayUnder first; fasten leads only after a hit; evac may lead.
+    expect(cards(facts(null, {neverTookCover: true, hadFurnitureHazard: true}))).toBe(JSON.stringify(["card.stayUnder", "card.fasten"]))
+    expect(pickCards(facts(null, {neverTookCover: true}))[0]).toBe("card.stayUnder")
+    expect(pickCards(facts(800, {hadFurnitureHazard: true}))[0] !== "card.fasten").toBe(true)
+    expect(cards(facts(800, {wasHit: true, hadFurnitureHazard: true}))).toBe(JSON.stringify(["card.falling", "card.fasten"]))
+    // 5l-4b: no evacuation points without cover.
+    expect(computeScore(null, 100, 0, 0, 0, {reached: true, seconds: 5, events: 0}).score).toBe(0)
     expect(pickCards(facts(800, {wasInDanger: true}))[0]).toBe("card.falling")
     expect(cards(facts(600, {duckedOnBed: true}))).toBe(JSON.stringify(["card.bed"]))
     const perfect = facts(950, {hadFurnitureHazard: true, evacReached: true})
@@ -64,7 +72,8 @@ export class DC19_EducationCards extends Scenario {
       expect(c.lastCards.length > 0 && c.lastCards.length <= MAX_CARDS).toBe(true)
       expect(f.leftCoverEarly).toBe(c.leftCoverEarly)
       expect(f.wasInDanger).toBe(c.secondsInDanger > 0)
-      expect(f.wasHit).toBe(c.fallHits > 0)
+      expect(f.wasHit).toBe(c.fallHits > 0 || c.tripCount > 0)
+      expect(f.neverTookCover).toBe(false)
       expect(f.duckedOnBed).toBe(c.bedWarnCount > 0)
       expect(f.hadFurnitureHazard).toBe(true) // CLASSIC: cabinet and shelf
       expect(f.evacReached).toBe(c.evacTime !== null)

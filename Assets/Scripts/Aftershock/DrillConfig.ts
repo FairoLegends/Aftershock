@@ -169,8 +169,12 @@ export class DrillConfig extends BaseScriptComponent {
   hazardCountMax: number = 5
 
   @input
-  @hint("Danger zone = hazard footprint grown by this margin (cm)")
+  @hint("Danger zone = hazard footprint grown by this margin (cm): to the front and sides only for a wall-backed hazard, never past the walls")
   dangerMargin: number = 60
+
+  @input
+  @hint("TV danger zone reach in front of the TV (cm): it topples forward and its top lands about 110 · sin 85° ≈ 110 cm past its front edge")
+  tvDangerFront: number = 140
 
   @input
   @hint("No furniture or danger zone within this radius of the start spot (cm)")

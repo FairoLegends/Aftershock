@@ -1,4 +1,5 @@
 import {Interactable} from "SpectaclesInteractionKit.lspkg/Components/Interaction/Interactable/Interactable"
+import {InteractorInputType} from "SpectaclesInteractionKit.lspkg/Core/Interactor/Interactor"
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
@@ -11,8 +12,9 @@ import {createRoundRect, SOFT_GREEN} from "./UiBacking"
 // handle shows only while the head is in that table's zone (never on Hard,
 // visualsOn false), but its collider and SIK Interactable stay on either way:
 // a pinch held on a handle of the table the head is under is "holding"
-// (onTriggerStart → true, onTriggerEnd / onTriggerCanceled → false; in the
-// preview, a mouse press-and-hold). Handle positions are Room-local, so the
+// (onTriggerStart → true, onTriggerEnd / onTriggerEndOutside /
+// onTriggerCanceled → false, and only while SIK still has an interactor
+// triggering it; in the preview, a mouse press-and-hold). Handle positions are Room-local, so the
 // handles shake with the room. The drain rule lives in DrillController.
 
 const POOL = 4 // two tables at most, two legs each
@@ -61,10 +63,16 @@ export class GripHandles extends BaseScriptComponent {
   }
 
   // Read-only getters for LEAF assertions (TDD §8).
-  /** Holding a handle of the table the head is in (or the test hook says so). */
+  /** Holding a handle of the table the head is in, still triggered by an interactor (or the test hook says so). */
   get isHolding(): boolean {
     if (this.holdingForTest !== null) return this.holdingForTest
-    return this.active && this.held !== null && this.held.zone !== null && this.held.zone === this.zoneNow
+    return (
+      this.active &&
+      this.held !== null &&
+      this.held.zone !== null &&
+      this.held.zone === this.zoneNow &&
+      this.held.interactable.triggeringInteractor !== InteractorInputType.None
+    )
   }
   /** Markers drawn now. */
   get shownCount(): number {
@@ -205,6 +213,7 @@ export class GripHandles extends BaseScriptComponent {
         if (this.held === h) this.held = null
       }
       interactable.onTriggerEnd.add(release)
+      interactable.onTriggerEndOutside.add(release) // the pinch let go after the ray left the handle
       interactable.onTriggerCanceled.add(release)
       this.handles.push(h)
     }

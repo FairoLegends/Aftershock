@@ -39,6 +39,7 @@ export type StringKey =
   | "over.why.stood"
   | "btn.restart"
   | "over.why.danger"
+  | "over.why.grip"
   | "label.danger"
   | "picker.title"
   | "lang.name"
@@ -242,6 +243,13 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "Du bist neben etwas geblieben, das umfallen kann",
     ja: "倒れてくる物のそばにいました",
     zh: "你待在可能倒下的物品旁边"
+  },
+  "over.why.grip": {
+    id: "Kamu tidak memegang kaki meja",
+    en: "You did not hold the table leg",
+    de: "Du hast das Tischbein nicht festgehalten",
+    ja: "机の脚をつかんでいませんでした",
+    zh: "你没有抓住桌腿"
   },
   "label.danger": {id: "Zona bahaya", en: "Danger zone", de: "Gefahrenzone", ja: "危険区域", zh: "危险区"},
   // Language picker (Slice 5L): every line is shown in its own language.

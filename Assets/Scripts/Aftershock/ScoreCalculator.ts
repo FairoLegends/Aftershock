@@ -55,9 +55,10 @@ export interface ScoreBreakdown {
  * speedPoints = tSafe == null ? 0 : round(450 * clamp((30 - speedTime) / 25, 0, 1))
  * healthPts   = tSafe == null ? 0 : round(3 * healthLeft)
  * holdPts     = tSafe == null ? 0 : round(100 * clamp(holdShare, 0, 1))
- * evacPts     = reached ? max(0, round(150 - 75 * clamp((seconds - 10) / 20, 0, 1)) - 25 * events) : 0
+ * evacPts     = tSafe != null && reached ? max(0, round(150 - 75 * clamp((seconds - 10) / 20, 0, 1)) - 25 * events) : 0
  * penalty     = round(10 * secondsStandingAfterFirstSafe)
  * score       = clamp(speedPoints + healthPts + holdPts + evacPts - penalty, 0, 1000)
+ * (never took cover: every part is 0, so the score is 0 even with the door reached)
  */
 export function computeScore(
   tSafe: number | null,
@@ -76,7 +77,7 @@ export function computeScore(
   const reached = evac !== null && evac.reached
   const events = evac === null ? 0 : Math.max(0, Math.round(evac.events))
   let evacPoints = 0
-  if (reached) {
+  if (reached && tSafe !== null) {
     const slow = clamp((evac.seconds - EVAC_FAST_S) / (EVAC_SLOW_S - EVAC_FAST_S), 0, 1)
     const base = Math.round(EVAC_MAX_POINTS - (EVAC_MAX_POINTS - EVAC_MIN_POINTS) * slow)
     evacPoints = Math.max(0, base - EVAC_EVENT_POINTS * events)

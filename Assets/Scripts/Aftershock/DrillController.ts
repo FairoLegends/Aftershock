@@ -295,6 +295,7 @@ export class DrillController extends BaseScriptComponent {
   private calibUpdate: UpdateEvent | null = null // Slice 8D: watches the head for one duck
   private calibDoneTimer: DelayedCallbackEvent | null = null // Slice 8D: calib.done, then BRIEFING
   private calibDuckSince: number | null = null // s; when the head went at or below the duck line
+  private calibWasUp = false // 5l-4g: the head was above the duck line + duckHysteresis since CALIBRATE began
   private _calibDucked = false
   private quakeStartTimer: DelayedCallbackEvent | null = null
   private quakeEndTimer: DelayedCallbackEvent | null = null
@@ -476,7 +477,7 @@ export class DrillController extends BaseScriptComponent {
   get secondsInDanger(): number {
     return this._secondsInDanger
   }
-  /** Why the last GAME_OVER happened (over.why.danger, over.why.stood or hit.fell), or null. */
+  /** Why the last GAME_OVER happened (5l-4f): hit.fell (a fall, the TV topple or a trip), over.why.grip, over.why.stood or over.why.danger; or null. */
   get gameOverReason(): StringKey | null {
     return this._gameOverReason
   }
@@ -828,6 +829,9 @@ export class DrillController extends BaseScriptComponent {
    * Slice 8D (P7): one duck counts when the head stays at or below the duck
    * line (the 5f-1 baseline floorY + eyeHeight, minus duckDrop) for
    * calibHoldSeconds; then calib.done for calibDoneSeconds, then BRIEFING.
+   * The duck timer arms only after the head has been above the duck line +
+   * duckHysteresis once since CALIBRATE began (5l-4g), so a head already low
+   * at the start is not a duck.
    */
   private onCalibUpdate(): void {
     if (this._state !== "CALIBRATE") {
@@ -835,7 +839,11 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     const duckLine = this._floorY + this.config.eyeHeight - this.config.duckDrop
-    if (this.headPose.position.y > duckLine) {
+    const headY = this.headPose.position.y
+    if (headY > duckLine + this.config.duckHysteresis) {
+      this.calibWasUp = true
+    }
+    if (headY > duckLine || !this.calibWasUp) {
       this.calibDuckSince = null
       return
     }
@@ -872,6 +880,7 @@ export class DrillController extends BaseScriptComponent {
     this.calibUpdate.enabled = false
     this.calibDoneTimer.cancel()
     this.calibDuckSince = null
+    this.calibWasUp = false
   }
 
   onRandomWaitEnded(): void {
@@ -1269,7 +1278,7 @@ export class DrillController extends BaseScriptComponent {
       z.captureRest()
     }
     for (const h of this.activeHazards) {
-      this.zones[h].captureRest()
+      this.zones[h].captureRest(this.room, this._layout) // 5l-4e/h: the zone's shape from the layout, cut to the walls
     }
     if (this.roomWalls) this.roomWalls.captureRest() // Slice 8A: door getters at rest
     this.gripHandles.place(this.activeTables, this.room, this._floorY) // Slice 8B: after the tables' captureRest
@@ -1428,7 +1437,9 @@ export class DrillController extends BaseScriptComponent {
       this._health = Math.max(0, this._health - drain * dt)
       this.hud.setHealth(this._health)
       if (this._health <= 0) {
-        this._gameOverReason = this._inDanger ? "over.why.danger" : "over.why.stood"
+        // 5l-4f: the drain that emptied health names the reason (the grip drain when it was the larger one).
+        this._gameOverReason =
+          gripDrain > 0 && gripDrain >= exposureDrain ? "over.why.grip" : this._inDanger ? "over.why.danger" : "over.why.stood"
         console.log(`${LOG} ${this._state}: health reached 0 after ${fmt(this._secondsStanding)} s exposed, ${fmt(this._secondsInDanger)} s in danger (${this._gameOverReason})`)
         this.onHealthDepleted()
       }
@@ -1579,7 +1590,11 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
-  /** Room-local XZ (x, y = z) where the toppled TV's top lands: its height out from the front edge, inside its danger zone. */
+  /**
+   * Room-local XZ (x, y = z) where the toppled TV's top lands (5l-4e): the
+   * front edge plus TV_HEIGHT · sin(TV_TOPPLE_RAD) ≈ 110 cm, kept 5 cm inside
+   * the tvDangerFront reach of its danger zone.
+   */
   private tvLanding(): vec2 | null {
     const at = this._layout ? this._layout.items.tv : undefined
     if (!at) {
@@ -1588,7 +1603,7 @@ export class DrillController extends BaseScriptComponent {
     const f = FOOTPRINTS.tv
     const theta = at.yaw + f.front
     const depth = Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ
-    const d = depth + Math.min(TV_HEIGHT, Math.max(5, this.config.dangerMargin - 5))
+    const d = depth + Math.min(TV_HEIGHT * Math.sin(TV_TOPPLE_RAD), Math.max(5, this.config.tvDangerFront - 5))
     return new vec2(at.x + Math.sin(theta) * d, at.z + Math.cos(theta) * d)
   }
 
@@ -1924,8 +1939,10 @@ export class DrillController extends BaseScriptComponent {
     }
     this.edgeWarning.setActive(this._inDanger)
     if (this._inDanger) {
+      this._secondsInDanger += dt // 5l-4d: the evacuation's danger counts too (card.falling)
       this._health = Math.max(0, this._health - this.config.healthDrainPerSecond * drainMultiplier(this._level, this.config) * dt)
     }
+    const drainedOut = this._health <= 0
     const at = this.toRoomLocal(head)
     for (const p of this.fallingObjects.landedPoints()) {
       if (this.tripped.indexOf(p.id) < 0 && Math.hypot(p.x - at.x, p.z - at.y) < this.config.tripRadius) {
@@ -1938,7 +1955,7 @@ export class DrillController extends BaseScriptComponent {
     }
     this.hud.setHealth(this._health)
     if (this._health <= 0) {
-      this._gameOverReason = "over.why.danger"
+      this._gameOverReason = drainedOut ? "over.why.danger" : "hit.fell" // 5l-4f: a trip that empties health is a hit
       this.transitionTo("GAME_OVER")
       return
     }
@@ -2013,8 +2030,9 @@ export class DrillController extends BaseScriptComponent {
   private cardFacts(score: number | null): CardFacts {
     return buildCardFacts(score, {
       leftCoverEarly: this._leftCoverEarly,
+      neverTookCover: this._tSafe === null, // 5l-4c: never safe in the main quake (aftershock cover does not set it)
       wasInDanger: this._secondsInDanger > 0,
-      wasHit: this._fallHits > 0,
+      wasHit: this._fallHits > 0 || this._tripCount > 0, // 5l-4c: a trip is a hit too
       duckedOnBed: this._bedWarnCount > 0,
       hadFurnitureHazard: this.hadFurnitureHazard,
       evacReached: this._evacTime !== null,

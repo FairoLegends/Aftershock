@@ -38,6 +38,7 @@ export function layoutParamsFor(level: Level, c: DrillConfig): LayoutParams {
     hazardCountMin: c.hazardCountMin,
     hazardCountMax: c.hazardCountMax,
     dangerMargin: c.dangerMargin,
+    tvDangerFront: c.tvDangerFront,
     safeZoneMargin: c.safeZoneMargin,
     startClearRadius: c.startClearRadius,
     layoutSeed: c.layoutSeed

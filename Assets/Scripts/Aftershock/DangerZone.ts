@@ -1,5 +1,6 @@
+import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
-import {FOOTPRINTS, insideRect, LayoutItem} from "./LayoutGenerator"
+import {clipToRoom, dangerRect, FOOTPRINTS, insideRect, Layout, LayoutItem} from "./LayoutGenerator"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
 import {createLightBacking, SOFT_BORDER_CM, SOFT_RED, SoftFrame} from "./UiBacking"
 
@@ -24,12 +25,13 @@ const LABEL_W = 30 // widest text slot; the pill shrinks to the text
 const FLAT = quat.angleAxis(-Math.PI / 2, vec3.right()) // a UI rectangle's +Z (its face) turned to +Y
 
 /**
- * The red floor area around one hazard (ENGINEERING_PLAN Slice 5P): the
- * hazard's footprint (LayoutGenerator FOOTPRINTS) grown by dangerMargin, a
- * faint red fill, a red outline and a label.danger label, built at runtime.
- * Put it on a child of its hazard at local (0, 0, 0), unrotated: the hazard
- * is this object's parent. It owns no drill state: DrillController shows,
- * hides and asks contains().
+ * The red floor area around one hazard (ENGINEERING_PLAN Slice 5P, 5l-4e/h):
+ * LayoutGenerator.dangerRect cut to the walls (a wall-backed hazard's footprint
+ * grown by dangerMargin to the front and sides only, the TV tvDangerFront to
+ * the front), a faint red fill, a red outline and a label.danger label, built
+ * at runtime. Put it on a child of its hazard at local (0, 0, 0), unrotated:
+ * the hazard is this object's parent. It owns no drill state: DrillController
+ * shows, hides and asks contains().
  */
 @component
 export class DangerZone extends BaseScriptComponent {
@@ -65,11 +67,16 @@ export class DangerZone extends BaseScriptComponent {
   @ui.group_end
 
   private visual: SceneObject | null = null
+  private fill: RoundedRectangle
+  private edgeNear: RoundedRectangle
+  private edgeFar: RoundedRectangle
+  private edgeLeft: RoundedRectangle
+  private edgeRight: RoundedRectangle
   private _label: SceneObject | null = null
   private labelPrimary: Text
   private labelSecondary: Text
   private pill: SoftFrame
-  private halfX = 0 // cm, zone half-size along the hazard's local X
+  private halfX = 0 // cm, zone half-size along the visual's local X
   private halfZ = 0 // cm, along its local Z
   private restX = 0 // cm, world
   private restZ = 0 // cm, world
@@ -86,16 +93,9 @@ export class DangerZone extends BaseScriptComponent {
       console.error(`[Aftershock] DangerZone: unknown kind "${this.kind}"`)
       return
     }
+    // Until captureRest has the layout: the footprint grown all round (captureRest sets the real shape).
     this.halfX = f.halfX + this.config.dangerMargin
     this.halfZ = f.halfZ + this.config.dangerMargin
-    if (this.item === "glass") {
-      // Slice 8A: the glass backs onto a wall, so its zone lies in front of it only.
-      const m = this.config.dangerMargin / 2
-      this.halfZ = f.halfZ + m
-      const t = this.sceneObject.getTransform()
-      const front = new vec3(Math.sin(f.front), 0, Math.cos(f.front)).uniformScale(m)
-      t.setLocalPosition(t.getLocalPosition().add(t.getLocalRotation().multiplyVec3(front)))
-    }
     this.buildVisual()
     this.buildLabel()
   }
@@ -119,12 +119,27 @@ export class DangerZone extends BaseScriptComponent {
   }
 
   /**
-   * Stores the zone's rest center and heading. DrillController calls this on
-   * entering BRIEFING after the layout, when the Room is at rest, so shaking
-   * never flips contains().
+   * Stores the zone's rest center, heading and size. DrillController calls this
+   * on entering BRIEFING after the layout, when the Room is at rest, so shaking
+   * never flips contains(). With the Room and its layout, the zone is
+   * LayoutGenerator.dangerRect cut to the walls (5l-4e/h): front and sides only
+   * for a wall-backed hazard, the TV tvDangerFront to the front; the visual
+   * moves and resizes to match. Without them it stays centered on the hazard.
    */
-  captureRest(): void {
-    const t = this.sceneObject.getTransform()
+  captureRest(room?: SceneObject, layout?: Layout | null): void {
+    const at = layout ? layout.items[this.item] : undefined
+    if (room && layout && at && this.visual) {
+      const r = clipToRoom(dangerRect(this.item, at, this.config.dangerMargin, this.config.tvDangerFront), layout.room)
+      const rt = room.getTransform()
+      const c = rt.getWorldTransform().multiplyPoint(new vec3(r.x, 0, r.z))
+      const vt = this.visual.getTransform()
+      vt.setWorldPosition(new vec3(c.x, this.sceneObject.getTransform().getWorldPosition().y, c.z))
+      vt.setWorldRotation(rt.getWorldRotation().multiply(quat.angleAxis(r.yaw, vec3.up())))
+      this.halfX = r.hx
+      this.halfZ = r.hz
+      this.sizeVisual()
+    }
+    const t = this.visual ? this.visual.getTransform() : this.sceneObject.getTransform()
     const p = t.getWorldPosition()
     const localX = t.getWorldRotation().multiplyVec3(vec3.right())
     this.restX = p.x
@@ -133,7 +148,7 @@ export class DangerZone extends BaseScriptComponent {
     this.captured = true
   }
 
-  /** True when the position's XZ is inside the rest zone (footprint grown by dangerMargin). */
+  /** True when the position's XZ is inside the rest zone (captureRest). */
   contains(position: vec3): boolean {
     return (
       this.captured &&
@@ -167,26 +182,41 @@ export class DangerZone extends BaseScriptComponent {
   private buildVisual(): void {
     const visual = global.scene.createSceneObject("DangerZoneVisual")
     visual.setParent(this.sceneObject)
-    const w = this.halfX * 2
-    const d = this.halfZ * 2
-    this.addRect(visual, "Fill", 0, FILL_LIFT, 0, w, d, this.fillColor)
-    this.addRect(visual, "EdgeNear", 0, OUTLINE_LIFT, this.halfZ, w + OUTLINE_W, OUTLINE_W, this.lineColor)
-    this.addRect(visual, "EdgeFar", 0, OUTLINE_LIFT, -this.halfZ, w + OUTLINE_W, OUTLINE_W, this.lineColor)
-    this.addRect(visual, "EdgeLeft", -this.halfX, OUTLINE_LIFT, 0, OUTLINE_W, d + OUTLINE_W, this.lineColor)
-    this.addRect(visual, "EdgeRight", this.halfX, OUTLINE_LIFT, 0, OUTLINE_W, d + OUTLINE_W, this.lineColor)
+    this.fill = this.addRect(visual, "Fill", FILL_LIFT, this.fillColor)
+    this.edgeNear = this.addRect(visual, "EdgeNear", OUTLINE_LIFT, this.lineColor)
+    this.edgeFar = this.addRect(visual, "EdgeFar", OUTLINE_LIFT, this.lineColor)
+    this.edgeLeft = this.addRect(visual, "EdgeLeft", OUTLINE_LIFT, this.lineColor)
+    this.edgeRight = this.addRect(visual, "EdgeRight", OUTLINE_LIFT, this.lineColor)
     visual.enabled = false
     this.visual = visual
+    this.sizeVisual()
   }
 
-  /** A flat rectangle on the floor, `sizeX` along local X and `sizeZ` along local Z. */
-  private addRect(parent: SceneObject, name: string, x: number, y: number, z: number, sizeX: number, sizeZ: number, color: vec4): void {
+  /** Lays the fill and the four edges out for halfX × halfZ. */
+  private sizeVisual(): void {
+    const w = this.halfX * 2
+    const d = this.halfZ * 2
+    this.setRect(this.fill, 0, 0, w, d)
+    this.setRect(this.edgeNear, 0, this.halfZ, w + OUTLINE_W, OUTLINE_W)
+    this.setRect(this.edgeFar, 0, -this.halfZ, w + OUTLINE_W, OUTLINE_W)
+    this.setRect(this.edgeLeft, -this.halfX, 0, OUTLINE_W, d + OUTLINE_W)
+    this.setRect(this.edgeRight, this.halfX, 0, OUTLINE_W, d + OUTLINE_W)
+  }
+
+  private setRect(rect: RoundedRectangle, x: number, z: number, sizeX: number, sizeZ: number): void {
+    const t = rect.sceneObject.getTransform()
+    t.setLocalPosition(new vec3(x, t.getLocalPosition().y, z))
+    rect.size = new vec2(sizeX, sizeZ)
+  }
+
+  /** A flat rectangle on the floor `y` up, sized by sizeVisual (`sizeX` along local X, `sizeZ` along local Z). */
+  private addRect(parent: SceneObject, name: string, y: number, color: vec4): RoundedRectangle {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.getTransform()
-    t.setLocalPosition(new vec3(x, y, z))
+    t.setLocalPosition(new vec3(0, y, 0))
     t.setLocalRotation(FLAT) // rectangle Y runs along −Z, so its size stays (X, Z)
-    const rect = createLightBacking(so, color)
-    rect.size = new vec2(sizeX, sizeZ)
+    return createLightBacking(so, color)
   }
 
   /** Upright label.danger pill, hidden until show(); placed by DrillController above the HazardLabel. */

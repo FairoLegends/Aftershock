@@ -109,6 +109,7 @@ export interface LayoutParams {
   hazardCountMin: number
   hazardCountMax: number
   dangerMargin: number
+  tvDangerFront: number // the TV zone's reach in front (5l-4e)
   safeZoneMargin: number
   startClearRadius: number
   layoutSeed: number
@@ -258,12 +259,57 @@ export function isHazard(item: LayoutItem): boolean {
   return HAZARDS.indexOf(item) >= 0
 }
 
-interface Rect {
+/** A turned floor rectangle (cm, radians): half-sizes hx along its local X, hz along its local Z. */
+export interface Rect {
   x: number
   z: number
   yaw: number
   hx: number
   hz: number
+}
+
+/**
+ * A hazard's danger zone (5l-4e/h), Room-local. A wall-backed hazard (cabinet,
+ * shelf, TV, glass) grows `margin` to both sides and to the front only, never
+ * behind into its wall; the TV grows `tvFront` to the front (it topples
+ * forward). The lamp stands free: its turned footprint's room-aligned box grown
+ * by `margin` all round. Every zone is room-aligned, so clipToRoom is exact.
+ */
+export function dangerRect(item: LayoutItem, at: Placement, margin: number, tvFront: number): Rect {
+  const f = FOOTPRINTS[item]
+  if (WALL_BACKED.indexOf(item) < 0) {
+    const c = Math.abs(Math.cos(at.yaw))
+    const s = Math.abs(Math.sin(at.yaw))
+    return {x: at.x, z: at.z, yaw: 0, hx: f.halfX * c + f.halfZ * s + margin, hz: f.halfX * s + f.halfZ * c + margin}
+  }
+  const grow = item === "tv" ? tvFront : margin
+  const fx = Math.round(Math.sin(f.front)) // the front in the item's frame: ±local X or ±local Z
+  const fz = Math.round(Math.cos(f.front))
+  const ox = (fx * grow) / 2 // the center moves half the front growth forward
+  const oz = (fz * grow) / 2
+  const c = Math.cos(at.yaw)
+  const s = Math.sin(at.yaw)
+  return {
+    x: at.x + ox * c + oz * s, // local X = (cos, −sin), local Z = (sin, cos)
+    z: at.z - ox * s + oz * c,
+    yaw: at.yaw,
+    hx: f.halfX + (fx !== 0 ? grow / 2 : margin),
+    hz: f.halfZ + (fz !== 0 ? grow / 2 : margin)
+  }
+}
+
+/** The room-aligned rect `r` cut to the walls (5l-4h): a zone never reaches past them. */
+export function clipToRoom(r: Rect, room: RoomRect): Rect {
+  const turned = Math.abs(Math.sin(r.yaw)) > 0.5 // local X runs along room Z
+  const ex = turned ? r.hz : r.hx
+  const ez = turned ? r.hx : r.hz
+  const minX = Math.max(room.minX, r.x - ex)
+  const maxX = Math.max(minX, Math.min(room.maxX, r.x + ex))
+  const minZ = Math.max(room.minZ, r.z - ez)
+  const maxZ = Math.max(minZ, Math.min(room.maxZ, r.z + ez))
+  const hx = (maxX - minX) / 2
+  const hz = (maxZ - minZ) / 2
+  return {x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, yaw: r.yaw, hx: turned ? hz : hx, hz: turned ? hx : hz}
 }
 
 /** The room: each side ROOM_SIDE_MIN..MAX, the start spot (origin) startClearRadius + START_WALL_CLEAR from every wall. */
@@ -477,8 +523,8 @@ function doorFits(door: DoorPlacement, items: Partial<Record<LayoutItem, Placeme
   }
   for (const item of all) {
     if (!items[item]) continue
-    const zone = isHazard(item) ? p.dangerMargin : isTable(item) ? p.safeZoneMargin : 0 // a zone holds its footprint
-    if (overlaps(clear, rectOf(items, item, zone))) {
+    const zone = isHazard(item) ? zoneOf(items, item, p) : rectOf(items, item, isTable(item) ? p.safeZoneMargin : 0) // a zone holds its footprint
+    if (overlaps(clear, zone)) {
       return false
     }
     if (item === "glass" && overlaps(doorRect(door, 0, DOOR_GLASS_GAP), rectOf(items, item, 0))) {
@@ -510,7 +556,7 @@ function shuffle<T>(random: () => number, list: T[]): T[] {
 /** True when `item` (already in `items`) keeps every rule against the `placed` items. */
 function fits(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, placed: LayoutItem[], p: LayoutParams): boolean {
   // Hazards keep their whole danger zone clear of the start spot; the rest their footprint.
-  const own = rectOf(items, item, isHazard(item) ? p.dangerMargin : 0)
+  const own = isHazard(item) ? zoneOf(items, item, p) : rectOf(items, item, 0)
   if (distanceFrom(own) < p.startClearRadius) {
     return false
   }
@@ -524,7 +570,7 @@ function fits(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, p
       const table = isTable(item) ? item : other
       const thing = isTable(item) ? other : item
       const safe = rectOf(items, table, p.safeZoneMargin)
-      if (overlaps(safe, rectOf(items, thing, isHazard(thing) ? p.dangerMargin : 0))) {
+      if (overlaps(safe, isHazard(thing) ? zoneOf(items, thing, p) : rectOf(items, thing, 0))) {
         return false
       }
     }
@@ -566,6 +612,11 @@ function pickHazards(random: () => number, count: number): LayoutItem[] {
 
 function rectOf(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, grow: number): Rect {
   return footRect(item, items[item], grow)
+}
+
+/** A hazard's danger zone (dangerRect), unclipped: the walls only cut parts no rule tests. */
+function zoneOf(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, p: LayoutParams): Rect {
+  return dangerRect(item, items[item], p.dangerMargin, p.tvDangerFront)
 }
 
 function footRect(item: LayoutItem, at: Placement, grow: number): Rect {

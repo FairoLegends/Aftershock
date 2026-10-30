@@ -1661,6 +1661,7 @@
     hazardCountMin: true
     hazardCountMax: true
     dangerMargin: true
+    tvDangerFront: true
     startClearRadius: true
     layoutSeed: true
     tableSwitchHysteresis: true
@@ -1751,6 +1752,7 @@
       hazardCountMin: !<float> 3.000000
       hazardCountMax: !<float> 5.000000
       dangerMargin: !<float> 60.000000
+      tvDangerFront: !<float> 140.000000
       startClearRadius: !<float> 50.000000
       layoutSeed: !<float> 0.000000
       tableSwitchHysteresis: !<float> 30.000000

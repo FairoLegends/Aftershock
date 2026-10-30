@@ -4,6 +4,7 @@ import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {DrillController} from "../DrillController"
 import {Layout, LayoutForce} from "../LayoutGenerator"
+import {LEVELS} from "../Levels"
 
 /** DC1–DC7 item set (Slice 2–6 rules): one table, cabinet, shelf, glass; bed and chair are always there. */
 export const CLASSIC: LayoutForce = {tables: 1, hazards: ["cabinet", "shelf", "glass"]}
@@ -18,7 +19,27 @@ const POLL_MS = 100
 export const DUCKED_HEAD_CM = 60
 
 export function getController(): DrillController {
-  return findSceneObjectByName("DrillController").getComponent(DrillController.getTypeName()) as DrillController
+  const c = findSceneObjectByName("DrillController").getComponent(DrillController.getTypeName()) as DrillController
+  saveBests(c)
+  return c
+}
+
+// 5l-4i: the wearer's three stored bests from before the first scenario; every
+// restore() puts them back instead of zeroing them.
+let savedBests: number[] | null = null
+
+/** Stores the three bests once, before any scenario can change them (getController calls it). */
+export function saveBests(c: DrillController): void {
+  if (savedBests === null) {
+    savedBests = LEVELS.map((level) => c.bestFor(level))
+  }
+}
+
+/** Puts back the bests saveBests stored. */
+export function restoreBests(c: DrillController): void {
+  if (savedBests === null) return
+  const bests = savedBests
+  LEVELS.forEach((level, i) => c.setBestForTest(level, bests[i]))
 }
 
 /** Waits out the panel's pinch guard, then pinches the named interactable. */
@@ -26,6 +47,23 @@ export async function press(name: string): Promise<void> {
   await sleep(PINCH_GUARD_WAIT_MS)
   await new DefaultLeafInteractor().trigger(findInteractableByName(name))
   await sleep(POLL_MS * 2)
+}
+
+/** 5l-4a: a LEAF interactor that keeps its pinch on an interactable until release(). */
+export class HoldInteractor extends DefaultLeafInteractor {
+  /** Hovers the named interactable and starts the pinch (SIK onTriggerStart). */
+  async hold(name: string): Promise<void> {
+    await this.enterHover(findInteractableByName(name))
+    this.startSelecting()
+    await sleep(POLL_MS * 2)
+  }
+
+  /** Lets go of the pinch (SIK onTriggerEnd), then stops hovering. */
+  async release(): Promise<void> {
+    this.stopSelecting()
+    await sleep(POLL_MS)
+    await this.exitHover()
+  }
 }
 
 /** Polls until `test` holds or `timeoutMs` passes; returns whether it held. */
@@ -86,8 +124,9 @@ export async function toFreshBriefing(c: DrillController, force: LayoutForce | n
 
 /**
  * Slice 8D: presses Skip on the duck practice panel and waits for BRIEFING. A
- * head already pinned ducked counts as a duck (Skip is then ignored), so this
- * waits out calibDoneSeconds too.
+ * head pinned ducked can still count as a duck once it has been standing
+ * since CALIBRATE began (5l-4g; Skip is then ignored), so this waits out
+ * calibDoneSeconds too.
  */
 export async function skipCalibrate(c: DrillController): Promise<void> {
   await press("SkipButton")
@@ -153,7 +192,7 @@ export function restore(c: DrillController, testMode: boolean, testDurationSecon
   c.forceAftershockForTest(null) // Slice 7C: back to the level's chance
   c.disableFallsForTest(false) // Slice 7D: falls on again
   c.gripHandles.setHoldingForTest(null) // Slice 8B: holding back to the pinch
-  c.clearBestsForTest() // Slice 8D: no stored best leaks into the next scenario
+  restoreBests(c) // 5l-4i: the wearer's stored bests back, not zeroed
 }
 
 /** Slice 8B: a head point inside doorContains, 30 cm in front of the exit door at eye height (the start spot if there is no door). */

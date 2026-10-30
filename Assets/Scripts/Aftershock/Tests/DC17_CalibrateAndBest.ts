@@ -1,21 +1,24 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
-import {findSceneObjectByName} from "Leaf.lspkg/Utils/common/Utils"
+import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {DrillController} from "../DrillController"
 import {lines} from "../Strings"
-import {atHeight, CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
+import {atHeight, CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, saveBests, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 /** ResultPanel.setRow's split: a ":" row shows a label and a value as two texts. */
 const SPLIT = /^(.*?)\s*[:：]\s*(.+)$/
 
 // DC17 (Slice 8D, 5k items 7 and 12): LEVEL → CALIBRATE with the room hidden;
-// a duck held for calibHoldSeconds shows calib.done, then BRIEFING (calibDucked);
-// Skip → BRIEFING at once (not calibrated). On RESULT a score over the stored
-// best is kept with result.newBest; result.best always shows the best.
+// standing, then a duck held for calibHoldSeconds shows calib.done, then
+// BRIEFING (calibDucked); Skip → BRIEFING at once (not calibrated). On RESULT a
+// score over the stored best is kept with result.newBest; result.best always
+// shows the best. The wearer's stored bests are saved first and put back by
+// restore() (5l-4i).
 @component
 export class DC17_CalibrateAndBest extends Scenario {
   async run(): Promise<void> {
     const c = getController()
+    saveBests(c) // 5l-4i (getController already did, unless an earlier scenario did)
     const prevTestMode = c.config.testMode
     const prevDuration = c.config.testDurationSeconds
     try {
@@ -25,6 +28,8 @@ export class DC17_CalibrateAndBest extends Scenario {
       expect(c.calibratePanel.isDone).toBe(false)
       expect(findSceneObjectByName("SafeZoneMarker").isEnabledInHierarchy).toBe(false)
       expect(findSceneObjectByName("CabinetLabel").isEnabledInHierarchy).toBe(false)
+      c.headPose.setOverride(startSpot(c), c.headPose.forward) // 5l-4g: standing first, so the duck counts
+      await sleep(300)
       c.headPose.setOverride(atHeight(c, startSpot(c), 50), c.headPose.forward)
       expect(await waitFor(() => c.calibratePanel.isDone, (c.config.calibHoldSeconds + 1) * 1000)).toBe(true)
       expect(c.calibratePanel.texts.indexOf(lines("calib.done").primary) >= 0).toBe(true)

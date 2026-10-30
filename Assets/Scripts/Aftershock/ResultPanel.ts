@@ -260,7 +260,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.showPanel()
   }
 
-  /** Out of health: what went wrong (over.why.stood, over.why.danger or hit.fell, 5j-19b), no score (TDD §7). */
+  /** Out of health: what went wrong (hit.fell, over.why.grip, over.why.stood or over.why.danger, 5j-19b, 5l-4f), no score (TDD §7). */
   showGameOver(reason: StringKey, extra: ResultLine[] = [], cards: StringKey[] = []): void {
     this._mode = "gameOver"
     this.sceneObject.enabled = true
