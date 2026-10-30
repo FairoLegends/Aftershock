@@ -48,15 +48,16 @@ export async function expectState(c: DrillController, state: string, timeoutMs: 
 
 /**
  * A fresh BRIEFING with this scenario's config, language and level. LANGUAGE,
- * SAFETY, LEVEL, RESULT and GAME_OVER use the normal buttons (Restart opens
- * the level picker, 5j-19a). BRIEFING, QUAKE, POST_QUAKE and AFTERSHOCK have
+ * SAFETY, LEVEL, CALIBRATE, RESULT and GAME_OVER use the normal buttons
+ * (Restart opens the level picker, 5j-19a; Slice 8D: CALIBRATE is skipped).
+ * BRIEFING, QUAKE, POST_QUAKE and AFTERSHOCK have
  * timers from an earlier config, so they use resetForTest(true); it clears
  * every test hook (5j-19f), so this scenario's hooks are put back before the
  * pickers.
  */
 export async function toFreshBriefing(c: DrillController, force: LayoutForce | null = CLASSIC): Promise<void> {
   c.forceLayoutForTest(force)
-  if (c.state !== "LANGUAGE" && c.state !== "SAFETY" && c.state !== "LEVEL" && c.state !== "RESULT" && c.state !== "GAME_OVER") {
+  if (c.state !== "LANGUAGE" && c.state !== "SAFETY" && c.state !== "LEVEL" && c.state !== "CALIBRATE" && c.state !== "RESULT" && c.state !== "GAME_OVER") {
     const aftershock = c.aftershockForcedForTest
     const fallsOff = c.fallsDisabledForTest
     const lang = c.language
@@ -76,8 +77,21 @@ export async function toFreshBriefing(c: DrillController, force: LayoutForce | n
   if (c.state === "LEVEL") {
     await press("LevelButton." + c.level) // the current level is preselected; one pinch keeps it
   }
+  if (c.state === "CALIBRATE") {
+    await skipCalibrate(c)
+  }
   expect(c.state).toBe("BRIEFING")
   expect(c.health).toBe(c.config.healthStart)
+}
+
+/**
+ * Slice 8D: presses Skip on the duck practice panel and waits for BRIEFING. A
+ * head already pinned ducked counts as a duck (Skip is then ignored), so this
+ * waits out calibDoneSeconds too.
+ */
+export async function skipCalibrate(c: DrillController): Promise<void> {
+  await press("SkipButton")
+  await waitFor(() => c.state === "BRIEFING", (c.config.calibDoneSeconds + 1) * 1000)
 }
 
 /** The start spot at eye height: the Room is placed under the head at every BRIEFING. */
@@ -139,6 +153,7 @@ export function restore(c: DrillController, testMode: boolean, testDurationSecon
   c.forceAftershockForTest(null) // Slice 7C: back to the level's chance
   c.disableFallsForTest(false) // Slice 7D: falls on again
   c.gripHandles.setHoldingForTest(null) // Slice 8B: holding back to the pinch
+  c.clearBestsForTest() // Slice 8D: no stored best leaks into the next scenario
 }
 
 /** Slice 8B: a head point inside doorContains, 30 cm in front of the exit door at eye height (the start spot if there is no door). */

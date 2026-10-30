@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName} from "Leaf.lspkg/Utils/common/Utils"
 import {getLanguage, getString, lines} from "../Strings"
-import {copyLayout, expectState, getController, press, restore, sameLayout, walkOut} from "./DrillTestKit"
+import {copyLayout, expectState, getController, press, restore, sameLayout, skipCalibrate, walkOut} from "./DrillTestKit"
 
 // DC7: picking ja shows the safety screen in Japanese; after a drill, Restart
 // opens the level picker in ja (5j-19a), and with layoutSeed 0 two Restarts
@@ -36,6 +36,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
       await press("ContinueButton")
       expect(c.state).toBe("LEVEL") // Slice 7C: the level picker
       await press("LevelButton.normal")
+      await skipCalibrate(c) // Slice 8D: duck practice
       expect(c.state).toBe("BRIEFING")
       const runS = c.config.testWaitSeconds + c.config.testScanSeconds + c.config.testDurationSeconds + 3
       // Head untouched at the start spot: the quake ends outside the zone, straight to EVACUATE (Slice 8B).
@@ -47,6 +48,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
       await press("RestartButton")
       expect(c.state).toBe("LEVEL")
       await press("LevelButton.normal")
+      await skipCalibrate(c) // Slice 8D: duck practice
       expect(c.state).toBe("BRIEFING")
       expect(c.language).toBe("ja")
       expect(getLanguage()).toBe("ja")
@@ -59,6 +61,7 @@ export class DC7_LanguagesAndRestart extends Scenario {
       await press("RestartButton")
       expect(c.state).toBe("LEVEL")
       await press("LevelButton.normal")
+      await skipCalibrate(c) // Slice 8D: duck practice
       expect(c.state).toBe("BRIEFING")
       expect(c.language).toBe("ja")
       const third = copyLayout(c.layout)

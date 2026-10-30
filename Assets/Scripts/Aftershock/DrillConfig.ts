@@ -334,6 +334,16 @@ export class DrillConfig extends BaseScriptComponent {
   gripHandleHeight: number = 40
   @ui.group_end
 
+  @ui.group_start("Duck practice (Slice 8D, ENGINEERING_PLAN 5k item 7)")
+  @input
+  @hint("The head must stay at or below the duck line this long to count as one duck, in seconds")
+  calibHoldSeconds: number = 0.4
+
+  @input
+  @hint("How long calib.done shows before BRIEFING, in seconds")
+  calibDoneSeconds: number = 1.2
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")

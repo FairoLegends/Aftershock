@@ -1,0 +1,50 @@
+- !<AssetImportMetadata/9440eb92-623e-4757-bc72-8644eb16ee08>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> fba3c611-bf7d-453d-8aec-da13ad3ea1dd
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> fba3c611-bf7d-453d-8aec-da13ad3ea1dd
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> dff6c843-a4cf-4b32-b9d4-5171f0525eb8
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/dff6c843-a4cf-4b32-b9d4-5171f0525eb8>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: ccb9ae95-aef4-453d-8bee-41bb7ab02891
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    backingColor: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Duck practice panel (P7)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @ui {"widget":"group_start", "label":"Look"}'
+    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @ui {"widget":"group_end"}'

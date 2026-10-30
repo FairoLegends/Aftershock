@@ -16,6 +16,7 @@ import {DC13_FallingObjects} from "./DC13_FallingObjects"
 import {DC14_WallsAndDoor} from "./DC14_WallsAndDoor"
 import {DC15_Evacuation} from "./DC15_Evacuation"
 import {DC16_HoldOn} from "./DC16_HoldOn"
+import {DC17_CalibrateAndBest} from "./DC17_CalibrateAndBest"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -36,6 +37,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc13-falling-objects", typename: DC13_FallingObjects.getTypeName()},
     {id: "dc14-walls-and-door", typename: DC14_WallsAndDoor.getTypeName()},
     {id: "dc15-evacuation", typename: DC15_Evacuation.getTypeName()},
-    {id: "dc16-hold-on", typename: DC16_HoldOn.getTypeName()}
+    {id: "dc16-hold-on", typename: DC16_HoldOn.getTypeName()},
+    {id: "dc17-calibrate-and-best", typename: DC17_CalibrateAndBest.getTypeName()}
   ]
 }

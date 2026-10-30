@@ -29,6 +29,7 @@ import {QuakeShaker} from "./QuakeShaker"
 import {ResultLine, ResultPanel} from "./ResultPanel"
 import {RoomWalls} from "./RoomWalls"
 import {SafetyPanel} from "./SafetyPanel"
+import {CalibratePanel} from "./CalibratePanel"
 import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
@@ -40,6 +41,7 @@ export type DrillState =
   | "LANGUAGE"
   | "SAFETY"
   | "LEVEL"
+  | "CALIBRATE"
   | "BRIEFING"
   | "QUAKE"
   | "POST_QUAKE"
@@ -52,7 +54,8 @@ export type DrillState =
 const ALLOWED: Record<DrillState, DrillState[]> = {
   LANGUAGE: ["SAFETY"],
   SAFETY: ["LEVEL"],
-  LEVEL: ["BRIEFING"],
+  LEVEL: ["CALIBRATE"], // Slice 8D (5k item 7): duck practice before the quake wait, every level
+  CALIBRATE: ["BRIEFING"],
   BRIEFING: ["QUAKE"],
   QUAKE: ["GAME_OVER", "POST_QUAKE"],
   POST_QUAKE: ["EVACUATE", "AFTERSHOCK"], // Slice 7C: the aftershock comes after leaving cover; 8B: then the door
@@ -63,6 +66,11 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
 }
 
 const LOG = "[Aftershock]"
+// Slice 8D (F5): one Persistent Storage key per level for its best total score.
+const BEST_LEVELS: Level[] = ["easy", "normal", "hard"]
+function bestKey(level: Level): string {
+  return "best." + level
+}
 const BED_REVEAL_SIZE = 120 // Slice 7C Hard reveal: the red warn.bed over the bed (about 2.7 cm em)
 const BED_REVEAL_HEIGHT = 120 // cm above the floor, Room-local
 
@@ -184,6 +192,10 @@ export class DrillController extends BaseScriptComponent {
   levelPanel: LevelPanel
 
   @input
+  @hint("CalibratePanel component (Slice 8D duck practice: calib.title + Skip, under AftershockRoot)")
+  calibratePanel: CalibratePanel
+
+  @input
   @hint("ResultPanel component (result / game-over + Restart, under AftershockRoot)")
   resultPanel: ResultPanel
 
@@ -279,6 +291,10 @@ export class DrillController extends BaseScriptComponent {
   private roomZ = 0
   private postQuakeUpdate: UpdateEvent | null = null
   private briefingUpdate: UpdateEvent | null = null // 5j-19e: the floor path follows the nearest table
+  private calibUpdate: UpdateEvent | null = null // Slice 8D: watches the head for one duck
+  private calibDoneTimer: DelayedCallbackEvent | null = null // Slice 8D: calib.done, then BRIEFING
+  private calibDuckSince: number | null = null // s; when the head went at or below the duck line
+  private _calibDucked = false
   private quakeStartTimer: DelayedCallbackEvent | null = null
   private quakeEndTimer: DelayedCallbackEvent | null = null
   private quakeUpdate: UpdateEvent | null = null
@@ -487,6 +503,25 @@ export class DrillController extends BaseScriptComponent {
   get level(): Level {
     return this._level
   }
+  /** Slice 8D (P7): true when the last CALIBRATE ended with a duck, false when skipped. */
+  get calibrated(): boolean {
+    return this._calibDucked
+  }
+  get calibDucked(): boolean {
+    return this._calibDucked
+  }
+  /** Slice 8D (F5): the stored best total score for `level`; 0 when none is kept. */
+  bestFor(level: Level): number {
+    return global.persistentStorageSystem.store.getInt(bestKey(level))
+  }
+  setBestForTest(level: Level, value: number): void {
+    global.persistentStorageSystem.store.putInt(bestKey(level), value)
+  }
+  clearBestsForTest(): void {
+    for (const level of BEST_LEVELS) {
+      global.persistentStorageSystem.store.putInt(bestKey(level), 0)
+    }
+  }
   get aftershockHappened(): boolean {
     return this._aftershockHappened
   }
@@ -577,6 +612,11 @@ export class DrillController extends BaseScriptComponent {
     this.briefingUpdate = this.createEvent("UpdateEvent")
     this.briefingUpdate.bind(() => this.onBriefingUpdate())
     this.briefingUpdate.enabled = false
+    this.calibUpdate = this.createEvent("UpdateEvent")
+    this.calibUpdate.bind(() => this.onCalibUpdate())
+    this.calibUpdate.enabled = false
+    this.calibDoneTimer = this.createEvent("DelayedCallbackEvent")
+    this.calibDoneTimer.bind(() => this.onCalibDoneEnded())
     this.createEvent("OnStartEvent").bind(() => this.onStart())
   }
 
@@ -611,6 +651,7 @@ export class DrillController extends BaseScriptComponent {
       ["floorPath", this.floorPath],
       ["edgeWarning", this.edgeWarning],
       ["levelPanel", this.levelPanel],
+      ["calibratePanel", this.calibratePanel],
       ["fallingObjects", this.fallingObjects],
       ["gripHandles", this.gripHandles]
     ]
@@ -701,6 +742,8 @@ export class DrillController extends BaseScriptComponent {
     this.resultPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.levelPanel.onPick.add((level) => this.onLevelPicked(level))
     this.levelPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
+    this.calibratePanel.onSkip.add(() => this.onCalibSkipped())
+    this.calibratePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.transitionTo("LANGUAGE")
   }
 
@@ -727,7 +770,57 @@ export class DrillController extends BaseScriptComponent {
     }
     this._level = level
     console.log(`${LOG} LEVEL: ${level}`)
+    this.transitionTo("CALIBRATE")
+  }
+
+  /**
+   * Slice 8D (P7): one duck counts when the head stays at or below the duck
+   * line (the 5f-1 baseline floorY + eyeHeight, minus duckDrop) for
+   * calibHoldSeconds; then calib.done for calibDoneSeconds, then BRIEFING.
+   */
+  private onCalibUpdate(): void {
+    if (this._state !== "CALIBRATE") {
+      this.calibUpdate.enabled = false
+      return
+    }
+    const duckLine = this._floorY + this.config.eyeHeight - this.config.duckDrop
+    if (this.headPose.position.y > duckLine) {
+      this.calibDuckSince = null
+      return
+    }
+    const now = getTime()
+    if (this.calibDuckSince === null) {
+      this.calibDuckSince = now
+    }
+    if (now - this.calibDuckSince >= this.config.calibHoldSeconds) {
+      this.calibUpdate.enabled = false
+      this._calibDucked = true
+      this.calibratePanel.setDone(true)
+      console.log(`${LOG} CALIBRATE: ducked (head ${fmt(this.headPose.position.y)} <= ${fmt(duckLine)} cm)`)
+      this.calibDoneTimer.reset(this.config.calibDoneSeconds)
+    }
+  }
+
+  private onCalibDoneEnded(): void {
+    if (this._state === "CALIBRATE") {
+      this.transitionTo("BRIEFING")
+    }
+  }
+
+  /** btn.skip: BRIEFING at once, not calibrated (every level). */
+  private onCalibSkipped(): void {
+    if (this._state !== "CALIBRATE" || this._calibDucked) {
+      return
+    }
+    console.log(`${LOG} CALIBRATE: skipped`)
     this.transitionTo("BRIEFING")
+  }
+
+  /** Stops the duck watch and the calib.done timer. */
+  private stopCalibrate(): void {
+    this.calibUpdate.enabled = false
+    this.calibDoneTimer.cancel()
+    this.calibDuckSince = null
   }
 
   onRandomWaitEnded(): void {
@@ -907,6 +1000,8 @@ export class DrillController extends BaseScriptComponent {
     this.stopEvacuate()
     this.postQuakeUpdate.enabled = false
     this.briefingUpdate.enabled = false
+    this.stopCalibrate() // Slice 8D
+    this.calibratePanel.hide()
     this.quakeStartTimer.cancel()
     this.resetAftershock()
     this._lastScore = null
@@ -937,6 +1032,9 @@ export class DrillController extends BaseScriptComponent {
         break
       case "LEVEL":
         this.enterLevel()
+        break
+      case "CALIBRATE":
+        this.enterCalibrate()
         break
       case "BRIEFING":
         this.enterBriefing()
@@ -974,6 +1072,7 @@ export class DrillController extends BaseScriptComponent {
     this.resultPanel.hide()
     this.safetyPanel.hide()
     this.levelPanel.hide()
+    this.calibratePanel.hide()
     this.showReveal(false)
     this.languagePanel.placeInFront(this.headPose.position, this.headPose.forward, this.config.hudDistance, 0)
     this.languagePanel.show()
@@ -1019,7 +1118,39 @@ export class DrillController extends BaseScriptComponent {
     this.levelPanel.show(this._level)
   }
 
+  /**
+   * Slice 8D (P7, 5k item 7): duck practice, placed like the safety panel;
+   * the room stays hidden as in SAFETY. Restart comes through here too.
+   */
+  private enterCalibrate(): void {
+    this.levelPanel.hide()
+    this._instructionKey = null
+    this.hideArrow()
+    this.hideScanPathEdge()
+    this.setRoomLabelsShown(false)
+    this.setDangerZonesShown(false)
+    this.showReveal(false)
+    this.briefingPanel.hide()
+    this.hud.hide()
+    this.resultPanel.hide()
+    this._calibDucked = false
+    this.stopCalibrate()
+    this.calibratePanel.placeInFront(
+      this.headPose.position,
+      this.headPose.forward,
+      this.config.hudDistance,
+      this.config.hudBelowEye
+    )
+    this.calibratePanel.show()
+    console.log(
+      `${LOG} CALIBRATE: duck line ${fmt(this._floorY + this.config.eyeHeight - this.config.duckDrop)} cm, hold ${fmt(this.config.calibHoldSeconds)} s`
+    )
+    this.calibUpdate.enabled = true
+  }
+
   private enterBriefing(): void {
+    this.stopCalibrate() // Slice 8D
+    this.calibratePanel.hide()
     this.safetyPanel.hide()
     this.levelPanel.hide()
     this.resultPanel.hide()
@@ -1665,6 +1796,20 @@ export class DrillController extends BaseScriptComponent {
     this.fallingObjects.releaseLanded()
   }
 
+  /** Slice 8D (F5, RESULT only): keeps a higher score as the level's best; result.newBest when it is, result.best always. */
+  private bestRows(score: number): ResultLine[] {
+    const rows: ResultLine[] = []
+    let best = this.bestFor(this._level)
+    if (score > best) {
+      best = score
+      global.persistentStorageSystem.store.putInt(bestKey(this._level), best)
+      rows.push({text: lines("result.newBest"), split: false})
+      console.log(`${LOG} RESULT: new best for ${this._level}: ${best}`)
+    }
+    rows.push({text: lines("result.best", {"{score}": String(best)}), split: true})
+    return rows
+  }
+
   private enterResult(): void {
     this.postQuakeUpdate.enabled = false
     this.stopEvacuate()
@@ -1676,7 +1821,7 @@ export class DrillController extends BaseScriptComponent {
     )
     this.showResultPanel()
     this.showReveal(true)
-    this.resultPanel.showResult(b, this.resultExtras())
+    this.resultPanel.showResult(b, this.resultExtras(this.bestRows(b.score)))
   }
 
   private enterGameOver(): void {
@@ -1726,14 +1871,17 @@ export class DrillController extends BaseScriptComponent {
     console.log(`${LOG} AFTERSHOCK: ${fmt(d)} s at strength ${fmt(c.aftershockStrength)}, health ${fmt(this._health)}`)
   }
 
-  /** The result rows Slice 7C adds: the aftershock's time to cover (if one happened), the level, and on Hard the reveal note. */
-  private resultExtras(): ResultLine[] {
+  /** The result rows Slice 7C adds: the aftershock's time to cover (if one happened), the level, the best rows (Slice 8D, RESULT only) and on Hard the reveal note. */
+  private resultExtras(best: ResultLine[] = []): ResultLine[] {
     const extra: ResultLine[] = []
     if (this._aftershockHappened) {
       const t = this._aftershockTimeToCover
       extra.push({text: lines("result.aftershock", {"{s}": t === null ? "–" : t.toFixed(1)}), split: true})
     }
     extra.push({text: lines("result.level", {"{level}": getString(levelNameKey(this._level))}), split: true})
+    for (const row of best) {
+      extra.push(row)
+    }
     if (!guidesOn(this._level)) {
       extra.push({text: lines("result.reveal"), split: false})
     }

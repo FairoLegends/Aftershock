@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {getString, lines} from "../Strings"
-import {CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
+import {CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, skipCalibrate, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 // DC12 (Slice 7C, ENGINEERING_PLAN 5j item 18): SAFETY Continue opens the
 // level picker. Hard: no guides (no scan, arrow or path), drain x1.5, and the
@@ -30,6 +30,7 @@ export class DC12_Levels extends Scenario {
       expect(c.levelPanel.texts.indexOf(getString("level.recommended")) >= 0).toBe(true)
 
       await press("LevelButton.hard")
+      await skipCalibrate(c) // Slice 8D: duck practice
       expect(c.state).toBe("BRIEFING")
       expect(c.level).toBe("hard")
       expect(c.levelPanel.isShown).toBe(false)
@@ -74,6 +75,7 @@ export class DC12_Levels extends Scenario {
       expect(c.levelPanel.isShown).toBe(true)
       expect(c.revealShown).toBe(false)
       await press("LevelButton.hard")
+      await skipCalibrate(c) // Slice 8D: duck practice
       expect(c.state).toBe("BRIEFING")
       expect(c.level).toBe("hard")
       expect(c.guidesVisible).toBe(false)

@@ -74,6 +74,11 @@ export type StringKey =
   | "result.aftershock"
   | "result.level"
   | "result.reveal"
+  | "calib.title"
+  | "calib.done"
+  | "btn.skip"
+  | "result.best"
+  | "result.newBest"
 
 export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "safety.drill": {
@@ -393,7 +398,25 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "Sieh dich um: Rot ist gefährlich, Grün ist sicher",
     ja: "見回そう：赤は危険、緑は安全",
     zh: "看看四周：红色危险，绿色安全"
-  }
+  },
+  // Slice 8D (STRINGS_I18N.md): duck practice and personal best.
+  "calib.title": {
+    id: "Coba merunduk sekarang",
+    en: "Try ducking now",
+    de: "Duck dich jetzt einmal",
+    ja: "今、しゃがんでみて",
+    zh: "现在试着蹲下"
+  },
+  "calib.done": {
+    id: "Bagus, begitu caranya",
+    en: "Good, that's how",
+    de: "Gut, so geht's",
+    ja: "いいですね、その調子",
+    zh: "很好，就是这样"
+  },
+  "btn.skip": {id: "Lewati", en: "Skip", de: "Überspringen", ja: "スキップ", zh: "跳过"},
+  "result.best": {id: "Rekor: {score}", en: "Best: {score}", de: "Bestwert: {score}", ja: "ベスト：{score}", zh: "最佳：{score}"},
+  "result.newBest": {id: "Rekor baru!", en: "New best!", de: "Neuer Bestwert!", ja: "自己ベスト更新！", zh: "新纪录！"}
 }
 
 // Selected language: "id" until the picker sets it; Restart keeps it.

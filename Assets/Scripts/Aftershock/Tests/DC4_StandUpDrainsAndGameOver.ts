@@ -1,7 +1,7 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
-import {atHeight, expectState, getController, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {atHeight, expectState, getController, levelLook, pinDucked, press, restore, skipCalibrate, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
 
 // Long enough for health to reach 0: healthStart / healthDrainPerSecond = 25 s at the defaults.
 const DURATION_S = 40
@@ -58,6 +58,7 @@ export class DC4_StandUpDrainsAndGameOver extends Scenario {
       await press("RestartButton")
       expect(c.state).toBe("LEVEL")
       await press("LevelButton." + c.level)
+      await skipCalibrate(c) // Slice 8D: duck practice
       expect(c.state).toBe("BRIEFING")
       expect(c.health).toBe(c.config.healthStart)
       expect(c.resultPanel.isShown).toBe(false)

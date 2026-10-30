@@ -55,6 +55,11 @@ export class DC1_SafetyThenRoom extends Scenario {
     await sleep(800)
     await interactor.trigger(findInteractableByName("LevelButton.normal"))
     await sleep(500)
+    // Slice 8D: the duck practice panel comes first; Skip → BRIEFING.
+    expect(controller.state).toBe("CALIBRATE")
+    await sleep(800)
+    await interactor.trigger(findInteractableByName("SkipButton"))
+    await sleep(500)
 
     expect(controller.state).toBe("BRIEFING")
     expect(controller.instructionKey).toBe("instr.brief")
