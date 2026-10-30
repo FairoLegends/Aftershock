@@ -8,7 +8,8 @@ import {atHeight, expectState, getController, levelLook, pinDucked, restore, sta
 // outside every danger zone does nothing; inside the shelf's danger zone it
 // costs fallHitDamage and shows hit.fell; one landing on a head ducked under
 // the table does nothing. Easy schedules no falls; Normal schedules
-// fallCountMin..fallCountMax.
+// fallCountMin..fallCountMax. Slice 9A (5l item 2): only the shelf drops
+// items; the closed cabinet drops nothing.
 @component
 export class DC13_FallingObjects extends Scenario {
   async run(): Promise<void> {
@@ -62,7 +63,7 @@ export class DC13_FallingObjects extends Scenario {
       expect(c.hud.isNoticeShown).toBe(true)
       expect(c.hud.noticeKey).toBe("hit.fell")
 
-      // (b) Ducked under the table, safe: a cabinet item lands on the head, no hit.
+      // (b) Ducked under the table, safe: a shelf item lands on the head, no hit (Slice 9A: the cabinet drops nothing).
       pinDucked(c)
       await waitFor(() => c.isSafe, 2000)
       expect(c.isSafe).toBe(true)
@@ -70,7 +71,9 @@ export class DC13_FallingObjects extends Scenario {
       const landed1 = c.fallsLanded
       const hits1 = c.fallHits
       const h2 = c.health
-      expect(c.forceFallForTest("cabinet", c.headPose.position)).toBe(true)
+      expect(c.forceFallForTest("cabinet", c.headPose.position)).toBe(false)
+      expect(c.fallsLanded).toBe(landed1)
+      expect(c.forceFallForTest("shelf", c.headPose.position)).toBe(true)
       await waitFor(() => c.fallsLanded > landed1, 2000)
       expect(c.fallsLanded).toBe(landed1 + 1)
       expect(c.fallHits).toBe(hits1)

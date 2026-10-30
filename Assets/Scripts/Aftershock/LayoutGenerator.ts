@@ -12,6 +12,8 @@ export const HAZARDS: LayoutItem[] = ["cabinet", "shelf", "glass", "lamp", "tv"]
 /** Plain furniture, always present (§5j-14b): no danger zone, never cover. */
 export const FURNITURE: LayoutItem[] = ["bed", "chair"]
 export const ALL_ITEMS: LayoutItem[] = TABLES.concat(HAZARDS, FURNITURE)
+/** Slice 9A (§5l-1): these stand with their back flush on a wall, facing into the room. */
+export const WALL_BACKED: LayoutItem[] = ["cabinet", "shelf", "tv", "glass", "bed"]
 
 export interface Footprint {
   halfX: number // cm, along the item's local X
@@ -48,7 +50,7 @@ export interface Layout {
   items: Partial<Record<LayoutItem, Placement>>
   tables: LayoutItem[] // present tables, "table" first
   hazards: LayoutItem[] // present hazards, in HAZARDS order
-  /** Slice 8A: the walls, an axis-aligned rect (cm) around every footprint and the start spot. */
+  /** Slice 9A: the walls, drawn first (ROOM_SIDE_MIN..MAX a side) with the start spot inside. */
   room: RoomRect
   /** The wall the glass stands on, or null without glass. */
   glassWall: WallSide | null
@@ -57,6 +59,7 @@ export interface Layout {
 
 /** A wall by its outward direction: "+z" is behind the start spot, "-z" in front of it. */
 export type WallSide = "+x" | "-x" | "+z" | "-z"
+export const WALL_SIDES: WallSide[] = ["+x", "-x", "+z", "-z"]
 
 export interface RoomRect {
   minX: number
@@ -74,9 +77,8 @@ export interface DoorPlacement {
 }
 
 // Slice 8A walls and door (ENGINEERING_PLAN §5k items 1–3). Not drill tunables.
-export const WALL_MARGIN = 40 // cm: walls stand this far outside every footprint and the start spot
-export const ROOM_MIN = 400 // cm: shortest wall
-export const ROOM_MAX = 700 // cm: longest wall; a draw that needs more is rejected
+export const ROOM_MIN = 400 // cm: shortest wall (DC14 bound)
+export const ROOM_MAX = 700 // cm: longest wall (DC14 bound)
 export const DOOR_W = 90 // cm: doorway width
 export const DOOR_H = 210 // cm: doorway height
 export const DOOR_ZONE_DEPTH = 60 // cm: doorContains() floor rect in front of the door
@@ -84,6 +86,17 @@ const DOOR_CLEAR = 120 // cm in front of the door kept free of footprints, dange
 const DOOR_GLASS_GAP = 100 // cm: least distance from the doorway to the glass
 const DOOR_CORNER = 20 // cm: least distance from a corner to the doorway
 const DOOR_TRIES = 12 // spots per wall
+
+// Slice 9A wall-backed layout (ENGINEERING_PLAN §5l item 1). Not drill tunables.
+export const ROOM_SIDE_MIN = 420 // cm: each side of the room is drawn in ROOM_SIDE_MIN..MAX
+export const ROOM_SIDE_MAX = 600
+export const WALL_GAP = 2 // cm between a wall-backed item's back and its wall
+const START_WALL_CLEAR = 60 // cm: the start spot keeps startClearRadius + this from every wall
+const WALL_CORNER = 20 // cm: a wall-backed item keeps this from the room's corners
+const TABLE_WALL_CLEAR = 50 // cm: tables keep this from every wall
+const LAMP_NEAR_WALL = 40 // cm: the lamp prefers a spot within this of a wall
+const CHAIR_TABLE_REACH = 150 // cm: a chair faces a table whose center is this close
+const RELAX = 60 // cm: a wall item's max distance grows to reach its wall's center line + this
 
 /** The DrillConfig fields the layout reads (cm). DrillConfig satisfies this. */
 export interface LayoutParams {
@@ -110,32 +123,46 @@ export interface LayoutForce {
 const SPACING = 30 // cm: footprints grown by this may not overlap (walkable gaps)
 const MAX_TRIES = 1000
 const ITEM_TRIES = 40 // draws per item inside one try before the try restarts
+// Placement order after the tables: the big wall items first, the free ones last.
+const PLACE_ORDER: LayoutItem[] = ["bed", "glass", "tv", "cabinet", "shelf", "lamp", "chair"]
 
 // Slice 2 fixed layout (DESIGN_BRIEF §6), used when no draw is valid, plus the
-// bed and chair (§5j-15): 1 table, cabinet, shelf, glass, bed, chair. Slice 8A:
-// the glass backs onto the +Z wall and nothing reaches past it.
+// bed and chair (§5j-15): 1 table, cabinet, shelf, glass, bed, chair. Slice 9A:
+// the cabinet (−X wall), shelf (+X wall), glass (+Z wall) and bed (long side on
+// the +X wall) stand with their backs WALL_GAP from FIXED_ROOM's walls.
+const FIXED_ROOM: RoomRect = {minX: -250, maxX: 250, minZ: -300, maxZ: 220}
 const FIXED_LAYOUT: Partial<Record<LayoutItem, Placement>> = {
   table: {x: 0, z: -150, yaw: 0},
-  cabinet: {x: -150, z: -40, yaw: 0},
-  shelf: {x: 130, z: -60, yaw: 0}, // Slice 8A: was x 150; its danger zone left the +X wall's door spots
-  glass: {x: 0, z: 200, yaw: 0},
-  bed: {x: 190, z: 90, yaw: Math.PI / 2},
+  cabinet: {x: -225.5, z: -60, yaw: 0},
+  shelf: {x: 233, z: -150, yaw: 0},
+  glass: {x: 0, z: 213, yaw: 0},
+  bed: {x: 203, z: 95, yaw: 0},
   chair: {x: -170, z: 120, yaw: 0}
 }
-const FIXED_DOOR: DoorPlacement = {x: 330, z: -80, nx: -1, nz: 0, wall: "+x"} // on the fixed layout's +X wall; used only if placeDoor finds no spot
+const FIXED_DOOR: DoorPlacement = {x: -150, z: -300, nx: 0, nz: 1, wall: "-z"} // on the fixed room's −Z wall; used only if placeDoor finds no spot
+
+interface Spot {
+  at: Placement
+  side: WallSide | null // the wall a wall-backed item stands on
+}
 
 /**
- * A new layout (§5j-14d, 15): tableCountMin..Max tables (centers
- * tableDistanceMin..Max from the start spot), hazardCountMin..Max hazards
- * drawn from HAZARDS without repeats, and the bed and chair (centers
- * hazardDistanceMin..Max), each at a random bearing and facing the start spot.
+ * A new layout (§5j-14d, 15; Slice 9A §5l-1): first the room, each side
+ * ROOM_SIDE_MIN..MAX, with the start spot inside at least startClearRadius +
+ * START_WALL_CLEAR from every wall (not always centred). Then
+ * tableCountMin..Max tables (centers tableDistanceMin..Max from the start spot,
+ * TABLE_WALL_CLEAR from the walls, facing the start spot), hazardCountMin..Max
+ * hazards drawn from HAZARDS without repeats, and the bed and chair. The
+ * WALL_BACKED items stand back to a wall (WALL_GAP), facing straight in,
+ * WALL_CORNER from the corners, centers hazardDistanceMin..Max from the start
+ * spot (the max grows to what the wall allows); the bed with its long side or
+ * its head end on the wall. The lamp prefers a spot near a wall, any facing;
+ * the chair faces a table within CHAIR_TABLE_REACH, else a random way.
  * Valid when no two footprints grown by SPACING overlap, no table, bed, chair
  * or danger zone comes within startClearRadius of the start spot, no danger
- * zone overlaps a safe zone and the bed and chair stay out of every safe zone.
- * Slice 8A: the glass goes last, back flush on a wall; the walls (room) hold
- * every footprint and the start spot grown by WALL_MARGIN, each ROOM_MIN to
- * ROOM_MAX long; a door on a wall keeps DOOR_CLEAR free in front (placeDoor).
- * A draw that breaks any of these is rejected.
+ * zone overlaps a safe zone and the bed and chair stay out of every safe zone;
+ * a door on a wall keeps DOOR_CLEAR free in front (placeDoor). A draw that
+ * breaks any of these is rejected.
  * layoutSeed 0 = a new seed each call; any other value = that seed, so the
  * same layout every time.
  */
@@ -146,18 +173,19 @@ export function generateLayout(p: LayoutParams, force: LayoutForce | null = null
   const tables = TABLES.slice(0, tableCount)
   const forced = force && force.hazards ? force.hazards : null
   const hazards = forced ? HAZARDS.filter((h) => forced.indexOf(h) >= 0) : pickHazards(random, drawCount(random, p.hazardCountMin, p.hazardCountMax, 0, HAZARDS.length))
-  const order = tables.concat(hazards.filter((h) => h !== "glass"), FURNITURE)
-  const glass = hazards.indexOf("glass") >= 0
+  const present = hazards.concat(FURNITURE)
+  const order = tables.concat(PLACE_ORDER.filter((i) => present.indexOf(i) >= 0))
   for (let tries = 1; tries <= MAX_TRIES; tries++) {
-    const items = placeAll(random, order, p)
-    const room = items ? placeWalls(random, items, order, glass, p) : null
-    if (room) {
-      return {seed: seed, tries: tries, fallback: false, items: items, tables: tables, hazards: hazards, room: room.rect, glassWall: room.glassWall, door: room.door}
+    const room = drawRoom(random, p)
+    const placed = placeAll(random, order, room, p)
+    const door = placed ? placeDoor(random, placed.items, order, room, placed.glassWall, p) : null
+    if (placed && door) {
+      return {seed: seed, tries: tries, fallback: false, items: placed.items, tables: tables, hazards: hazards, room: room, glassWall: placed.glassWall, door: door}
     }
   }
   const items = copyItems(FIXED_LAYOUT)
-  const fixedOrder: LayoutItem[] = ["table", "cabinet", "shelf", "bed", "chair"]
-  const rect = roomRect(items, fixedOrder, "+z", FIXED_LAYOUT.glass.z + FOOTPRINTS.glass.halfZ) || boundsOf(items, fixedOrder)
+  const fixedOrder: LayoutItem[] = ["table", "cabinet", "shelf", "glass", "bed", "chair"]
+  const rect = {minX: FIXED_ROOM.minX, maxX: FIXED_ROOM.maxX, minZ: FIXED_ROOM.minZ, maxZ: FIXED_ROOM.maxZ}
   return {
     seed: seed,
     tries: MAX_TRIES,
@@ -167,7 +195,7 @@ export function generateLayout(p: LayoutParams, force: LayoutForce | null = null
     hazards: ["cabinet", "shelf", "glass"],
     room: rect,
     glassWall: "+z",
-    door: placeDoor(mulberry32(seed), items, fixedOrder.concat(["glass"]), rect, "+z", p) || FIXED_DOOR
+    door: placeDoor(mulberry32(seed), items, fixedOrder, rect, "+z", p) || FIXED_DOOR
   }
 }
 
@@ -183,6 +211,25 @@ export function inDoorZone(door: DoorPlacement, px: number, pz: number): boolean
 /** Yaw (radians) that turns an item at (x, z) so its front faces the start spot. */
 export function yawFacingStart(x: number, z: number, front: number): number {
   return Math.atan2(-x, -z) - front
+}
+
+/**
+ * Slice 9A: the item-frame yaws that may face into the room when the item is
+ * wall-backed. The bed: its head end (front 0, foot end out) or either long
+ * side; the rest: their footprint front.
+ */
+export function wallFronts(item: LayoutItem): number[] {
+  return item === "bed" ? [0, Math.PI / 2, -Math.PI / 2] : [FOOTPRINTS[item].front]
+}
+
+/** Slice 9A: the wall's line, x for "+x"/"-x" and z for "+z"/"-z" (Room-local cm). */
+export function wallLine(room: RoomRect, side: WallSide): number {
+  return side === "+x" ? room.maxX : side === "-x" ? room.minX : side === "+z" ? room.maxZ : room.minZ
+}
+
+/** Slice 9A: the wall's unit floor normal into the room. */
+export function wallInward(side: WallSide): {x: number; z: number} {
+  return side === "+x" ? {x: -1, z: 0} : side === "-x" ? {x: 1, z: 0} : side === "+z" ? {x: 0, z: -1} : {x: 0, z: 1}
 }
 
 /**
@@ -219,123 +266,166 @@ interface Rect {
   hz: number
 }
 
+/** The room: each side ROOM_SIDE_MIN..MAX, the start spot (origin) startClearRadius + START_WALL_CLEAR from every wall. */
+function drawRoom(random: () => number, p: LayoutParams): RoomRect {
+  const c = p.startClearRadius + START_WALL_CLEAR
+  const w = ROOM_SIDE_MIN + random() * (ROOM_SIDE_MAX - ROOM_SIDE_MIN)
+  const d = ROOM_SIDE_MIN + random() * (ROOM_SIDE_MAX - ROOM_SIDE_MIN)
+  const minX = -(c + random() * Math.max(0, w - 2 * c))
+  const minZ = -(c + random() * Math.max(0, d - 2 * c))
+  return {minX: minX, maxX: minX + w, minZ: minZ, maxZ: minZ + d}
+}
+
 /**
  * Places `order` one item at a time against the items already placed; null
- * when one item finds no spot. Slice 8A: the start spot and every footprint,
- * grown by WALL_MARGIN, must fit in ROOM_MAX × ROOM_MAX.
+ * when one item finds no spot. Also returns the glass's wall.
  */
-function placeAll(random: () => number, order: LayoutItem[], p: LayoutParams): Partial<Record<LayoutItem, Placement>> | null {
+function placeAll(
+  random: () => number,
+  order: LayoutItem[],
+  room: RoomRect,
+  p: LayoutParams
+): {items: Partial<Record<LayoutItem, Placement>>; glassWall: WallSide | null} | null {
   const items: Partial<Record<LayoutItem, Placement>> = {}
   const placed: LayoutItem[] = []
+  let glassWall: WallSide | null = null
   for (const item of order) {
-    const min = isTable(item) ? p.tableDistanceMin : p.hazardDistanceMin
-    const max = isTable(item) ? p.tableDistanceMax : p.hazardDistanceMax
     let ok = false
     for (let i = 0; i < ITEM_TRIES && !ok; i++) {
-      items[item] = draw(random, item, min, max)
-      ok = fits(items, item, placed, p) && fitsRoom(boundsOf(items, placed.concat([item])))
+      const spot = drawItem(random, item, i, items, room, p)
+      if (!spot) continue
+      items[item] = spot.at
+      ok = fits(items, item, placed, p)
+      if (ok && item === "glass") glassWall = spot.side
     }
     if (!ok) {
       return null
     }
     placed.push(item)
   }
-  return items
+  return {items: items, glassWall: glassWall}
 }
 
-const SIDES: WallSide[] = ["+x", "-x", "+z", "-z"]
-
-/**
- * Slice 8A: stands the glass (when present) with its back flush on a wall,
- * facing in, then the walls around everything and the door. Null when the
- * glass or the door finds no spot or a wall would pass ROOM_MAX.
- */
-function placeWalls(
+/** One candidate spot for `item` (attempt `i` of ITEM_TRIES), or null when the draw missed the room. */
+function drawItem(
   random: () => number,
+  item: LayoutItem,
+  i: number,
   items: Partial<Record<LayoutItem, Placement>>,
-  order: LayoutItem[],
-  glass: boolean,
+  room: RoomRect,
   p: LayoutParams
-): {rect: RoomRect; glassWall: WallSide | null; door: DoorPlacement} | null {
-  let glassWall: WallSide | null = null
-  let rect: RoomRect | null = null
-  if (glass) {
-    const b = boundsOf(items, order)
-    for (let i = 0; i < ITEM_TRIES && !glassWall; i++) {
-      const side = SIDES[Math.floor(random() * SIDES.length)]
-      const wall = drawGlassOnWall(random, side, b, items)
-      if (wall === null) continue
-      const at = items.glass
-      const d = Math.sqrt(at.x * at.x + at.z * at.z)
-      if (d >= p.hazardDistanceMin && d <= p.hazardDistanceMax && fits(items, "glass", order, p)) {
-        rect = roomRect(items, order, side, wall)
-        if (rect) glassWall = side
-      }
-    }
-    if (!glassWall) {
-      delete items.glass
-      return null
-    }
-  } else {
-    rect = roomRect(items, order, null, 0)
+): Spot | null {
+  if (WALL_BACKED.indexOf(item) >= 0) {
+    return drawOnWall(random, item, room, p)
   }
-  if (!rect) {
-    return null
+  if (isTable(item)) {
+    const at = draw(random, item, p.tableDistanceMin, p.tableDistanceMax)
+    return insideRoom(footRect(item, at, 0), room, TABLE_WALL_CLEAR) ? {at: at, side: null} : null
   }
-  const door = placeDoor(random, items, glass ? order.concat(["glass"]) : order, rect, glassWall, p)
-  return door ? {rect: rect, glassWall: glassWall, door: door} : null
+  if (item === "lamp" && i < ITEM_TRIES / 2) {
+    return drawNearWall(random, room, p)
+  }
+  const at = draw(random, item, p.hazardDistanceMin, p.hazardDistanceMax)
+  if (item === "lamp") at.yaw = (random() * 2 - 1) * Math.PI
+  if (item === "chair") at.yaw = chairYaw(random, at, items)
+  return insideRoom(footRect(item, at, 0), room, WALL_GAP) ? {at: at, side: null} : null
 }
 
 /**
- * Draws a wall line on `side` beyond the bounds `b` (so the span stays within
- * ROOM_MAX) and puts the glass on it, back to the wall; returns the wall line,
- * or null when that side has no room.
+ * A wall-backed spot: a random wall, the back WALL_GAP from its line, the front
+ * straight into the room, WALL_CORNER from both corners, the center
+ * hazardDistanceMin..max from the start spot, where max is hazardDistanceMax or,
+ * when that cannot reach this wall, the wall's center-line distance + RELAX.
  */
-function drawGlassOnWall(random: () => number, side: WallSide, b: RoomRect, items: Partial<Record<LayoutItem, Placement>>): number | null {
+function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams): Spot | null {
+  const f = FOOTPRINTS[item]
+  const side = WALL_SIDES[Math.floor(random() * WALL_SIDES.length)]
+  const fronts = wallFronts(item)
+  // The bed: head end or a long side, even odds; then either long side.
+  const front = fronts.length === 1 ? fronts[0] : random() < 0.5 ? fronts[0] : fronts[1 + Math.floor(random() * 2)]
+  const sideways = Math.abs(Math.sin(front)) > 0.5 // front along the item's X
+  const depth = sideways ? f.halfX : f.halfZ
+  const width = sideways ? f.halfZ : f.halfX
+  const n = wallInward(side)
   const wallX = side === "+x" || side === "-x" // the wall line is x = const
-  const sign = side.charAt(0) === "+" ? 1 : -1
-  const lo = wallX ? b.minX : b.minZ
-  const hi = wallX ? b.maxX : b.maxZ
-  const wMin = sign > 0 ? hi : hi - ROOM_MAX
-  const wMax = sign > 0 ? lo + ROOM_MAX : lo
-  const reach = FOOTPRINTS.glass.halfX + WALL_MARGIN
-  const llo = wallX ? b.minZ : b.minX
-  const lhi = wallX ? b.maxZ : b.maxX
-  const uMin = lhi - ROOM_MAX + reach
-  const uMax = llo + ROOM_MAX - reach
-  if (wMax < wMin || uMax < uMin) {
+  const perp = wallLine(room, side) + (wallX ? n.x : n.z) * (WALL_GAP + depth)
+  const along = alongSpan(random, room, wallX, WALL_CORNER + width, perp, p)
+  if (along === null) {
     return null
   }
-  const wall = wMin + random() * (wMax - wMin)
-  const u = uMin + random() * (uMax - uMin)
-  const c = wall - sign * FOOTPRINTS.glass.halfZ
-  // Glass front is its local −Z (FOOTPRINTS.glass.front = π): yaw 0 faces −Z.
-  const yaw = side === "+z" ? 0 : side === "-z" ? Math.PI : side === "+x" ? Math.PI / 2 : -Math.PI / 2
-  items.glass = wallX ? {x: c, z: u, yaw: yaw} : {x: u, z: c, yaw: yaw}
-  return wall
+  const yaw = wrap(Math.atan2(n.x, n.z) - front)
+  const at = wallX ? {x: perp, z: along, yaw: yaw} : {x: along, z: perp, yaw: yaw}
+  return {at: at, side: side}
+}
+
+/** The lamp near a wall or corner: its footprint LAMP_NEAR_WALL or less from a random wall, any facing. */
+function drawNearWall(random: () => number, room: RoomRect, p: LayoutParams): Spot | null {
+  const f = FOOTPRINTS.lamp
+  const side = WALL_SIDES[Math.floor(random() * WALL_SIDES.length)]
+  const yaw = (random() * 2 - 1) * Math.PI
+  const c = Math.abs(Math.cos(yaw))
+  const s = Math.abs(Math.sin(yaw))
+  const ex = f.halfX * c + f.halfZ * s
+  const ez = f.halfX * s + f.halfZ * c
+  const wallX = side === "+x" || side === "-x"
+  const n = wallInward(side)
+  const gap = WALL_GAP + random() * (LAMP_NEAR_WALL - WALL_GAP)
+  const perp = wallLine(room, side) + (wallX ? n.x : n.z) * (gap + (wallX ? ex : ez))
+  const along = alongSpan(random, room, wallX, WALL_GAP + (wallX ? ez : ex), perp, p)
+  if (along === null) {
+    return null
+  }
+  return {at: wallX ? {x: perp, z: along, yaw: yaw} : {x: along, z: perp, yaw: yaw}, side: null}
 }
 
 /**
- * The walls: the bounds of `list` (and the glass, whose wall is `wall` on
- * `glassWall`), each side at least ROOM_MIN (grown evenly, or away from the
- * glass wall); null when a side passes ROOM_MAX.
+ * A random coordinate along a wall (z for an x = const wall, else x), `inset`
+ * from both corners, whose point at `perp` lies hazardDistanceMin..reach from
+ * the start spot; null when there is none.
  */
-function roomRect(items: Partial<Record<LayoutItem, Placement>>, list: LayoutItem[], glassWall: WallSide | null, wall: number): RoomRect | null {
-  const b = boundsOf(items, list)
-  if (glassWall) {
-    growBounds(b, rectOf(items, "glass", WALL_MARGIN))
-    if (glassWall === "+x") b.maxX = wall
-    else if (glassWall === "-x") b.minX = wall
-    else if (glassWall === "+z") b.maxZ = wall
-    else b.minZ = wall
+function alongSpan(random: () => number, room: RoomRect, wallX: boolean, inset: number, perp: number, p: LayoutParams): number | null {
+  const reach = Math.max(p.hazardDistanceMax, Math.abs(perp) + RELAX)
+  const half = Math.sqrt(Math.max(0, reach * reach - perp * perp))
+  const lo = Math.max((wallX ? room.minZ : room.minX) + inset, -half)
+  const hi = Math.min((wallX ? room.maxZ : room.maxX) - inset, half)
+  if (hi < lo) {
+    return null
   }
-  const wx = Math.max(0, ROOM_MIN - (b.maxX - b.minX))
-  const wz = Math.max(0, ROOM_MIN - (b.maxZ - b.minZ))
-  b.minX -= glassWall === "+x" ? wx : glassWall === "-x" ? 0 : wx / 2
-  b.maxX += glassWall === "-x" ? wx : glassWall === "+x" ? 0 : wx / 2
-  b.minZ -= glassWall === "+z" ? wz : glassWall === "-z" ? 0 : wz / 2
-  b.maxZ += glassWall === "-z" ? wz : glassWall === "+z" ? 0 : wz / 2
-  return fitsRoom(b) ? b : null
+  const u = lo + random() * (hi - lo)
+  return Math.sqrt(u * u + perp * perp) >= p.hazardDistanceMin ? u : null
+}
+
+/** A chair faces the nearest table whose center is CHAIR_TABLE_REACH or closer, else a random way. */
+function chairYaw(random: () => number, at: Placement, items: Partial<Record<LayoutItem, Placement>>): number {
+  let best: Placement | null = null
+  let bestD = CHAIR_TABLE_REACH
+  for (const t of TABLES) {
+    const tp = items[t]
+    if (!tp) continue
+    const d = Math.sqrt((tp.x - at.x) * (tp.x - at.x) + (tp.z - at.z) * (tp.z - at.z))
+    if (d <= bestD) {
+      best = tp
+      bestD = d
+    }
+  }
+  return best ? Math.atan2(best.x - at.x, best.z - at.z) - FOOTPRINTS.chair.front : (random() * 2 - 1) * Math.PI
+}
+
+/** True when the turned rect `r` lies inside `room` shrunk by `clear` on every side. */
+function insideRoom(r: Rect, room: RoomRect, clear: number): boolean {
+  const c = Math.abs(Math.cos(r.yaw))
+  const s = Math.abs(Math.sin(r.yaw))
+  const ex = r.hx * c + r.hz * s
+  const ez = r.hx * s + r.hz * c
+  return r.x - ex >= room.minX + clear && r.x + ex <= room.maxX - clear && r.z - ez >= room.minZ + clear && r.z + ez <= room.maxZ - clear
+}
+
+/** Angle in (−π, π]. */
+function wrap(a: number): number {
+  let r = a
+  while (r > Math.PI) r -= 2 * Math.PI
+  while (r <= -Math.PI) r += 2 * Math.PI
+  return r
 }
 
 /**
@@ -386,6 +476,7 @@ function doorFits(door: DoorPlacement, items: Partial<Record<LayoutItem, Placeme
     return false
   }
   for (const item of all) {
+    if (!items[item]) continue
     const zone = isHazard(item) ? p.dangerMargin : isTable(item) ? p.safeZoneMargin : 0 // a zone holds its footprint
     if (overlaps(clear, rectOf(items, item, zone))) {
       return false
@@ -404,30 +495,6 @@ function doorRect(door: DoorPlacement, depth: number, grow: number): Rect {
   const along = DOOR_W / 2 + grow
   const across = depth / 2 + grow
   return door.nx !== 0 ? {x: x, z: z, yaw: 0, hx: across, hz: along} : {x: x, z: z, yaw: 0, hx: along, hz: across}
-}
-
-/** Axis-aligned bounds of the start spot and the `list` footprints, each grown by WALL_MARGIN. */
-function boundsOf(items: Partial<Record<LayoutItem, Placement>>, list: LayoutItem[]): RoomRect {
-  const b = {minX: -WALL_MARGIN, maxX: WALL_MARGIN, minZ: -WALL_MARGIN, maxZ: WALL_MARGIN}
-  for (const item of list) {
-    growBounds(b, rectOf(items, item, WALL_MARGIN))
-  }
-  return b
-}
-
-function growBounds(b: RoomRect, r: Rect): void {
-  const c = Math.abs(Math.cos(r.yaw))
-  const s = Math.abs(Math.sin(r.yaw))
-  const ex = r.hx * c + r.hz * s
-  const ez = r.hx * s + r.hz * c
-  b.minX = Math.min(b.minX, r.x - ex)
-  b.maxX = Math.max(b.maxX, r.x + ex)
-  b.minZ = Math.min(b.minZ, r.z - ez)
-  b.maxZ = Math.max(b.maxZ, r.z + ez)
-}
-
-function fitsRoom(b: RoomRect): boolean {
-  return b.maxX - b.minX <= ROOM_MAX + 0.001 && b.maxZ - b.minZ <= ROOM_MAX + 0.001
 }
 
 function shuffle<T>(random: () => number, list: T[]): T[] {
@@ -465,6 +532,7 @@ function fits(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, p
   return true
 }
 
+/** A center min..max from the start spot at a random bearing, facing the start spot. */
 function draw(random: () => number, item: LayoutItem, min: number, max: number): Placement {
   const d = min + random() * Math.max(0, max - min)
   const bearing = (random() * 2 - 1) * Math.PI // 0 = straight ahead (−Z)
@@ -497,7 +565,10 @@ function pickHazards(random: () => number, count: number): LayoutItem[] {
 }
 
 function rectOf(items: Partial<Record<LayoutItem, Placement>>, item: LayoutItem, grow: number): Rect {
-  const at = items[item]
+  return footRect(item, items[item], grow)
+}
+
+function footRect(item: LayoutItem, at: Placement, grow: number): Rect {
   const f = FOOTPRINTS[item]
   return {x: at.x, z: at.z, yaw: at.yaw, hx: f.halfX + grow, hz: f.halfZ + grow}
 }

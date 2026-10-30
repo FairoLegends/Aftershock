@@ -1,6 +1,6 @@
-# Aftershock — education cards (F4, DRAFT for learner review)
+# Aftershock — education cards (F4, approved by the learner 30 Oct 2026)
 
-Shown after the drill, chosen by what happened (at most 2 cards per result). Text is short enough for a 40 cm panel (two lines at 2 cm). DE/JA/ZH are translated after the learner approves the Indonesian and English.
+Shown after the drill, chosen by what happened (at most 2 cards per result). Text is short enough for a 40 cm panel (two lines at 2 cm). DE/JA/ZH translations are in docs/STRINGS_I18N.md (default, not yet checked by native speakers).
 
 Sources:
 - [BMKG] BMKG, "Antisipasi Gempa Bumi", https://bmkg.go.id/gempabumi/mitigasi/antisipasi-gempabumi (accessed 29 Oct 2026)

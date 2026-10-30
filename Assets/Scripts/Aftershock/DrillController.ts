@@ -342,6 +342,17 @@ export class DrillController extends BaseScriptComponent {
   private safeSince = -1 // s; when inZone && ducked last began, -1 when not safe
   private _fallHits = 0 // Slice 7D: items that hit the head this drill
   private fallsDisabled = false // LEAF disableFallsForTest
+  // Slice 9A (5l item 2): the TV topples once per drill.
+  private tvUpdate: UpdateEvent | null = null
+  private tvModel: SceneObject | null = null // this drill's TvStand instance
+  private tvRest: quat | null = null // its local rotation as addModel set it
+  private tvScreen: SceneObject | null = null // the anchor's TvScreen quad (Slice 8A), not part of the model
+  private tvScreenPos: vec3 | null = null // its authored local pose, captured once
+  private tvScreenRot: quat | null = null
+  private _tvToppled = false
+  private tvToppleAt = -1 // s, getTime(); -1 = none pending
+  private tvToppleStart = -1 // s, getTime(); -1 = not tipping
+  private tvAngle = 0 // rad, the current tip
   // Slice 8B EVACUATE and HOLD ON (ENGINEERING_PLAN 5k items 8, 9).
   private evacUpdate: UpdateEvent | null = null
   private evacStart = 0 // s
@@ -592,6 +603,24 @@ export class DrillController extends BaseScriptComponent {
   get fallHits(): number {
     return this._fallHits
   }
+  /** Slice 9A: the TV has toppled (or is tipping) this drill; false again from the next BRIEFING. */
+  get tvToppled(): boolean {
+    return this._tvToppled
+  }
+  /** Slice 9A: the TV model's tip forward, degrees: 0 upright, about 85 down. */
+  get tvTipDegrees(): number {
+    return this.tvAngle * RAD_TO_DEG
+  }
+  /** Slice 9A: where the toppled TV's top lands (world XZ at rest, y 0), or null without a TV. */
+  get tvLandingPoint(): vec3 | null {
+    const p = this.tvLanding()
+    if (!p) {
+      return null
+    }
+    const c = Math.cos(this.roomYaw)
+    const s = Math.sin(this.roomYaw)
+    return new vec3(this.roomX + p.x * c + p.y * s, 0, this.roomZ - p.x * s + p.y * c) // toRoomLocal inverted
+  }
 
   onAwake(): void {
     this.quakeStartTimer = this.createEvent("DelayedCallbackEvent")
@@ -615,6 +644,8 @@ export class DrillController extends BaseScriptComponent {
     this.calibUpdate = this.createEvent("UpdateEvent")
     this.calibUpdate.bind(() => this.onCalibUpdate())
     this.calibUpdate.enabled = false
+    this.tvUpdate = this.createEvent("UpdateEvent")
+    this.tvUpdate.bind(() => this.onTvUpdate()) // its own event: the tipping runs on after the shake
     this.calibDoneTimer = this.createEvent("DelayedCallbackEvent")
     this.calibDoneTimer.bind(() => this.onCalibDoneEnded())
     this.createEvent("OnStartEvent").bind(() => this.onStart())
@@ -929,6 +960,7 @@ export class DrillController extends BaseScriptComponent {
     this.fallsDisabled = off
     if (off) {
       this.fallingObjects.cancelPending()
+      this.tvToppleAt = -1
     }
     console.log(`${LOG} disableFallsForTest: ${off}`)
   }
@@ -938,14 +970,31 @@ export class DrillController extends BaseScriptComponent {
    * must be in this drill). With landAt it lands at that world XZ, ignoring
    * the zone rule; otherwise in front of the hazard as in the drill.
    */
-  forceFallForTest(item: FallSource, landAt: vec3 | null): boolean {
+  forceFallForTest(item: LayoutItem, landAt: vec3 | null): boolean {
+    if (FALL_SOURCES.indexOf(item as FallSource) < 0) {
+      console.warn(`${LOG} forceFallForTest: ${item} drops nothing (sources: ${FALL_SOURCES.join(", ")})`) // Slice 9A
+      return false
+    }
     const at = this._layout ? this._layout.items[item] : undefined
     if (!at || this.activeHazards.indexOf(item) < 0) {
       console.warn(`${LOG} forceFallForTest: no ${item} in this drill`)
       return false
     }
     console.log(`${LOG} forceFallForTest: ${item}${landAt ? ` at (${fmt(landAt.x)}, ${fmt(landAt.z)})` : ""}`)
-    return this.fallingObjects.drop({source: item, at}, landAt ? this.toRoomLocal(landAt) : null)
+    return this.fallingObjects.drop({source: item as FallSource, at}, landAt ? this.toRoomLocal(landAt) : null)
+  }
+
+  /**
+   * LEAF test hook only (TDD §8, Slice 9A): topples the TV now, as the drill
+   * would. False when there is no TV, on Easy, or when it has toppled already.
+   */
+  forceTvToppleForTest(): boolean {
+    if (this._tvToppled || !this.canTopple()) {
+      console.warn(`${LOG} forceTvToppleForTest: ${this._tvToppled ? "already toppled" : "no TV topple in this drill"}`)
+      return false
+    }
+    this.startTvTopple("forced")
+    return true
   }
 
   /**
@@ -1170,6 +1219,7 @@ export class DrillController extends BaseScriptComponent {
     this._nearestTableDistance = 0
     this._fallHits = 0
     this.fallingObjects.clear()
+    this.resetTvTopple()
     if (this.shakeFx) this.shakeFx.resetCracks()
     this.fallingObjects.keepLanded = true // Slice 8B: landed items stay through EVACUATE (trip hazards)
     this._evacTime = null
@@ -1266,6 +1316,7 @@ export class DrillController extends BaseScriptComponent {
 
     this.quakeShaker.startShake(this._quakeDuration)
     this.scheduleFalls(this._quakeDuration)
+    this.scheduleTvTopple(this._quakeDuration, "QUAKE")
     if (this.chimeAudio && this.chimeAudio.audioTrack) {
       this.chimeAudio.play(1) // 5k item 6: the alert chime, then the rumble
     }
@@ -1392,7 +1443,7 @@ export class DrillController extends BaseScriptComponent {
     this._nearBed = near
   }
 
-  /** Slice 7D (5j-8): fallCountMin..Max falls this shake from the shelf, cabinet and TV present; none on Easy. */
+  /** Slice 7D (5j-8): fallCountMin..Max falls this shake from the shelf present (Slice 9A: the only source); none on Easy. */
   private scheduleFalls(durationSeconds: number): void {
     if (!fallsOn(this._level) || this.fallsDisabled || !this._layout) {
       console.log(`${LOG} falls: off (${this.fallsDisabled ? "disabled for test" : "level " + this._level})`)
@@ -1436,6 +1487,98 @@ export class DrillController extends BaseScriptComponent {
       this._gameOverReason = "hit.fell"
       this.onHealthDepleted()
     }
+  }
+
+  /** Slice 9A (5l item 2): a TV that can topple this drill (present, its model placed, not Easy). */
+  private canTopple(): boolean {
+    return fallsOn(this._level) && !!this._layout && !!this._layout.items.tv && this.activeHazards.indexOf("tv") >= 0 && !!this.tvModel
+  }
+
+  /** Slice 9A: once per drill, at a random 25-75 % of this shake; the aftershock's try only when the quake did not topple it. */
+  private scheduleTvTopple(durationSeconds: number, phase: string): void {
+    if (this._tvToppled || this.fallsDisabled || !this.canTopple()) {
+      return
+    }
+    const t = (TV_TOPPLE_FROM + Math.random() * (TV_TOPPLE_TO - TV_TOPPLE_FROM)) * durationSeconds
+    this.tvToppleAt = getTime() + t
+    console.log(`${LOG} ${phase}: TV topples at ${t.toFixed(1)} s`)
+  }
+
+  private startTvTopple(why: string): void {
+    this._tvToppled = true
+    this.tvToppleAt = -1
+    this.tvToppleStart = getTime()
+    if (this.shakeFx) this.shakeFx.stopWobble("tv")
+    console.log(`${LOG} ${this._state}: TV topples (${why})`)
+  }
+
+  private onTvUpdate(): void {
+    if (this.tvToppleAt >= 0 && getTime() >= this.tvToppleAt) {
+      this.tvToppleAt = -1
+      if ((this._state === "QUAKE" || this._state === "AFTERSHOCK") && !this._tvToppled && this.canTopple()) {
+        this.startTvTopple("scheduled")
+      }
+    }
+    if (this.tvToppleStart < 0) {
+      return
+    }
+    const s = Math.min(1, (getTime() - this.tvToppleStart) / TV_TOPPLE_SECONDS)
+    this.poseTv(s * s * TV_TOPPLE_RAD) // ease in: it gathers speed as it falls
+    if (s >= 1) {
+      this.tvToppleStart = -1
+      this.landTv()
+    }
+  }
+
+  /** The TV model and its screen quad tipped forward by `angle` (rad) about the model's front-bottom edge, anchor-local. */
+  private poseTv(angle: number): void {
+    this.tvAngle = angle
+    if (!this.tvModel || !this.tvRest) {
+      return
+    }
+    const f = FOOTPRINTS.tv
+    const dir = new vec3(Math.sin(f.front), 0, Math.cos(f.front))
+    const pivot = dir.uniformScale(Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ)
+    const q = quat.angleAxis(angle, vec3.up().cross(dir)) // sends up toward the front
+    const t = this.tvModel.getTransform()
+    t.setLocalRotation(q.multiply(this.tvRest))
+    t.setLocalPosition(pivot.add(q.multiplyVec3(pivot.uniformScale(-1)))) // the model's root rests at the anchor's origin
+    if (this.tvScreen && this.tvScreenPos && this.tvScreenRot) {
+      const st = this.tvScreen.getTransform()
+      st.setLocalRotation(q.multiply(this.tvScreenRot))
+      st.setLocalPosition(pivot.add(q.multiplyVec3(this.tvScreenPos.sub(pivot))))
+    }
+  }
+
+  /** Room-local XZ (x, y = z) where the toppled TV's top lands: its height out from the front edge, inside its danger zone. */
+  private tvLanding(): vec2 | null {
+    const at = this._layout ? this._layout.items.tv : undefined
+    if (!at) {
+      return null
+    }
+    const f = FOOTPRINTS.tv
+    const theta = at.yaw + f.front
+    const depth = Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ
+    const d = depth + Math.min(TV_HEIGHT, Math.max(5, this.config.dangerMargin - 5))
+    return new vec2(at.x + Math.sin(theta) * d, at.z + Math.cos(theta) * d)
+  }
+
+  /** The tipped TV reaches the floor: the same thud and hit rule as a falling item (5j-19b). */
+  private landTv(): void {
+    const p = this.tvLanding()
+    if (!p) {
+      return
+    }
+    console.log(`${LOG} ${this._state}: TV landed at (${fmt(p.x)}, ${fmt(p.y)}) Room-local`)
+    this.onItemLanded("tv", p.x, p.y)
+  }
+
+  /** BRIEFING and each new layout: upright, nothing pending. */
+  private resetTvTopple(): void {
+    this._tvToppled = false
+    this.tvToppleAt = -1
+    this.tvToppleStart = -1
+    this.poseTv(0)
   }
 
   /** True when the head is in any of this drill's safe zones. */
@@ -1656,6 +1799,7 @@ export class DrillController extends BaseScriptComponent {
     this.quakeEndTimer.cancel()
     this.quakeShaker.stopShake()
     this.fallingObjects.cancelPending() // items already in the air still land, but hit only while shaking
+    this.tvToppleAt = -1 // a TV already tipping still lands
     if (this.rumbleAudio.isPlaying()) {
       this.rumbleAudio.stop(false)
     }
@@ -1852,6 +1996,7 @@ export class DrillController extends BaseScriptComponent {
     this.quakeShaker.startShake(d, c.aftershockStrength)
     this.aftershockDuration = d
     this.scheduleFalls(d)
+    this.scheduleTvTopple(d, "AFTERSHOCK") // only when the quake did not topple it
     this.rumbleAudio.volume = 0
     if (this.rumbleAudio.audioTrack) {
       this.rumbleAudio.play(-1)
@@ -2079,6 +2224,9 @@ export class DrillController extends BaseScriptComponent {
     const items = layout.items
     // Last drill's models go (5j-14); absent items are disabled, so their zone and label go with them.
     if (this.shakeFx) this.shakeFx.clearModels()
+    this.resetTvTopple() // a new layout: the TV stands again
+    this.tvModel = null
+    this.tvRest = null
     for (const so of this.instances) {
       so.destroy()
     }
@@ -2144,6 +2292,22 @@ export class DrillController extends BaseScriptComponent {
     if (this.shakeFx && WOBBLE_ITEMS.indexOf(item as WobbleItem) >= 0) {
       this.shakeFx.setModel(item as WobbleItem, so) // Slice 8C: the model rocks, the anchor stays
     }
+    if (item === "tv") {
+      // Slice 9A: the TvStand GLB is one mesh, so the whole model topples; the screen quad goes with it.
+      this.tvModel = so
+      this.tvRest = t.getLocalRotation()
+      if (!this.tvScreen) {
+        for (let i = 0; i < anchor.getChildrenCount(); i++) {
+          const child = anchor.getChild(i)
+          if (child.name === "TvScreen") {
+            this.tvScreen = child
+            this.tvScreenPos = child.getTransform().getLocalPosition()
+            this.tvScreenRot = child.getTransform().getLocalRotation()
+          }
+        }
+      }
+      this.poseTv(0)
+    }
   }
 
   /** Turns a label (a child of its hazard at `at`) so its +Z faces the start spot. */
@@ -2164,6 +2328,12 @@ export class DrillController extends BaseScriptComponent {
 }
 
 const RAD_TO_DEG = 180 / Math.PI // layout yaw is radians; logs show degrees
+// Slice 9A (5l item 2): the TV topple.
+const TV_TOPPLE_SECONDS = 0.5 // the tip from upright to down, ease in
+const TV_TOPPLE_RAD = (85 * Math.PI) / 180 // down: almost flat, its top on the floor
+const TV_TOPPLE_FROM = 0.25 // of the shake: the topple's random time
+const TV_TOPPLE_TO = 0.75
+const TV_HEIGHT = 110 // cm, TvStand's top (FallingObjects TOP_CM): the landing's reach from the front edge
 
 /** Moves a Room child to a layout placement (Room-local cm, yaw radians), keeping its height. */
 function placeItem(so: SceneObject, at: Placement): void {

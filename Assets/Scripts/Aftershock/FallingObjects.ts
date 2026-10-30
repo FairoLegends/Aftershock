@@ -5,8 +5,9 @@ import {createRoundRect} from "./UiBacking"
 
 // Falling objects (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e). DrillController
 // starts a schedule for each QUAKE and AFTERSHOCK; at each random time a small
-// book or box slides off the top of a present shelf, cabinet or TV and falls in
-// front of it, landing inside its danger zone. Animation only, no physics:
+// book or box slides off the top of a present shelf and falls in front of it,
+// landing inside its danger zone (Slice 9A, 5l item 2: the closed cabinet drops
+// nothing; the TV topples instead, in DrillController). Animation only, no physics:
 // y = y0 - ½gt², a small forward drift and a tumble, one hop, a rest, then it
 // shrinks away. Lives under the Room, so every position here is Room-local cm
 // (the Room's origin is the start spot on the floor). The hit rule lives in
@@ -15,7 +16,8 @@ import {createRoundRect} from "./UiBacking"
 // the fallback) and each landing puffs a little dust.
 
 export type FallSource = "shelf" | "cabinet" | "tv"
-export const FALL_SOURCES: FallSource[] = ["shelf", "cabinet", "tv"]
+/** Slice 9A (5l item 2): only the open shelf drops items. The type keeps the old names for the TOP_CM table. */
+export const FALL_SOURCES: FallSource[] = ["shelf"]
 
 export interface FallFrom {
   source: FallSource
@@ -215,7 +217,7 @@ export class FallingObjects extends BaseScriptComponent {
   scheduleShake(durationSeconds: number, sources: FallFrom[]): void {
     const c = this.config
     if (sources.length === 0) {
-      console.log(`${LOG} falls: none (no shelf, cabinet or TV in this drill)`)
+      console.log(`${LOG} falls: none (no shelf in this drill)`)
       return
     }
     const lo = Math.max(0, Math.round(Math.min(c.fallCountMin, c.fallCountMax)))

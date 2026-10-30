@@ -17,6 +17,7 @@ import {DC14_WallsAndDoor} from "./DC14_WallsAndDoor"
 import {DC15_Evacuation} from "./DC15_Evacuation"
 import {DC16_HoldOn} from "./DC16_HoldOn"
 import {DC17_CalibrateAndBest} from "./DC17_CalibrateAndBest"
+import {DC18_TvTopple} from "./DC18_TvTopple"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -38,6 +39,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc14-walls-and-door", typename: DC14_WallsAndDoor.getTypeName()},
     {id: "dc15-evacuation", typename: DC15_Evacuation.getTypeName()},
     {id: "dc16-hold-on", typename: DC16_HoldOn.getTypeName()},
-    {id: "dc17-calibrate-and-best", typename: DC17_CalibrateAndBest.getTypeName()}
+    {id: "dc17-calibrate-and-best", typename: DC17_CalibrateAndBest.getTypeName()},
+    {id: "dc18-tv-topple", typename: DC18_TvTopple.getTypeName()}
   ]
 }
