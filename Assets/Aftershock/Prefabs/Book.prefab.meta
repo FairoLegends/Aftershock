@@ -1,0 +1,120 @@
+- !<AssetImportMetadata/2cdf4b9a-2730-4c73-9a85-8b45c4867dcc>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> 1d53ec5c-3b45-43cf-9146-ee032c930872
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> 1d53ec5c-3b45-43cf-9146-ee032c930872
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 240488b6-aacb-4cc9-a956-81ffa255a938
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<SceneObject/10b4421f-d783-4129-575a-6b962679303a>
+  PrefabRemaps:
+    - 10b4421f-d783-4129-575a-6b962679303a: aec8c00f-6b64-4c19-653a-a90a3e1bc1a5
+    - 13f14123-11fa-4019-5a47-c5cc504b5869: 414f89d5-f1f9-485e-60c7-10b4cd401dba
+    - db7eeefb-dc09-4f94-5ae7-64a4af192ec3: 3f8b347a-7135-4d66-785e-9bc80418eb10
+    - e282d694-e5a7-4d8d-4bde-7147b8324b8c: 2f4c0e91-e89f-4610-492b-b8922b37f704
+    - fa645632-9986-4e57-7969-158c274a7a73: 28577a95-d234-45b2-75a2-7b5c15138955
+  Name: BookModel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> e282d694-e5a7-4d8d-4bde-7147b8324b8c
+  Components:
+    []
+- !<SceneObject/13f14123-11fa-4019-5a47-c5cc504b5869>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> fa645632-9986-4e57-7969-158c274a7a73
+  Components:
+    []
+- !<ObjectPrefabAssetData/240488b6-aacb-4cc9-a956-81ffa255a938>
+  Prototype: !<ObjectOwner/5e00cfcc-5a2c-4048-9380-ab0c2c7dbf98>
+    PackagePath: ""
+    objects:
+      - !<own> 8a3c5799-fbe9-4e74-4427-f8e3a177f424
+- !<SceneObject/8a3c5799-fbe9-4e74-4427-f8e3a177f424>
+  PrefabRemaps:
+    []
+  Name: Book
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 10b4421f-d783-4129-575a-6b962679303a
+  Components:
+    []
+- !<RenderMeshVisual/db7eeefb-dc09-4f94-5ae7-64a4af192ec3>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> b3f28fde-1963-4917-ab27-88e18935b7a0
+  Mesh: !<reference> 81bce00c-a224-41a7-b02d-5d59ab922ebd
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/e282d694-e5a7-4d8d-4bde-7147b8324b8c>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 13f14123-11fa-4019-5a47-c5cc504b5869
+  Components:
+    []
+- !<SceneObject/fa645632-9986-4e57-7969-158c274a7a73>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.020000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 90.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> db7eeefb-dc09-4f94-5ae7-64a4af192ec3

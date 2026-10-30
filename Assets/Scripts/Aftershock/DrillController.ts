@@ -32,6 +32,7 @@ import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
+import {ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
 import {getLanguage, getString, Lang, lines, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {SOFT_RED} from "./UiBacking"
 
@@ -212,6 +213,32 @@ export class DrillController extends BaseScriptComponent {
   @hint("GripHandles component: the grip handles at the table legs, HOLD ON (Slice 8B)")
   gripHandles: GripHandles
 
+  @ui.group_start("Shake effects and sounds (Slice 8C, 5k items 4, 6)")
+  @input
+  @allowUndefined
+  @hint("ShakeFx component: furniture wobble, lamp flicker, glass cracks")
+  shakeFx: ShakeFx
+
+  @input
+  @allowUndefined
+  @hint("AudioComponent, chime_start.wav: once when the quake starts, before the rumble")
+  chimeAudio: AudioComponent
+
+  @input
+  @allowUndefined
+  @hint("AudioComponent, thud.wav: each item landing (volume falls with distance)")
+  thudAudio: AudioComponent
+
+  @input
+  @allowUndefined
+  @hint("AudioComponent, glass_crack.wav: each crack stage")
+  crackAudio: AudioComponent
+
+  @input
+  @allowUndefined
+  @hint("AudioComponent, heartbeat_loop.wav: loops while health is below healthAlarmBelow in QUAKE, AFTERSHOCK and EVACUATE")
+  heartbeatAudio: AudioComponent
+  @ui.group_end
   @ui.group_start("Furniture models (Slice 7R)")
   @input
   @hint("Table model (both tables): root at bottom center, cm, front +Z")
@@ -258,6 +285,10 @@ export class DrillController extends BaseScriptComponent {
   private quakeStartTime = 0 // s
   private _quakeDuration = 0 // s
   private rumbleBaseVolume = 1
+  private thudBaseVolume = 1
+  private heartbeatBaseVolume = 1
+  private _heartbeatOn = false
+  private aftershockDuration = 0 // s
   private _state: DrillState | null = null
   private _health: number = 0
   private _instructionKey: StringKey | null = null
@@ -506,6 +537,22 @@ export class DrillController extends BaseScriptComponent {
   get fallsLanded(): number {
     return this.fallingObjects.fallsLanded
   }
+  /** Slice 8C: furniture wobble or lamp flicker running (shaking, or settling back to rest). */
+  get shakeFxActive(): boolean {
+    return !!this.shakeFx && this.shakeFx.shakeFxActive
+  }
+  /** Slice 8C: crack stages on the glass, 0 (clean, every BRIEFING) to 4 (aftershock). */
+  get crackStage(): number {
+    return this.shakeFx ? this.shakeFx.crackStage : 0
+  }
+  /** Slice 8C: the heartbeat loop is playing (health below healthAlarmBelow while shaking or evacuating). */
+  get heartbeatPlaying(): boolean {
+    return this._heartbeatOn
+  }
+  /** Slice 8C: dust puff quads alive (each landing spawns 6-8). */
+  get dustPuffsAlive(): number {
+    return this.fallingObjects.dustPuffsAlive
+  }
   /** Items that hit the head (within fallHitRadius, not safe) this drill. */
   get fallHits(): number {
     return this._fallHits
@@ -607,6 +654,14 @@ export class DrillController extends BaseScriptComponent {
     // Ambient loop: latency is fine (specs-audio).
     this.rumbleAudio.playbackMode = Audio.PlaybackMode.LowPower
     this.rumbleBaseVolume = this.rumbleAudio.volume
+    // Slice 8C: the effect sounds are optional; a missing component or track only skips that sound.
+    for (const a of [this.chimeAudio, this.thudAudio, this.crackAudio, this.heartbeatAudio]) {
+      if (a) {
+        a.playbackMode = Audio.PlaybackMode.LowPower
+      }
+    }
+    if (this.thudAudio) this.thudBaseVolume = this.thudAudio.volume
+    if (this.heartbeatAudio) this.heartbeatBaseVolume = this.heartbeatAudio.volume
     if (!this.rumbleAudio.audioTrack) {
       console.warn(`${LOG} DrillController: rumbleAudio has no audio track; the quake will be silent`)
     }
@@ -870,6 +925,9 @@ export class DrillController extends BaseScriptComponent {
     }
     this._state = next
     console.log(`${LOG} state ${prev === null ? "[start]" : prev} -> ${next}`)
+    if (next !== "QUAKE" && next !== "AFTERSHOCK" && next !== "EVACUATE") {
+      this.stopHeartbeat()
+    }
     switch (next) {
       case "LANGUAGE":
         this.enterLanguage()
@@ -981,6 +1039,7 @@ export class DrillController extends BaseScriptComponent {
     this._nearestTableDistance = 0
     this._fallHits = 0
     this.fallingObjects.clear()
+    if (this.shakeFx) this.shakeFx.resetCracks()
     this.fallingObjects.keepLanded = true // Slice 8B: landed items stay through EVACUATE (trip hazards)
     this._evacTime = null
     this._evacFailed = false
@@ -1076,6 +1135,9 @@ export class DrillController extends BaseScriptComponent {
 
     this.quakeShaker.startShake(this._quakeDuration)
     this.scheduleFalls(this._quakeDuration)
+    if (this.chimeAudio && this.chimeAudio.audioTrack) {
+      this.chimeAudio.play(1) // 5k item 6: the alert chime, then the rumble
+    }
     if (this.rumbleAudio.audioTrack) {
       this.rumbleAudio.volume = 0 // ramps with the shake (DESIGN_BRIEF §6.2)
       this.rumbleAudio.play(-1)
@@ -1110,6 +1172,8 @@ export class DrillController extends BaseScriptComponent {
     const aftershock = this._state === "AFTERSHOCK"
     this.hud.setElapsed(now - (aftershock ? this.aftershockStartTime : this.quakeStartTime))
     this.rumbleAudio.volume = this.rumbleBaseVolume * this.quakeShaker.envelope
+    this.updateCracks(now, aftershock)
+    this.updateHeartbeat()
     this.updateCover(now)
     this.updateDanger()
     this.updateBedTrap()
@@ -1220,6 +1284,7 @@ export class DrillController extends BaseScriptComponent {
    * the red area. Only while shaking; at 0 health, game over (hit.fell).
    */
   private onItemLanded(source: FallSource, x: number, z: number): void {
+    this.playThud(x, z)
     if (this._state !== "QUAKE" && this._state !== "AFTERSHOCK") {
       return
     }
@@ -1281,6 +1346,63 @@ export class DrillController extends BaseScriptComponent {
   }
 
   /** World position → Room-local XZ at rest (cm) as (x, y = z): the layout's frame. */
+  /**
+   * Slice 8C (5k item 6): one thud per landing. Non-spatial; the volume falls
+   * from full within 1 m of the head to 30 % at 6 m.
+   */
+  private playThud(x: number, z: number): void {
+    const a = this.thudAudio
+    if (!a || !a.audioTrack) {
+      return
+    }
+    const head = this.toRoomLocal(this.headPose.position)
+    const d = Math.sqrt((head.x - x) * (head.x - x) + (head.y - z) * (head.y - z))
+    a.volume = this.thudBaseVolume * Math.max(0.3, Math.min(1, 1 - (d - 100) / 500))
+    a.play(1)
+  }
+
+  /** Slice 8C: crack stages 1-3 at 25, 50 and 75 % of the QUAKE; stage 4 at 25 % of an AFTERSHOCK. Only with the glass in the layout. */
+  private updateCracks(now: number, aftershock: boolean): void {
+    if (!this.shakeFx || this.activeHazards.indexOf("glass") < 0) {
+      return
+    }
+    let stage: number
+    if (aftershock) {
+      stage = now - this.aftershockStartTime >= 0.25 * this.aftershockDuration ? 4 : 3
+    } else {
+      const f = (now - this.quakeStartTime) / Math.max(0.01, this._quakeDuration)
+      stage = f >= 0.75 ? 3 : f >= 0.5 ? 2 : f >= 0.25 ? 1 : 0
+    }
+    if (this.shakeFx.setCrackStage(stage) && this.crackAudio && this.crackAudio.audioTrack) {
+      this.crackAudio.play(1)
+    }
+  }
+
+  /** Slice 8C: the heartbeat loops while health is below healthAlarmBelow, louder as it drops (35 % at the limit, full at 0). */
+  private updateHeartbeat(): void {
+    const a = this.heartbeatAudio
+    if (!a || !a.audioTrack) {
+      return
+    }
+    const limit = Math.max(1, this.config.healthAlarmBelow)
+    if (this._health >= limit) {
+      this.stopHeartbeat()
+      return
+    }
+    a.volume = this.heartbeatBaseVolume * (0.35 + 0.65 * (1 - Math.max(0, this._health) / limit))
+    if (!this._heartbeatOn) {
+      a.play(-1)
+      this._heartbeatOn = true
+    }
+  }
+
+  private stopHeartbeat(): void {
+    if (this._heartbeatOn && this.heartbeatAudio) {
+      this.heartbeatAudio.stop(false)
+    }
+    this._heartbeatOn = false
+  }
+
   private toRoomLocal(p: vec3): vec2 {
     const dx = p.x - this.roomX
     const dz = p.z - this.roomZ
@@ -1485,6 +1607,7 @@ export class DrillController extends BaseScriptComponent {
   }
 
   private onEvacUpdate(): void {
+    this.updateHeartbeat()
     const now = getTime()
     const dt = getDeltaTime()
     const head = this.headPose.position
@@ -1582,6 +1705,7 @@ export class DrillController extends BaseScriptComponent {
     const c = this.config
     const d = c.testMode ? c.testAftershockDurationSeconds : randomBetween(c.aftershockDurationMin, c.aftershockDurationMax)
     this.quakeShaker.startShake(d, c.aftershockStrength)
+    this.aftershockDuration = d
     this.scheduleFalls(d)
     this.rumbleAudio.volume = 0
     if (this.rumbleAudio.audioTrack) {
@@ -1806,6 +1930,7 @@ export class DrillController extends BaseScriptComponent {
     }
     const items = layout.items
     // Last drill's models go (5j-14); absent items are disabled, so their zone and label go with them.
+    if (this.shakeFx) this.shakeFx.clearModels()
     for (const so of this.instances) {
       so.destroy()
     }
@@ -1868,6 +1993,9 @@ export class DrillController extends BaseScriptComponent {
     t.setLocalPosition(vec3.zero())
     t.setLocalRotation(quat.angleAxis(FOOTPRINTS[item].front, vec3.up()).multiply(t.getLocalRotation()))
     this.instances.push(so)
+    if (this.shakeFx && WOBBLE_ITEMS.indexOf(item as WobbleItem) >= 0) {
+      this.shakeFx.setModel(item as WobbleItem, so) // Slice 8C: the model rocks, the anchor stays
+    }
   }
 
   /** Turns a label (a child of its hazard at `at`) so its +Z faces the start spot. */

@@ -1,5 +1,7 @@
+import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, Placement} from "./LayoutGenerator"
+import {createRoundRect} from "./UiBacking"
 
 // Falling objects (Slice 7D, ENGINEERING_PLAN 5j items 8, 17e). DrillController
 // starts a schedule for each QUAKE and AFTERSHOCK; at each random time a small
@@ -8,7 +10,9 @@ import {FOOTPRINTS, Placement} from "./LayoutGenerator"
 // y = y0 - ½gt², a small forward drift and a tumble, one hop, a rest, then it
 // shrinks away. Lives under the Room, so every position here is Room-local cm
 // (the Room's origin is the start spot on the floor). The hit rule lives in
-// DrillController, which gets each landing through onLanded.
+// DrillController, which gets each landing through onLanded. Slice 8C (5k
+// item 5): each item shows the Book / StorageBox model (the unit cube stays as
+// the fallback) and each landing puffs a little dust.
 
 export type FallSource = "shelf" | "cabinet" | "tv"
 export const FALL_SOURCES: FallSource[] = ["shelf", "cabinet", "tv"]
@@ -31,7 +35,27 @@ const SIDE_INSET = 10 // stay this far inside the hazard's sides (cm)
 const SPIN_MAX = 3 // rad/s, Y spin while falling
 const BOOK = new vec3(20, 4, 15)
 const BOX = new vec3(25, 15, 20)
+const DUST_POOL = 24 // quads, three landings at once
+const DUST_MIN = 6 // quads per landing
+const DUST_MAX = 8
+const DUST_SECONDS = 0.6
+const DUST_SPREAD_MIN = 15 // cm outward
+const DUST_SPREAD_MAX = 25
+const DUST_SIZE = 7 // cm, grows to 1.6x as it fades
+const DUST_COLOR = new vec4(0.847, 0.847, 0.847, 0.6) // #D8D8D8 at 60 %
 const LOG = "[Aftershock]"
+
+interface Puff {
+  so: SceneObject
+  rect: RoundedRectangle
+  alive: boolean
+  t0: number
+  x: number
+  z: number
+  dx: number
+  dz: number
+  dist: number
+}
 
 type Phase = "fall" | "hop" | "rest" | "shrink"
 
@@ -73,6 +97,16 @@ export class FallingObjects extends BaseScriptComponent {
   @hint("Review only: landed items stay on the floor until the next BRIEFING instead of shrinking after 4 s, so a screenshot can catch one. Keep off.")
   holdForReview: boolean = false
 
+  @input
+  @allowUndefined
+  @hint("Book model (Aftershock/Prefabs/Book.prefab): root at bottom center, 20 x 4 x 15 cm. Missing: the cube.")
+  bookPrefab: ObjectPrefab
+
+  @input
+  @allowUndefined
+  @hint("Box model (Aftershock/Prefabs/StorageBox.prefab): root at bottom center, 25 x 15 x 20 cm. Missing: the cube.")
+  boxPrefab: ObjectPrefab
+
   /** Set by DrillController: an item touched the floor at Room-local (x, z). */
   onLanded: ((source: FallSource, x: number, z: number) => void) | null = null
 
@@ -80,6 +114,8 @@ export class FallingObjects extends BaseScriptComponent {
   keepLanded: boolean = false
 
   private items: Item[] = []
+  private puffs: Puff[] = []
+  private nextPuff = 0
   private pending: Pending[] = []
   private nextItem = 0
   private nextId = 1
@@ -98,6 +134,10 @@ export class FallingObjects extends BaseScriptComponent {
   /** Items on screen: falling, hopping, resting or shrinking. */
   get aliveCount(): number {
     return this.items.filter((i) => i.busy).length
+  }
+  /** Slice 8C: dust puff quads on screen. */
+  get dustPuffsAlive(): number {
+    return this.puffs.filter((p) => p.alive).length
   }
 
   /** Items on the floor (hopping or resting), Room-local cm; `id` is unique per drop, so a trip counts once per item. */
@@ -122,13 +162,23 @@ export class FallingObjects extends BaseScriptComponent {
     // preview (near invisible on the floor); the material as authored draws light oak.
     const colors = [this.itemMaterial, this.itemMaterial]
     for (let i = 0; i < POOL_SIZE; i++) {
-      const size = i % 2 === 0 ? BOOK : BOX
-      const so = global.scene.createSceneObject((i % 2 === 0 ? "FallBook" : "FallBox") + i)
+      const book = i % 2 === 0
+      const size = book ? BOOK : BOX
+      // The item root stays unscaled (the shrink scales it); the cube or the model hangs under it.
+      const so = global.scene.createSceneObject((book ? "FallBook" : "FallBox") + i)
       so.setParent(this.sceneObject)
-      const v = so.createComponent("Component.RenderMeshVisual") as RenderMeshVisual
-      v.mesh = this.boxMesh
-      v.mainMaterial = colors[(i + Math.floor(i / 2)) % 2]
-      so.getTransform().setLocalScale(size)
+      const prefab = book ? this.bookPrefab : this.boxPrefab
+      if (prefab) {
+        const model = prefab.instantiate(so)
+        model.getTransform().setLocalPosition(new vec3(0, -size.y / 2, 0)) // its bottom on the item's bottom face
+      } else {
+        const cube = global.scene.createSceneObject("Cube")
+        cube.setParent(so)
+        const v = cube.createComponent("Component.RenderMeshVisual") as RenderMeshVisual
+        v.mesh = this.boxMesh
+        v.mainMaterial = colors[(i + Math.floor(i / 2)) % 2]
+        cube.getTransform().setLocalScale(size)
+      }
       so.enabled = false
       this.items.push({
         so,
@@ -145,6 +195,14 @@ export class FallingObjects extends BaseScriptComponent {
         yaw0: 0,
         spin: 0
       })
+    }
+    for (let i = 0; i < DUST_POOL; i++) {
+      const so = global.scene.createSceneObject("Dust" + i)
+      so.setParent(this.sceneObject)
+      const rect = createRoundRect(so, DUST_COLOR, DUST_SIZE, DUST_SIZE, DUST_SIZE / 2)
+      so.getTransform().setLocalRotation(quat.angleAxis(-Math.PI / 2, vec3.right())) // flat on the floor, facing up
+      so.enabled = false
+      this.puffs.push({so, rect, alive: false, t0: 0, x: 0, z: 0, dx: 0, dz: 0, dist: 0})
     }
     this.createEvent("UpdateEvent").bind(() => this.onUpdate())
   }
@@ -217,7 +275,7 @@ export class FallingObjects extends BaseScriptComponent {
     item.phase = "fall"
     item.t0 = getTime()
     const t = item.so.getTransform()
-    t.setLocalScale(item.size)
+    t.setLocalScale(vec3.one())
     t.setLocalPosition(item.from)
     t.setLocalRotation(quat.angleAxis(item.yaw0, vec3.up()))
     item.so.enabled = true
@@ -239,6 +297,10 @@ export class FallingObjects extends BaseScriptComponent {
       item.busy = false
       item.so.enabled = false
     }
+    for (const p of this.puffs) {
+      p.alive = false
+      p.so.enabled = false
+    }
     this._fallsScheduled = 0
     this._fallsLanded = 0
   }
@@ -259,6 +321,48 @@ export class FallingObjects extends BaseScriptComponent {
         this.animate(item, now)
       }
     }
+    for (const p of this.puffs) {
+      if (p.alive) {
+        this.animatePuff(p, now)
+      }
+    }
+  }
+
+  /** 6-8 flat light-grey discs at the landing spot, spreading outward. */
+  private puff(x: number, z: number, now: number): void {
+    const n = DUST_MIN + Math.floor(Math.random() * (DUST_MAX - DUST_MIN + 1))
+    const a0 = Math.random() * Math.PI * 2
+    for (let k = 0; k < n; k++) {
+      const p = this.puffs[this.nextPuff]
+      this.nextPuff = (this.nextPuff + 1) % this.puffs.length
+      const a = a0 + (k * Math.PI * 2) / n + (Math.random() - 0.5) * 0.5
+      p.alive = true
+      p.t0 = now
+      p.x = x
+      p.z = z
+      p.dx = Math.sin(a)
+      p.dz = Math.cos(a)
+      p.dist = DUST_SPREAD_MIN + Math.random() * (DUST_SPREAD_MAX - DUST_SPREAD_MIN)
+      p.rect.backgroundColor = DUST_COLOR
+      p.so.getTransform().setLocalScale(vec3.one())
+      p.so.getTransform().setLocalPosition(new vec3(x, 1, z))
+      p.so.enabled = true
+    }
+  }
+
+  private animatePuff(p: Puff, now: number): void {
+    const s = Math.min(1, (now - p.t0) / DUST_SECONDS)
+    const out = p.dist * (1 - (1 - s) * (1 - s)) // ease out
+    const t = p.so.getTransform()
+    t.setLocalPosition(new vec3(p.x + p.dx * out, 1 + 3 * s, p.z + p.dz * out))
+    const g = 1 + 0.6 * s
+    t.setLocalScale(new vec3(g, g, 1))
+    const c = DUST_COLOR
+    p.rect.backgroundColor = new vec4(c.x, c.y, c.z, c.w * (1 - s))
+    if (s >= 1) {
+      p.alive = false
+      p.so.enabled = false
+    }
   }
 
   private animate(item: Item, now: number): void {
@@ -275,6 +379,7 @@ export class FallingObjects extends BaseScriptComponent {
         this._fallsLanded++
         item.phase = "hop"
         item.t0 = now
+        this.puff(item.to.x, item.to.z, now)
         if (this.onLanded) {
           this.onLanded(item.source, item.to.x, item.to.z)
         }
@@ -298,7 +403,7 @@ export class FallingObjects extends BaseScriptComponent {
       }
     } else {
       const k = Math.max(0, 1 - e / SHRINK_SECONDS)
-      t.setLocalScale(item.size.uniformScale(Math.max(0.001, k)))
+      t.setLocalScale(vec3.one().uniformScale(Math.max(0.001, k)))
       t.setLocalPosition(new vec3(item.to.x, item.to.y * k, item.to.z)) // stays on the floor
       if (k <= 0) {
         item.busy = false

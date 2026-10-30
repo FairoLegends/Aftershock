@@ -1,0 +1,120 @@
+- !<AssetImportMetadata/861de170-c76f-49e1-9d64-d4f5621c5c5d>
+  ImportedAssetIds:
+    ObjectPrefab: !<reference> a11d376e-c37c-4dc4-be5a-1593ed392436
+  ImporterName: ObjectPrefabImporter
+  PrimaryAsset: !<reference> a11d376e-c37c-4dc4-be5a-1593ed392436
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    ObjectPrefab: !<own> 486c2431-de11-4581-8dc1-70a1f8cc7b39
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<SceneObject/0788d557-d6ad-4f82-5c3e-ceb5ffa18104>
+  PrefabRemaps:
+    []
+  Name: StorageBox
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 44d822ca-56f0-4923-77df-412078043fa2
+  Components:
+    []
+- !<SceneObject/44d822ca-56f0-4923-77df-412078043fa2>
+  PrefabRemaps:
+    - 44d822ca-56f0-4923-77df-412078043fa2: fcc8bfa0-70b0-4ac5-7705-ed9a2b809ccf
+    - 66e31396-d0a6-46d2-668d-2b85d98de621: 6e4a69b8-e527-424b-4556-b91983a902ab
+    - 7e1f467c-ea0c-41d2-71f8-4d0419d9244a: 3d21b08f-c709-4d93-7748-0a97cb25f1a9
+    - 88f45d76-3434-4607-7388-90eae19c22e9: 979d8f2d-fca2-4f65-4488-74560a69d027
+    - a52f2fa9-7f34-4006-6179-a9522df58f1b: fae1f0eb-370f-42a9-49bc-c51ec6c079a7
+  Name: StorageBoxModel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> a52f2fa9-7f34-4006-6179-a9522df58f1b
+  Components:
+    []
+- !<ObjectPrefabAssetData/486c2431-de11-4581-8dc1-70a1f8cc7b39>
+  Prototype: !<ObjectOwner/e8af2b9b-0e0a-4da2-bc2e-c4de97937692>
+    PackagePath: ""
+    objects:
+      - !<own> 0788d557-d6ad-4f82-5c3e-ceb5ffa18104
+- !<SceneObject/66e31396-d0a6-46d2-668d-2b85d98de621>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 88f45d76-3434-4607-7388-90eae19c22e9
+  Components:
+    []
+- !<RenderMeshVisual/7e1f467c-ea0c-41d2-71f8-4d0419d9244a>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 90933de3-6e5c-41ad-aa27-45b20f31566b
+  Mesh: !<reference> ce6d5cd0-4455-4eac-a2a4-7652ed0dd9d2
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/88f45d76-3434-4607-7388-90eae19c22e9>
+  PrefabRemaps:
+    []
+  Name: geometry_0
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.075000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 90.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 7e1f467c-ea0c-41d2-71f8-4d0419d9244a
+- !<SceneObject/a52f2fa9-7f34-4006-6179-a9522df58f1b>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 66e31396-d0a6-46d2-668d-2b85d98de621
+  Components:
+    []

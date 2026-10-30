@@ -28,7 +28,9 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
+    bookPrefab: false
     boxMesh: false
+    boxPrefab: false
     config: false
     holdForReview: false
     itemMaterial: false
@@ -45,6 +47,8 @@
       boxMesh: !<reference.RenderMesh> 00000000-0000-0000-0000-000000000000
       itemMaterial: !<reference.Material> 00000000-0000-0000-0000-000000000000
       holdForReview: false
+      bookPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
+      boxPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
   ScriptTypes:
     -
       {}
@@ -53,3 +57,5 @@
     - '// @input Asset.RenderMesh boxMesh {"hint":"Unit cube mesh for the items (Aftershock/Meshes/AS_Box.mesh)"}'
     - '// @input Asset.Material itemMaterial {"hint":"Item material, used as authored (Aftershock/Materials/AS_ItemA.mat)"}'
     - '// @input bool holdForReview {"hint":"Review only: landed items stay on the floor until the next BRIEFING instead of shrinking after 4 s, so a screenshot can catch one. Keep off."}'
+    - '// @input Asset.ObjectPrefab bookPrefab {"hint":"Book model (Aftershock/Prefabs/Book.prefab): root at bottom center, 20 x 4 x 15 cm. Missing: the cube."}'
+    - '// @input Asset.ObjectPrefab boxPrefab {"hint":"Box model (Aftershock/Prefabs/StorageBox.prefab): root at bottom center, 25 x 15 x 20 cm. Missing: the cube."}'
