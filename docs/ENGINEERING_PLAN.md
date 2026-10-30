@@ -237,6 +237,12 @@ Chosen: G-A (window on a real virtual wall), polish P1 P2 P3 P4 P5 P7, features 
 13. F6 voice instructions: skipped for now; last, only if time is left.
 14. Order: 8A walls + window + door + P1 + P2; 8B evacuation + hold on + score; 8C P3 + P4 + P5; 8D P7 + F5 + F4; then audit. LEAF: DC1–DC13 keep passing; new DC14 walls/door, DC15 evacuation, DC16 hold on + score, DC17 duck practice + best.
 
+### 5l. Slice 9 decisions (learner, 30 Oct, from a preview screenshot: "why does the cabinet turn its back on the TV, and why do the cabinet and the TV drop books and boxes?")
+
+1. Wall-backed furniture (fixes the first report). Cause: `placeAll` drew every hazard at a random bearing from the start spot and turned it to face the start spot (`yawFacingStart`), knowing nothing about the walls or about the other items' fronts, so two items could end up back to back in open floor. Fix: pick the room rectangle FIRST (each side 420–600 cm at random (default), the start spot inside with at least startClearRadius + 60 cm to every wall), then place `cabinet`, `shelf`, `tv`, `glass` and `bed` with their backs flat against a wall, facing into the room, at a random spot along a wall that keeps their distance range from the start spot; `lamp` and `chair` may stand free (a lamp beside a wall or a corner is preferred (default)); `table` and `table2` stay free so the user can reach under them from any side. Walls are then exactly that rectangle. Fallback stays the fixed layout.
+2. Falling items (fixes the second report). Cause: §5j-8 (written from the feature list) named the shelf, the cabinet top and the TV as fall sources, so a closed wardrobe and a TV "dropped" books. Fix: only the shelf drops books and boxes (it visibly holds them). The cabinet drops nothing. The TV instead TOPPLES: once per shake (default), the TV model tips forward about its base over about 0.5 s and lies on the floor inside its danger zone; it counts as a hit by the same rule as a falling item (within fallHitRadius and not safe → −fallHitDamage, hit.fell) and stays down until the next BRIEFING. A toppled TV no longer topples again in the same drill.
+3. Order: 9A layout + fall sources + TV topple, 9B education cards (F4, learner approved 30 Oct), then the Slice 8+9 audit. LEAF: DC1–DC17 keep passing; DC14 also checks that every wall-backed item is against a wall; new DC18 TV topple.
+
 ## 6. Status
 
 | Slice | Status | Commit | LEAF | Learner checkpoint |
