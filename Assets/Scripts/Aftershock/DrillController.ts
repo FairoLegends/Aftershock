@@ -2167,14 +2167,14 @@ export class DrillController extends BaseScriptComponent {
     this._instructionKey = null
     this.resultPanel.placeInFront(
       this.headPose.position,
-      this.panelForward("result"),
+      this.headPose.forward, // audit (30 Oct): the tall result panel with cards fills the view; a turn pushed its edge off it
       this.config.hudDistance,
       this.config.resultBelowEye
     )
   }
 
   /**
-   * Slice 8A P1: the head's look turned by the PanelAim offset (0, ±20°, ±40°)
+   * Slice 8A P1: the head's look turned by the PanelAim offset (0, ±8°; briefing panel only)
    * whose ray from the eye crosses the fewest footprints, so furniture does
    * not stand between the eye and the panel.
    */
