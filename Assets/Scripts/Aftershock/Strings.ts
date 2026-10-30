@@ -25,6 +25,7 @@ export type StringKey =
   | "label.glass"
   | "label.lamp"
   | "label.tv"
+  | "label.door"
   | "warn.bed"
   | "label.safe"
   | "hud.health"
@@ -148,6 +149,7 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     ja: "テレビが落ちるかも",
     zh: "电视可能掉落"
   },
+  "label.door": {id: "Pintu keluar", en: "Exit door", de: "Ausgang", ja: "出口", zh: "出口"}, // Slice 8A
   "warn.bed": {
     id: "Kasur bukan tempat berlindung",
     en: "A bed is not a safe place",

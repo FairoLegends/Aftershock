@@ -88,6 +88,14 @@ export class DangerZone extends BaseScriptComponent {
     }
     this.halfX = f.halfX + this.config.dangerMargin
     this.halfZ = f.halfZ + this.config.dangerMargin
+    if (this.item === "glass") {
+      // Slice 8A: the glass backs onto a wall, so its zone lies in front of it only.
+      const m = this.config.dangerMargin / 2
+      this.halfZ = f.halfZ + m
+      const t = this.sceneObject.getTransform()
+      const front = new vec3(Math.sin(f.front), 0, Math.cos(f.front)).uniformScale(m)
+      t.setLocalPosition(t.getLocalPosition().add(t.getLocalRotation().multiplyVec3(front)))
+    }
     this.buildVisual()
     this.buildLabel()
   }

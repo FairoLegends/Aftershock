@@ -50,7 +50,7 @@
     - '// @ui {"widget":"label", "label":"Result / game-over panel (R12, R13)"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
-    - '// @input vec4 backingColor = {1,1,1,0.5} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive. 50% white (ENGINEERING_PLAN 5i item 3).", "widget":"color"}'
+    - '// @input vec4 backingColor = {1,1,1,0.75} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive. 75% white (Slice 8A P1: readable over furniture).", "widget":"color"}'
     - '// @input vec4 textOutlineColor = {0.2,0.2,0.2,1} {"hint":"Thin outline around every panel text, so white text reads over light furniture seen through the backing (same as the HUD)", "widget":"color"}'
     - '// @input float textOutlineSize = 0.2 {"hint":"Outline strength, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @ui {"widget":"group_end"}'

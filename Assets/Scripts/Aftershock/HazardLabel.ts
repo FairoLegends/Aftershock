@@ -1,5 +1,5 @@
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {createRoundRect, SOFT_INNER_RADIUS_CM, SOFT_LINE, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
+import {createRoundRect, SOFT_GREEN, SOFT_INNER_RADIUS_CM, SOFT_LINE, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
 
 // DESIGN_BRIEF §5–6: labels use 2.5 cm type. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -37,7 +37,8 @@ export class HazardLabel extends BaseScriptComponent {
       new ComboBoxItem("Glass", "label.glass"),
       new ComboBoxItem("Lamp", "label.lamp"),
       new ComboBoxItem("TV", "label.tv"),
-      new ComboBoxItem("Safe zone", "label.safe")
+      new ComboBoxItem("Safe zone", "label.safe"),
+      new ComboBoxItem("Exit door", "label.door")
     ])
   )
   key: string = "label.cabinet"
@@ -72,7 +73,7 @@ export class HazardLabel extends BaseScriptComponent {
 
     this.dot = global.scene.createSceneObject("Dot")
     this.dot.setParent(content)
-    createRoundRect(this.dot, this.isHazard ? SOFT_RED : this.textColor, DOT_CM, DOT_CM, DOT_CM / 2)
+    createRoundRect(this.dot, this.isDoor ? SOFT_GREEN : this.isHazard ? SOFT_RED : this.textColor, DOT_CM, DOT_CM, DOT_CM / 2)
 
     const key = this.key as StringKey
     this.primary = this.addLine(content, key + ".id")
@@ -87,7 +88,12 @@ export class HazardLabel extends BaseScriptComponent {
   }
 
   private get isHazard(): boolean {
-    return this.key !== "label.safe"
+    return this.key !== "label.safe" && !this.isDoor
+  }
+
+  /** Slice 8A exit door: a soft green dot and white text, never the hazard red. */
+  private get isDoor(): boolean {
+    return this.key === "label.door"
   }
 
   hide(): void {
@@ -163,7 +169,7 @@ export class HazardLabel extends BaseScriptComponent {
     t.size = LABEL_EM_CM * SIZE_PER_CM
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
-    t.textFill.color = this.isHazard ? SOFT_WHITE : this.textColor
+    t.textFill.color = this.isHazard || this.isDoor ? SOFT_WHITE : this.textColor
     t.horizontalAlignment = HorizontalAlignment.Left
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Wrap

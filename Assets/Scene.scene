@@ -319,7 +319,7 @@
   PrefabRemaps:
     []
   Name: GlassPane
-  Enabled: false
+  Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
     Position: {x: 0.000000, y: 150.000000, z: 0.000000}
@@ -594,12 +594,12 @@
   Enabled: true
   ScriptAsset: !<reference> 317c7675-ac84-43aa-af86-943991db91a1
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.750000}
   ScriptTypes:
     "":
       {}
@@ -765,12 +765,12 @@
   PrefabRemaps:
     []
   Name: FrameLeft
-  Enabled: false
+  Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: -62.000000, y: 150.000000, z: 0.000000}
+    Position: {x: -64.000000, y: 150.000000, z: 0.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 4.000000, y: 120.000000, z: 3.000000}
+    Scale: {x: 8.000000, y: 120.000000, z: 4.000000}
     HasSegmentScaleCompensation: false
   Children:
     []
@@ -780,7 +780,7 @@
   PrefabRemaps:
     []
   Name: WallEdgeTop
-  Enabled: true
+  Enabled: false
   Layers: 1
   LocalTransform: !<TransformEntity>
     Position: {x: 0.000000, y: 240.000000, z: 2.000000}
@@ -919,7 +919,7 @@
   ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ShadowDensity: 1.000000
   Materials:
-    - !<reference> 6d214826-7829-4a74-a761-227dea1456a2
+    - !<reference> 37c059bf-3bcd-4e96-b0cf-7fa3868af90a
   Mesh: !<reference> f27ea527-2119-4880-ad06-453f0e7daaf3
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
@@ -1072,6 +1072,21 @@
     - !<own> d9071294-12e8-425f-98f1-bf308a02639e
   Components:
     []
+- !<SceneObject/26ef5b18-612e-463c-8772-3cf4d04aba46>
+  PrefabRemaps:
+    []
+  Name: DoorLabel
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 235.000000, z: 3.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> ddfea2bc-68f8-411a-bd7e-8c352b9663ed
 - !<ScriptComponent/275aeb4d-77ac-4b1b-811e-907652542110>
   PrefabRemaps:
     []
@@ -1132,7 +1147,7 @@
   ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ShadowDensity: 1.000000
   Materials:
-    - !<reference> 6d214826-7829-4a74-a761-227dea1456a2
+    - !<reference> 37c059bf-3bcd-4e96-b0cf-7fa3868af90a
   Mesh: !<reference> f27ea527-2119-4880-ad06-453f0e7daaf3
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
@@ -1214,6 +1229,21 @@
     ring-3_end_end_end: !<reference> b93dfa60-41bd-4999-ac0f-4b2f1df2bdaf
     thumb-3_end_end_end_end: !<reference> 08e3cc22-f2e1-49fb-9ddc-145fe6547ce3
     pinky-3_end_end: !<reference> d08269e3-acd4-4156-b5b9-477ca259611d
+- !<SceneObject/29d3147c-ffe0-436d-9086-6e41455afdb1>
+  PrefabRemaps:
+    []
+  Name: TvScreen
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 82.000000, z: 2.800000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 60.000000, z: 0.200000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> bdafa8c9-a745-4847-9c09-39965f7a21f1
 - !<SceneObject/2b60ef13-6914-4e40-a069-833249257545>
   PrefabRemaps:
     []
@@ -2409,6 +2439,7 @@
     - !<own> 0e8688f8-2e1e-472b-9b18-290b9c5f4602
     - !<own> 235565ea-925a-4995-be27-32921680800c
     - !<own> 046839bf-5d5c-4a5f-be26-ae8a9c7a4b9b
+    - !<own> 96df5061-5813-46a2-883e-3fad098e183f
   Components:
     - !<own> 30de3aec-07f9-441e-8f20-3c0a7158ba47
 - !<SceneObject/6a7a67db-5675-49bb-8f31-ba0588e3cffc>
@@ -2705,7 +2736,7 @@
   PrefabRemaps:
     []
   Name: WallEdgeRight
-  Enabled: true
+  Enabled: false
   Layers: 1
   LocalTransform: !<TransformEntity>
     Position: {x: 90.000000, y: 120.000000, z: 2.000000}
@@ -2979,6 +3010,7 @@
   Children:
     - !<own> f2e70f8e-a3d0-4ae5-b044-5c623ef208a7
     - !<own> 13fa4364-e6a8-4575-9301-a4ae82f15ff6
+    - !<own> 29d3147c-ffe0-436d-9086-6e41455afdb1
   Components:
     []
 - !<SceneObject/859e1ef3-3021-4825-8626-f1dc323b9252>
@@ -3211,7 +3243,7 @@
   PrefabRemaps:
     []
   Name: WallEdgeLeft
-  Enabled: true
+  Enabled: false
   Layers: 1
   LocalTransform: !<TransformEntity>
     Position: {x: -90.000000, y: 120.000000, z: 2.000000}
@@ -3273,6 +3305,21 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<SceneObject/96df5061-5813-46a2-883e-3fad098e183f>
+  PrefabRemaps:
+    []
+  Name: RoomWalls
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 26ef5b18-612e-463c-8772-3cf4d04aba46
+  Components:
+    - !<own> dc0ebf08-b693-4388-8074-35fa7a16d58a
 - !<SceneObject/988c408a-99dc-47e6-b7c4-efbf4bf8dc3c>
   PrefabRemaps:
     []
@@ -4143,17 +4190,37 @@
   PrefabRemaps:
     []
   Name: FrameRight
-  Enabled: false
+  Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 62.000000, y: 150.000000, z: 0.000000}
+    Position: {x: 64.000000, y: 150.000000, z: 0.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 4.000000, y: 120.000000, z: 3.000000}
+    Scale: {x: 8.000000, y: 120.000000, z: 4.000000}
     HasSegmentScaleCompensation: false
   Children:
     []
   Components:
     - !<own> 28439d96-71de-41fd-b6ae-ca38f4de4443
+- !<RenderMeshVisual/bdafa8c9-a745-4847-9c09-39965f7a21f1>
+  PrefabRemaps:
+    []
+  Name: Render Mesh Visual
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 993ca980-c7a6-46dc-bfb7-974893f01d6e
+  Mesh: !<reference> f27ea527-2119-4880-ad06-453f0e7daaf3
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
 - !<SceneObject/bf2095b6-c6f8-48c8-b840-e0a6cec0dc99>
   PrefabRemaps:
     []
@@ -4212,7 +4279,7 @@
   ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ShadowDensity: 1.000000
   Materials:
-    - !<reference> 6d214826-7829-4a74-a761-227dea1456a2
+    - !<reference> 37c059bf-3bcd-4e96-b0cf-7fa3868af90a
   Mesh: !<reference> f27ea527-2119-4880-ad06-453f0e7daaf3
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
@@ -4534,7 +4601,7 @@
   ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ShadowDensity: 1.000000
   Materials:
-    - !<reference> 6d214826-7829-4a74-a761-227dea1456a2
+    - !<reference> 37c059bf-3bcd-4e96-b0cf-7fa3868af90a
   Mesh: !<reference> f27ea527-2119-4880-ad06-453f0e7daaf3
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
@@ -4741,6 +4808,37 @@
     - !<own> f74a6bbb-4fba-4d8b-9b4e-64dd1c3e9ac3
   Components:
     []
+- !<ScriptComponent/dc0ebf08-b693-4388-8074-35fa7a16d58a>
+  PrefabRemaps:
+    []
+  Name: RoomWalls
+  Enabled: true
+  ScriptAsset: !<reference> 74d29c3e-e0a8-4589-ad80-c755845c78d7
+  ScriptInputsDefault:
+    wallColor: true
+    lineColor: true
+    wallHeight: true
+    lineWidth: true
+    doorFrameColor: true
+    doorLeafColor: true
+    doorFrameWidth: true
+    doorLabelHeight: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      wallColor: !<Vec4> {x: 0.910000, y: 0.933000, z: 0.949000, w: 0.250000}
+      lineColor: !<Vec4> {x: 0.960000, y: 0.970000, z: 0.980000, w: 0.600000}
+      wallHeight: !<float> 250.000000
+      lineWidth: 1.500000
+      doorFrameColor: !<Vec4> {x: 0.870000, y: 0.750000, z: 0.560000, w: 1.000000}
+      doorLeafColor: !<Vec4> {x: 0.800000, y: 0.670000, z: 0.480000, w: 1.000000}
+      doorFrameWidth: !<float> 8.000000
+      doorLabel: !<MappingBased.AssignableType_1> ddfea2bc-68f8-411a-bd7e-8c352b9663ed
+      doorLabelHeight: !<float> 235.000000
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/dc874f07-0097-4423-8104-109edaf3a1ce>
   PrefabRemaps:
     []
@@ -4816,6 +4914,25 @@
     []
   Components:
     - !<own> b777c273-df7a-46ee-9973-56b8f8e25008
+- !<ScriptComponent/ddfea2bc-68f8-411a-bd7e-8c352b9663ed>
+  PrefabRemaps:
+    []
+  Name: HazardLabel
+  Enabled: true
+  ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
+  ScriptInputsDefault:
+    textColor: true
+    backingColor: true
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      key: label.door
+      textColor: !<Vec4> {x: 1.000000, y: 0.690000, z: 0.125000, w: 1.000000}
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/de91b1aa-ca7c-4c48-8423-69888cc1f913>
   PrefabRemaps:
     []
@@ -5067,7 +5184,7 @@
     {}
   ScriptInputs:
     "":
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.500000}
+      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.750000}
       textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
       textOutlineSize: 0.200000
   ScriptTypes:
@@ -5373,12 +5490,12 @@
   PrefabRemaps:
     []
   Name: FrameBottom
-  Enabled: false
+  Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 88.000000, z: 0.000000}
+    Position: {x: 0.000000, y: 86.000000, z: 0.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 128.000000, y: 4.000000, z: 3.000000}
+    Scale: {x: 136.000000, y: 8.000000, z: 4.000000}
     HasSegmentScaleCompensation: false
   Children:
     []
@@ -5557,10 +5674,10 @@
       floorPath: !<MappingBased.AssignableType_24> 9f8d2fbd-7283-4da9-b193-08e8747212c1
       edgeWarning: !<MappingBased.AssignableType_25> 0735a83d-fdd5-4d23-ba88-ba52fe8a35bd
       fallingObjects: !<MappingBased.AssignableType_26> c8e0f0db-1d48-4afb-a033-26eaa0dd3227
+      roomWalls: !<MappingBased.AssignableType_27> dc0ebf08-b693-4388-8074-35fa7a16d58a
       tablePrefab: !<reference.ObjectPrefab> 68a4de7c-d609-40a8-8e70-c31fd9877491
       cabinetPrefab: !<reference.ObjectPrefab> 1c8bc680-a962-43dc-8449-ab4fe5c708b5
       shelfPrefab: !<reference.ObjectPrefab> ff246972-5993-4e77-bf50-fe5c3c0cf985
-      glassPrefab: !<reference.ObjectPrefab> 84362e90-8ea9-4222-9291-5c49a0e655a9
       lampPrefab: !<reference.ObjectPrefab> b5313633-df9f-4973-a8ba-2becdfbebf0e
       tvPrefab: !<reference.ObjectPrefab> 17dabe1e-78ce-4f47-9d33-ecb470078502
       bedPrefab: !<reference.ObjectPrefab> 12b24cdf-171d-4717-ad0c-4586819a58ff
@@ -5602,12 +5719,12 @@
   PrefabRemaps:
     []
   Name: FrameTop
-  Enabled: false
+  Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 212.000000, z: 0.000000}
+    Position: {x: 0.000000, y: 214.000000, z: 0.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 128.000000, y: 4.000000, z: 3.000000}
+    Scale: {x: 136.000000, y: 8.000000, z: 4.000000}
     HasSegmentScaleCompensation: false
   Children:
     []

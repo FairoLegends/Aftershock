@@ -42,7 +42,6 @@
     floorPath: false
     glassDanger: false
     glassLabel: false
-    glassPrefab: false
     headPose: false
     hud: false
     lampDanger: false
@@ -54,6 +53,7 @@
     quakeShaker: false
     resultPanel: false
     room: false
+    roomWalls: false
     rumbleAudio: false
     safeZone: false
     safeZone2: false
@@ -105,10 +105,10 @@
       floorPath: !<MappingBased.AssignableType_24> 00000000-0000-0000-0000-000000000000
       edgeWarning: !<MappingBased.AssignableType_25> 00000000-0000-0000-0000-000000000000
       fallingObjects: !<MappingBased.AssignableType_26> 00000000-0000-0000-0000-000000000000
+      roomWalls: !<MappingBased.AssignableType_27> 00000000-0000-0000-0000-000000000000
       tablePrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       cabinetPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       shelfPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
-      glassPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       lampPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       tvPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
       bedPrefab: !<reference.ObjectPrefab> 00000000-0000-0000-0000-000000000000
@@ -151,11 +151,11 @@
     - '// @input AssignableType_25 edgeWarning {"hint":"EdgeWarning component: red view-edge pulse while health drains"}'
     - '// @ui {"widget":"group_end"}'
     - '// @input AssignableType_26 fallingObjects {"hint":"FallingObjects component (under the Room): items that fall off the shelf, cabinet and TV (Slice 7D)"}'
+    - '// @input AssignableType_27 roomWalls {"hint":"RoomWalls component (under the Room): the four walls and the exit door (Slice 8A)"}'
     - '// @ui {"widget":"group_start", "label":"Furniture models (Slice 7R)"}'
     - '// @input Asset.ObjectPrefab tablePrefab {"hint":"Table model (both tables): root at bottom center, cm, front +Z"}'
     - // @input Asset.ObjectPrefab cabinetPrefab
     - // @input Asset.ObjectPrefab shelfPrefab
-    - // @input Asset.ObjectPrefab glassPrefab
     - // @input Asset.ObjectPrefab lampPrefab
     - // @input Asset.ObjectPrefab tvPrefab
     - // @input Asset.ObjectPrefab bedPrefab

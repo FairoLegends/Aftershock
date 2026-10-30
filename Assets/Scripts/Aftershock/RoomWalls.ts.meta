@@ -1,0 +1,72 @@
+- !<AssetImportMetadata/b18fdc64-de88-4332-a984-573006f26d01>
+  ImportedAssetIds:
+    TypeScriptAsset: !<reference> 74d29c3e-e0a8-4589-ad80-c755845c78d7
+  ImporterName: TypeScriptAssetImporter
+  PrimaryAsset: !<reference> 74d29c3e-e0a8-4589-ad80-c755845c78d7
+  PackageType: NotAPackage
+  LegacyPackagePolicy: ~
+  ExtraData:
+    {}
+  AssetDataMap:
+    TypeScriptAsset: !<own> 49016d61-62a2-430a-98a3-52845c1dc850
+  DependentFiles:
+    []
+  ImporterSettings: !<AssetImporterSettings>
+    {}
+  CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
+- !<TypeScriptAssetData/49016d61-62a2-430a-98a3-52845c1dc850>
+  SvgIcon: ""
+  SetupScript:
+    code: ""
+  Description: ""
+  VersionMajor: 0
+  VersionMinor: 0
+  VersionPatch: 0
+  VersionPrerelease: ""
+  UpdateOrder: 0
+  ComponentUid: 867f4baa-69e0-47ec-b733-81206d268d23
+  ExportUid: 00000000-0000-0000-0000-000000000000
+  PackagePolicy: CanBeUnpacked
+  ScriptInputsHidden:
+    doorFrameColor: false
+    doorFrameWidth: false
+    doorLabel: false
+    doorLabelHeight: false
+    doorLeafColor: false
+    lineColor: false
+    lineWidth: false
+    wallColor: false
+    wallHeight: false
+  ScriptTypesHidden:
+    {}
+  ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
+  DeclarationFile: !<reference> 00000000-0000-0000-0000-000000000000
+  Tags:
+    []
+  Attachments:
+    []
+  DefaultScriptInputs:
+    - wallColor: !<Vec4> {x: 0.910000, y: 0.933000, z: 0.949000, w: 0.250000}
+      lineColor: !<Vec4> {x: 0.960000, y: 0.970000, z: 0.980000, w: 0.600000}
+      wallHeight: !<float> 250.000000
+      lineWidth: 1.500000
+      doorFrameColor: !<Vec4> {x: 0.870000, y: 0.750000, z: 0.560000, w: 1.000000}
+      doorLeafColor: !<Vec4> {x: 0.800000, y: 0.670000, z: 0.480000, w: 1.000000}
+      doorFrameWidth: !<float> 8.000000
+      doorLabel: !<MappingBased.AssignableType_1> 00000000-0000-0000-0000-000000000000
+      doorLabelHeight: !<float> 235.000000
+  ScriptTypes:
+    -
+      {}
+  InputLines:
+    - '// @ui {"widget":"label", "label":"Room walls and exit door (Slice 8A)"}'
+    - '// @ui {"widget":"separator"}'
+    - '// @input vec4 wallColor = {0.91,0.933,0.949,0.25} {"hint":"Wall panel color: #E8EEF2 at 25% (light only: the display is additive)", "widget":"color"}'
+    - '// @input vec4 lineColor = {0.96,0.97,0.98,0.6} {"hint":"Top and bottom edge lines, slightly brighter than the panel", "widget":"color"}'
+    - '// @input float wallHeight = 250 {"hint":"Wall height (cm)"}'
+    - '// @input float lineWidth = 1.5 {"hint":"Edge line width (cm)"}'
+    - '// @input vec4 doorFrameColor = {0.87,0.75,0.56,1} {"hint":"Door frame: light oak", "widget":"color"}'
+    - '// @input vec4 doorLeafColor = {0.8,0.67,0.48,1} {"hint":"Door leaf: slightly darker than the frame, still light", "widget":"color"}'
+    - '// @input float doorFrameWidth = 8 {"hint":"Door frame width (cm)"}'
+    - '// @input AssignableType_1 doorLabel {"hint":"HazardLabel with key label.door, a child of this object"}'
+    - '// @input float doorLabelHeight = 235 {"hint":"Door label height above the floor (cm)"}'

@@ -31,9 +31,9 @@ export class BriefingPanel extends BaseScriptComponent {
   @ui.separator
   @ui.group_start("Look")
   @input
-  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.")
+  @hint("Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive. 75% white (Slice 8A P1: readable over furniture).")
   @widget(new ColorWidget())
-  backingColor: vec4 = new vec4(1, 1, 1, 0.25)
+  backingColor: vec4 = new vec4(1, 1, 1, 0.75)
   @ui.group_end
 
   private readonly shownTexts: Text[] = []

@@ -22,8 +22,10 @@ import {
   levelNameKey
 } from "./Levels"
 import {OffscreenArrow} from "./OffscreenArrow"
+import {panelYawOffset} from "./PanelAim"
 import {QuakeShaker} from "./QuakeShaker"
 import {ResultLine, ResultPanel} from "./ResultPanel"
+import {RoomWalls} from "./RoomWalls"
 import {SafetyPanel} from "./SafetyPanel"
 import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
@@ -198,6 +200,10 @@ export class DrillController extends BaseScriptComponent {
   @hint("FallingObjects component (under the Room): items that fall off the shelf, cabinet and TV (Slice 7D)")
   fallingObjects: FallingObjects
 
+  @input
+  @hint("RoomWalls component (under the Room): the four walls and the exit door (Slice 8A)")
+  roomWalls: RoomWalls
+
   @ui.group_start("Furniture models (Slice 7R)")
   @input
   @hint("Table model (both tables): root at bottom center, cm, front +Z")
@@ -208,9 +214,6 @@ export class DrillController extends BaseScriptComponent {
 
   @input
   shelfPrefab: ObjectPrefab
-
-  @input
-  glassPrefab: ObjectPrefab
 
   @input
   lampPrefab: ObjectPrefab
@@ -320,6 +323,18 @@ export class DrillController extends BaseScriptComponent {
   /** This drill's layout (Room-local cm, radians), or null before the first BRIEFING. */
   get layout(): Layout | null {
     return this._layout
+  }
+  /** Slice 8A (for 8B): the doorway's center on the wall line, on the floor (world, at rest); null before the first BRIEFING. */
+  get doorCenter(): vec3 | null {
+    return this.roomWalls ? this.roomWalls.doorCenter : null
+  }
+  /** Unit floor normal from the door into the room (world, at rest). */
+  get doorNormal(): vec3 | null {
+    return this.roomWalls ? this.roomWalls.doorNormal : null
+  }
+  /** True inside the 90 × 60 cm floor rect in front of the door. */
+  doorContains(pos: vec3): boolean {
+    return !!this.roomWalls && this.roomWalls.doorContains(pos)
   }
   /** Head XZ inside any danger zone (QUAKE). */
   get inDanger(): boolean {
@@ -521,13 +536,13 @@ export class DrillController extends BaseScriptComponent {
       table2: this.tablePrefab,
       cabinet: this.cabinetPrefab,
       shelf: this.shelfPrefab,
-      glass: this.glassPrefab,
       lamp: this.lampPrefab,
       tv: this.tvPrefab,
       bed: this.bedPrefab,
       chair: this.chairPrefab
     }
-    const noModel = ALL_ITEMS.filter((item) => !this.prefabs[item])
+    // Slice 8A: the glass is the box window under its anchor (pane and frame), never a model.
+    const noModel = ALL_ITEMS.filter((item) => item !== "glass" && !this.prefabs[item])
     if (noModel.length > 0) {
       console.warn(`${LOG} DrillController: no prefab for ${noModel.join(", ")}; those items have no model (re-enable their box children as a fallback)`)
     }
@@ -916,6 +931,7 @@ export class DrillController extends BaseScriptComponent {
     for (const h of this.activeHazards) {
       this.zones[h].captureRest()
     }
+    if (this.roomWalls) this.roomWalls.captureRest() // Slice 8A: door getters at rest
     this.updateTarget(true)
     // 5j-4/17d: labels and markers appear as the scan sweep reaches them; with guides off, no scan.
     this.applyLevelGuides()
@@ -928,7 +944,7 @@ export class DrillController extends BaseScriptComponent {
     this.briefingUpdate.enabled = true // 5j-19e: the path follows the nearest table as the user walks
     this.briefingPanel.placeInFront(
       this.headPose.position,
-      this.headPose.forward,
+      this.panelForward("briefing"),
       this.config.hudDistance,
       this.config.hudBelowEye
     )
@@ -1477,10 +1493,25 @@ export class DrillController extends BaseScriptComponent {
     this._instructionKey = null
     this.resultPanel.placeInFront(
       this.headPose.position,
-      this.headPose.forward,
+      this.panelForward("result"),
       this.config.hudDistance,
       this.config.resultBelowEye
     )
+  }
+
+  /**
+   * Slice 8A P1: the head's look turned by the PanelAim offset (0, ±20°, ±40°)
+   * whose ray from the eye crosses the fewest footprints, so furniture does
+   * not stand between the eye and the panel.
+   */
+  private panelForward(panel: string): vec3 {
+    const f = this.headPose.forward
+    const eye = this.toRoomLocal(this.headPose.position)
+    const c = Math.cos(this.roomYaw)
+    const s = Math.sin(this.roomYaw)
+    const aim = panelYawOffset(this._layout, eye.x, eye.y, f.x * c - f.z * s, f.x * s + f.z * c)
+    console.log(`${LOG} ${this._state}: ${panel} panel yaw offset ${aim.offsetDeg}° (${aim.hits} footprint(s) on the line)`)
+    return quat.angleAxis((aim.offsetDeg * Math.PI) / 180, vec3.up()).multiplyVec3(f)
   }
 
   /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. */
@@ -1608,6 +1639,11 @@ export class DrillController extends BaseScriptComponent {
         this.addModel(item, anchor)
         this.logItem(item, at)
       }
+    }
+    if (this.roomWalls) {
+      this.roomWalls.apply(layout.room, layout.door) // Slice 8A
+    } else {
+      console.warn(`${LOG} DrillController: roomWalls is not assigned; no walls or door`)
     }
   }
 

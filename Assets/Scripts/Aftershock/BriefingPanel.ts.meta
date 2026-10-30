@@ -46,5 +46,5 @@
     - '// @ui {"widget":"label", "label":"Briefing instruction panel (R5)"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Look"}'
-    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @input vec4 backingColor = {1,1,1,0.75} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive. 75% white (Slice 8A P1: readable over furniture).", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

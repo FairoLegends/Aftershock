@@ -13,6 +13,7 @@ import {DC10_ScanPathEdge} from "./DC10_ScanPathEdge"
 import {DC11_Aftershock} from "./DC11_Aftershock"
 import {DC12_Levels} from "./DC12_Levels"
 import {DC13_FallingObjects} from "./DC13_FallingObjects"
+import {DC14_WallsAndDoor} from "./DC14_WallsAndDoor"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -30,6 +31,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc10-scan-path-edge", typename: DC10_ScanPathEdge.getTypeName()},
     {id: "dc11-aftershock", typename: DC11_Aftershock.getTypeName()},
     {id: "dc12-levels", typename: DC12_Levels.getTypeName()},
-    {id: "dc13-falling-objects", typename: DC13_FallingObjects.getTypeName()}
+    {id: "dc13-falling-objects", typename: DC13_FallingObjects.getTypeName()},
+    {id: "dc14-walls-and-door", typename: DC14_WallsAndDoor.getTypeName()}
   ]
 }
