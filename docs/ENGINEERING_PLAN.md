@@ -251,6 +251,7 @@ Chosen: G-A (window on a real virtual wall), polish P1 P2 P3 P4 P5 P7, features 
    c. The floor lamp is placed next to the bed's head end (beside it, within 30 cm of the head wall) in about 60% of layouts that have both (default), otherwise near a wall as today.
    d. The TV stands on a wall that faces the bed or the room center, never on the same wall as the bed and never beside it (at least 150 cm between the TV and bed footprints, default).
    e. The cabinet and shelf never stand in front of the window: no footprint within 80 cm (default) in front of the glass, and they are not placed on the glass wall closer than 30 cm to the window frame's sides.
+   f. Tables and chairs are square to the walls (learner, 31 Oct, after the Slice 11 top views): yaw a multiple of 90° in Room space (each table picks the one of the four whose long side faces the start spot best); the chair also square, facing its table when near one. The arrow and floor path still lead to the nearest table. The free-standing lamp keeps a free yaw (it is round).
 
 ## 6. Status
 
