@@ -52,6 +52,7 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `over.why.danger` | Kamu berdiri di dekat benda yang bisa jatuh | You stayed next to something that can fall | Du bist neben etwas geblieben, das umfallen kann | 倒れてくる物のそばにいました | 你待在可能倒下的物品旁边 |
 | `label.danger` | Zona bahaya | Danger zone | Gefahrenzone | 危険区域 | 危险区 |
 | `result.never` | Kamu tidak berlindung di bawah meja | You never took cover under the table | Du hast keinen Schutz unter dem Tisch gesucht | 机の下に避難しませんでした | 你没有躲到桌子下面 |
+| `btn.changeLang` | Ganti bahasa | Change language | Sprache ändern | 言語を変更 | 更改语言 |
 | `btn.restart` | Ulangi | Restart | Neu starten | もう一度 | 重新开始 |
 | `step.goUnder` | Ke bawah meja | Go under the table | Unter den Tisch | 机の下へ | 躲到桌下 |
 | `step.duck` | Merunduk | Duck down | Ducken | 身を低く | 蹲下 |
