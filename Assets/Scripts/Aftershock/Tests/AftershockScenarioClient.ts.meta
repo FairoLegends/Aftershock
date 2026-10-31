@@ -28,7 +28,7 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    {}
+    only: false
   ScriptTypesHidden:
     {}
   ReadMe: !<reference> 00000000-0000-0000-0000-000000000000
@@ -38,10 +38,9 @@
   Attachments:
     []
   DefaultScriptInputs:
-    -
-      {}
+    - only: ""
   ScriptTypes:
     -
       {}
   InputLines:
-    []
+    - '// @input string only {"hint":"Comma-separated scenario ids to run, in index order; empty runs them all"}'

@@ -155,9 +155,9 @@ export class DrillConfig extends BaseScriptComponent {
   hudStepNameColor: vec4 = new vec4(1, 1, 1, 1)
 
   @input
-  @hint("Done step number and name text: green tinted, between the active step (green) and the upcoming ones")
+  @hint("Done step number and name text: brand green SOFT_GREEN at full alpha, with the secondary outline (5m-11a). The pale done fill and no border keep it apart from the active step.")
   @widget(new ColorWidget())
-  hudStepDoneColor: vec4 = new vec4(0.62, 0.94, 0.76, 1)
+  hudStepDoneColor: vec4 = new vec4(0.239, 0.863, 0.518, 1)
 
   @input
   @hint("Done step cell opacity (was 0.45)")
@@ -480,6 +480,40 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("How long calib.done shows before BRIEFING, in seconds")
   calibDoneSeconds: number = 1.2
+  @ui.group_end
+
+  @ui.group_start("Ghost replay (Slice 13B, ENGINEERING_PLAN 5m item 12)")
+  @input
+  @hint("The head's floor point is sampled this often from QUAKE until the drill ends, in seconds")
+  replaySampleSeconds: number = 0.1
+
+  @input
+  @hint("Replay draws the whole trail in this many seconds, whatever the drill length")
+  replaySeconds: number = 8
+
+  @input
+  @hint("The full trail stays this long after it is drawn, then the result panel comes back, in seconds")
+  replayHoldSeconds: number = 2
+
+  @input
+  @hint("Trail points closer than this to the last kept one are dropped (cm); a change in or out of danger is always kept")
+  replaySimplifyCm: number = 8
+
+  @input
+  @hint("Trail ribbon width (cm)")
+  replayLineWidthCm: number = 4
+
+  @input
+  @hint("Trail and markers sit this far above the floor (cm), clear of z-fighting")
+  replayLiftCm: number = 0.5
+
+  @input
+  @hint("A small dot on the trail every this many cm")
+  replayDotSpacingCm: number = 30
+
+  @input
+  @hint("Landed, hit and cover marker size (cm)")
+  replayMarkerCm: number = 18
   @ui.group_end
 
   @ui.group_start("Test hooks")

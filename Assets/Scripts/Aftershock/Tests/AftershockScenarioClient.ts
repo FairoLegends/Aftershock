@@ -8,6 +8,10 @@ const GAP_MS = 1000
 // summary. Lives on LeafAutoRun, which stays disabled except for test runs.
 @component
 export class AftershockScenarioClient extends BaseScriptComponent {
+  @input
+  @hint("Comma-separated scenario ids to run, in index order; empty runs them all")
+  only: string = ""
+
   onAwake(): void {
     this.createEvent("OnStartEvent").bind(() => {
       this.runAll()
@@ -16,7 +20,8 @@ export class AftershockScenarioClient extends BaseScriptComponent {
 
   private async runAll(): Promise<void> {
     const manager = DefaultScenarioManager.getInstance()
-    const ids = manager.listScenarioIds()
+    const want = this.only.split(",").map((s) => s.trim()).filter((s) => s.length > 0)
+    const ids = manager.listScenarioIds().filter((id) => want.length === 0 || want.indexOf(id) >= 0)
     print(`${LOG} running ${ids.length} scenarios: ${ids.join(", ")}`)
     const failed: string[] = []
     for (const id of ids) {

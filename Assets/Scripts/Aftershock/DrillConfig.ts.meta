@@ -107,6 +107,14 @@
     quakeDurationMin: false
     quakeWaitMax: false
     quakeWaitMin: false
+    replayDotSpacingCm: false
+    replayHoldSeconds: false
+    replayLiftCm: false
+    replayLineWidthCm: false
+    replayMarkerCm: false
+    replaySampleSeconds: false
+    replaySeconds: false
+    replaySimplifyCm: false
     resultBelowEye: false
     safeHoldSeconds: false
     safeZoneMargin: false
@@ -260,6 +268,14 @@
       gripHandleHeight: !<float> 40.000000
       calibHoldSeconds: 0.400000
       calibDoneSeconds: 1.200000
+      replaySampleSeconds: 0.100000
+      replaySeconds: !<float> 8.000000
+      replayHoldSeconds: !<float> 2.000000
+      replaySimplifyCm: !<float> 8.000000
+      replayLineWidthCm: !<float> 4.000000
+      replayLiftCm: 0.500000
+      replayDotSpacingCm: !<float> 30.000000
+      replayMarkerCm: !<float> 18.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -321,13 +337,13 @@
     - '// @ui {"widget":"group_start", "label":"HUD contrast (Slice 13A, ENGINEERING_PLAN 5m item 11)"}'
     - '// @input vec4 hudStepNumberColor = {1,1,1,1} {"hint":"Upcoming step number text (02, 03, 04). Bright and opaque: on the additive display a see-through white vanishes on the light backing.", "widget":"color"}'
     - '// @input vec4 hudStepNameColor = {1,1,1,1} {"hint":"Upcoming step name text (Merunduk, Tahan, Keluar)", "widget":"color"}'
-    - '// @input vec4 hudStepDoneColor = {0.62,0.94,0.76,1} {"hint":"Done step number and name text: green tinted, between the active step (green) and the upcoming ones", "widget":"color"}'
+    - '// @input vec4 hudStepDoneColor = {0.239,0.863,0.518,1} {"hint":"Done step number and name text: brand green SOFT_GREEN at full alpha, with the secondary outline (5m-11a). The pale done fill and no border keep it apart from the active step.", "widget":"color"}'
     - '// @input float hudStepDoneAlpha = 1 {"hint":"Done step cell opacity (was 0.45)", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @input vec4 hudLabelColor = {1,1,1,1} {"hint":"Health and time labels (Nyawa, Waktu)", "widget":"color"}'
     - '// @input vec4 hudSecondaryOutlineColor = {0.12,0.14,0.18,1} {"hint":"Outline of the step and label texts. Dark only as a thin edge, never a panel or shadow (the display is additive).", "widget":"color"}'
     - '// @input float hudSecondaryOutlineSize = 0.35 {"hint":"Outline strength of the step and label texts, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @input vec4 hudStepFill = {0.6,0.66,0.74,0.35} {"hint":"Upcoming step cell fill. Light only: each of r, g, b at least 0.5.", "widget":"color"}'
-    - '// @input vec4 hudStepDoneFill = {0.239,0.863,0.518,0.1} {"hint":"Done step cell fill. Light only.", "widget":"color"}'
+    - '// @input vec4 hudStepDoneFill = {0.62,0.94,0.76,0.2} {"hint":"Done step cell fill: pale green. Light only: each of r, g, b at least 0.5.", "widget":"color"}'
     - '// @input vec4 hudStepOnFill = {0.239,0.863,0.518,0.22} {"hint":"Active step cell fill (green), with the green outline", "widget":"color"}'
     - '// @input vec4 hudBarTrack = {1,1,1,0.18} {"hint":"Health bar track behind the fill. Light only.", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'
@@ -419,6 +435,16 @@
     - '// @ui {"widget":"group_start", "label":"Duck practice (Slice 8D, ENGINEERING_PLAN 5k item 7)"}'
     - '// @input float calibHoldSeconds = 0.4 {"hint":"The head must stay at or below the duck line this long to count as one duck, in seconds"}'
     - '// @input float calibDoneSeconds = 1.2 {"hint":"How long calib.done shows before BRIEFING, in seconds"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Ghost replay (Slice 13B, ENGINEERING_PLAN 5m item 12)"}'
+    - "// @input float replaySampleSeconds = 0.1 {\"hint\":\"The head's floor point is sampled this often from QUAKE until the drill ends, in seconds\"}"
+    - '// @input float replaySeconds = 8 {"hint":"Replay draws the whole trail in this many seconds, whatever the drill length"}'
+    - '// @input float replayHoldSeconds = 2 {"hint":"The full trail stays this long after it is drawn, then the result panel comes back, in seconds"}'
+    - '// @input float replaySimplifyCm = 8 {"hint":"Trail points closer than this to the last kept one are dropped (cm); a change in or out of danger is always kept"}'
+    - '// @input float replayLineWidthCm = 4 {"hint":"Trail ribbon width (cm)"}'
+    - '// @input float replayLiftCm = 0.5 {"hint":"Trail and markers sit this far above the floor (cm), clear of z-fighting"}'
+    - '// @input float replayDotSpacingCm = 30 {"hint":"A small dot on the trail every this many cm"}'
+    - '// @input float replayMarkerCm = 18 {"hint":"Landed, hit and cover marker size (cm)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'

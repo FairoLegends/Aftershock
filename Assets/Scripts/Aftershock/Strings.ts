@@ -39,6 +39,10 @@ export type StringKey =
   | "over.why.stood"
   | "btn.restart"
   | "btn.changeLang"
+  | "btn.replay"
+  | "replay.hit"
+  | "replay.danger"
+  | "replay.safe"
   | "over.why.danger"
   | "over.why.grip"
   | "label.danger"
@@ -240,6 +244,29 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   },
   "btn.restart": {id: "Ulangi", en: "Restart", de: "Neu starten", ja: "もう一度", zh: "重新开始"},
   "btn.changeLang": {id: "Ganti bahasa", en: "Change language", de: "Sprache ändern", ja: "言語を変更", zh: "更改语言"},
+  // Slice 13B ghost replay: de, ja, zh are the builder's own (default) translations.
+  "btn.replay": {id: "Lihat ulang", en: "Watch again", de: "Noch einmal ansehen", ja: "もう一度見る", zh: "再看一遍"},
+  "replay.hit": {
+    id: "Di sini kamu terkena barang jatuh.",
+    en: "Here you were hit by a falling item.",
+    de: "Hier hat dich ein fallender Gegenstand getroffen.",
+    ja: "ここで落ちてきた物に当たりました。",
+    zh: "你在这里被掉落的物品砸中了。"
+  },
+  "replay.danger": {
+    id: "Garis merah: kamu berada di zona bahaya.",
+    en: "Red line: you were in a danger zone.",
+    de: "Rote Linie: Du warst in einer Gefahrenzone.",
+    ja: "赤い線：危険ゾーンにいました。",
+    zh: "红线：你曾在危险区域内。"
+  },
+  "replay.safe": {
+    id: "Jalurmu aman. Bagus!",
+    en: "Your path was safe. Well done!",
+    de: "Dein Weg war sicher. Gut gemacht!",
+    ja: "安全な道でした。よくできました！",
+    zh: "你的路线很安全。做得好！"
+  },
   "over.why.danger": {
     id: "Kamu berdiri di dekat benda yang bisa jatuh",
     en: "You stayed next to something that can fall",

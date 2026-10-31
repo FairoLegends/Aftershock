@@ -27,6 +27,8 @@ import {OffscreenArrow} from "./OffscreenArrow"
 import {panelYawOffset} from "./PanelAim"
 import {QuakeShaker} from "./QuakeShaker"
 import {ResultLine, ResultPanel} from "./ResultPanel"
+import {ReplayKind, ReplayTrack} from "./ReplayTrack"
+import {ReplayView} from "./ReplayView"
 import {RoomWalls} from "./RoomWalls"
 import {SafetyPanel} from "./SafetyPanel"
 import {CalibratePanel} from "./CalibratePanel"
@@ -317,6 +319,13 @@ export class DrillController extends BaseScriptComponent {
   private quakeStartTimer: DelayedCallbackEvent | null = null
   private quakeEndTimer: DelayedCallbackEvent | null = null
   private quakeUpdate: UpdateEvent | null = null
+  // Slice 13B: the ghost replay's trail, from QUAKE until RESULT / GAME_OVER (kept in memory only).
+  private readonly _replayTrack = new ReplayTrack()
+  private replayView: ReplayView | null = null
+  private replayRecUpdate: UpdateEvent | null = null
+  private replayStart = -1 // s; -1 when not recording
+  private replayLastSample = 0
+  private _lastReplayCaption: StringKey | null = null
   private quakeStartTime = 0 // s
   private _quakeDuration = 0 // s
   private rumbleBaseVolume = 1
@@ -448,6 +457,20 @@ export class DrillController extends BaseScriptComponent {
   /** Head XZ inside any danger zone (QUAKE). */
   get inDanger(): boolean {
     return this._inDanger
+  }
+  /** Slice 13B: the recorded ghost replay trail. */
+  get replayTrack(): ReplayTrack {
+    return this._replayTrack
+  }
+  get replay(): ReplayView | null {
+    return this.replayView
+  }
+  get isRecordingReplay(): boolean {
+    return this.replayStart >= 0
+  }
+  /** The caption key of the last replay started (null after a clear). */
+  get lastReplayCaption(): StringKey | null {
+    return this._lastReplayCaption
   }
   /** Seconds inside a danger zone during this drill's QUAKE and AFTERSHOCK. */
   // Slice 8B (5k items 8, 9).
@@ -697,6 +720,9 @@ export class DrillController extends BaseScriptComponent {
     this.quakeUpdate = this.createEvent("UpdateEvent")
     this.quakeUpdate.bind(() => this.onQuakeUpdate())
     this.quakeUpdate.enabled = false
+    this.replayRecUpdate = this.createEvent("UpdateEvent") // Slice 13B: ghost replay samples
+    this.replayRecUpdate.bind(() => this.sampleReplay(false))
+    this.replayRecUpdate.enabled = false
     this.postQuakeUpdate = this.createEvent("UpdateEvent")
     this.postQuakeUpdate.bind(() => this.onPostQuakeUpdate())
     this.evacUpdate = this.createEvent("UpdateEvent")
@@ -836,6 +862,8 @@ export class DrillController extends BaseScriptComponent {
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())
     this.resultPanel.onChangeLanguage.add(() => this.onChangeLanguagePressed())
+    this.resultPanel.onReplay.add(() => this.onReplayPressed())
+    this.replayView = new ReplayView(this, this.config, this.headPose)
     // 5h item 1: each panel ignores presses for its first pinchGuardSeconds.
     this.languagePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.safetyPanel.pinchGuard.seconds = this.config.pinchGuardSeconds
@@ -1035,6 +1063,7 @@ export class DrillController extends BaseScriptComponent {
     this._lastCards = []
     this._lastCardFacts = null
     this._quakeDuration = 0
+    this.clearReplay()
     this.resultPanel.hide()
     return true
   }
@@ -1165,6 +1194,7 @@ export class DrillController extends BaseScriptComponent {
     this._lastCardFacts = null
     this._quakeDuration = 0
     this._health = this.config.healthStart
+    this.clearReplay()
     this.resultPanel.hide()
     this._state = null // a reset, not a drill transition
     if (toLanguage) this.safetySeen = false // Slice 10B: the opening picker leads to SAFETY again
@@ -1316,6 +1346,7 @@ export class DrillController extends BaseScriptComponent {
     this.safetyPanel.hide()
     this.levelPanel.hide()
     this.resultPanel.hide()
+    this.clearReplay() // Slice 13B: each drill records its own trail
     this.resetAftershock()
     this.showReveal(false)
     this._health = this.config.healthStart
@@ -1431,6 +1462,7 @@ export class DrillController extends BaseScriptComponent {
       ? this.config.testDurationSeconds
       : randomBetween(this.config.quakeDurationMin, this.config.quakeDurationMax)
     console.log(`${LOG} QUAKE: lasts ${fmt(this._quakeDuration)} s`)
+    this.startReplayRecording()
 
     this.quakeShaker.startShake(this._quakeDuration)
     this.scheduleFalls(this._quakeDuration)
@@ -1609,6 +1641,7 @@ export class DrillController extends BaseScriptComponent {
     if (this._state !== "QUAKE" && this._state !== "AFTERSHOCK") {
       return
     }
+    this.addReplayEvent("landed", x, z, source)
     this.updateDanger() // this frame's head, not the last quake update's
     const head = this.toRoomLocal(this.headPose.position)
     const dist = Math.sqrt((head.x - x) * (head.x - x) + (head.y - z) * (head.y - z))
@@ -1618,6 +1651,7 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     this._fallHits++
+    this.addReplayEvent("hit", head.x, head.y, source)
     this._health = Math.max(0, this._health - this.config.fallHitDamage)
     this.hud.setHealth(this._health)
     this.hud.showNotice(this.config.fallNoticeSeconds, "hit.fell")
@@ -1818,6 +1852,7 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     this._glassHits++
+    this.addReplayHeadEvent("hit", "glass")
     this._health = Math.max(0, this._health - GLASS_HIT_DAMAGE)
     this.hud.setHealth(this._health)
     this.hud.showNotice(this.config.fallNoticeSeconds, "hit.glass")
@@ -1934,6 +1969,7 @@ export class DrillController extends BaseScriptComponent {
       // Slice 7C: its own time to cover; the main quake's tSafe (and the score) stay as they were.
       if (this._aftershockTimeToCover === null && now - this.safeSince >= this.config.safeHoldSeconds) {
         this._aftershockTimeToCover = now - this.aftershockStartTime
+        this.addReplayHeadEvent("cover", null)
         console.log(`${LOG} AFTERSHOCK: safe after ${fmt(this._aftershockTimeToCover)} s`)
       }
       return
@@ -1941,6 +1977,7 @@ export class DrillController extends BaseScriptComponent {
     if (!this._hasBeenSafe && now - this.safeSince >= this.config.safeHoldSeconds) {
       this._hasBeenSafe = true
       this._tSafe = now - this.quakeStartTime
+      this.addReplayHeadEvent("cover", null)
       console.log(`${LOG} QUAKE: safe after ${fmt(this._tSafe)} s`)
     }
   }
@@ -2157,6 +2194,7 @@ export class DrillController extends BaseScriptComponent {
   }
 
   private enterResult(): void {
+    this.stopReplayRecording()
     this.postQuakeUpdate.enabled = false
     this.stopEvacuate()
     this.stopVoice() // Slice 10: nothing is said on the result screen
@@ -2172,6 +2210,7 @@ export class DrillController extends BaseScriptComponent {
   }
 
   private enterGameOver(): void {
+    this.stopReplayRecording()
     this.stopQuakeEffects()
     this.stopEvacuate()
     this.stopVoice() // Slice 10
@@ -2335,6 +2374,74 @@ export class DrillController extends BaseScriptComponent {
    * Hides the HUD, arrow, labels and danger zones, then places the result panel
    * in front of the head. The room stays visible behind it (5f item 3).
    */
+  // Slice 13B (5m item 12): ghost replay recording and playback.
+  private startReplayRecording(): void {
+    this._replayTrack.clear()
+    this.replayStart = getTime()
+    this.sampleReplay(true)
+    if (this.replayRecUpdate) this.replayRecUpdate.enabled = true
+  }
+
+  private stopReplayRecording(): void {
+    if (this.replayStart < 0) return
+    this.sampleReplay(true)
+    if (this.replayRecUpdate) this.replayRecUpdate.enabled = false
+    this.replayStart = -1
+  }
+
+  private sampleReplay(force: boolean): void {
+    if (this.replayStart < 0) return
+    const now = getTime()
+    if (!force && now - this.replayLastSample < this.config.replaySampleSeconds) return
+    this.replayLastSample = now
+    const p = this.toRoomLocal(this.headPose.position)
+    this._replayTrack.addSample(now - this.replayStart, p.x, p.y, this._inDanger)
+  }
+
+  private addReplayEvent(kind: ReplayKind, x: number, z: number, source: string | null): void {
+    if (this.replayStart >= 0) this._replayTrack.addEvent(getTime() - this.replayStart, x, z, kind, source)
+  }
+
+  private addReplayHeadEvent(kind: ReplayKind, source: string | null): void {
+    const h = this.toRoomLocal(this.headPose.position)
+    this.addReplayEvent(kind, h.x, h.y, source)
+  }
+
+  private clearReplay(): void {
+    if (this.replayView) this.replayView.stop()
+    if (this.replayRecUpdate) this.replayRecUpdate.enabled = false
+    this.replayStart = -1
+    this._replayTrack.clear()
+    this._lastReplayCaption = null
+  }
+
+  private onReplayPressed(): void {
+    if ((this._state !== "RESULT" && this._state !== "GAME_OVER") || !this.replayView || this.replayView.isPlaying) return
+    const t = this._replayTrack
+    if (t.samples.length === 0) {
+      console.log(`${LOG} REPLAY: nothing recorded`)
+      return
+    }
+    const fallHit = t.events.some((e) => e.kind === "hit" && e.source !== "glass")
+    const key: StringKey = fallHit ? "replay.hit" : t.samples.some((s) => s.inDanger) ? "replay.danger" : "replay.safe"
+    this._lastReplayCaption = key
+    this.resultPanel.hideForReplay()
+    const c = Math.cos(this.roomYaw)
+    const s = Math.sin(this.roomYaw)
+    const toWorld = (x: number, z: number): vec3 => new vec3(this.roomX + x * c + z * s, 0, this.roomZ - x * s + z * c)
+    const pts = this.replayView.play(t, toWorld, this.floorY, key, () => this.onReplayEnded())
+    const runs = t.segments().filter((r) => r.inDanger).length
+    console.log(
+      `${LOG} REPLAY: ${t.samples.length} samples (${pts.length} after simplify), ${runs} danger runs, ${t.events.length} events (landed ${t.count("landed")}, hit ${t.count("hit")}, cover ${t.count("cover")}), caption ${key}`
+    )
+  }
+
+  private onReplayEnded(): void {
+    if (this._state !== "RESULT" && this._state !== "GAME_OVER") return
+    this.resultPanel.showAgain()
+    console.log(`${LOG} REPLAY: ended; the result panel is back`)
+  }
+
   private showResultPanel(): void {
     this.hud.hide()
     this.hideArrow()

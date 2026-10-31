@@ -142,6 +142,9 @@ export class ResultPanel extends BaseScriptComponent {
   private readonly changeLanguageEvent = new Event()
   /** Slice 10B: raised when Change language is pressed (pinch or click). */
   readonly onChangeLanguage: PublicApi<void> = this.changeLanguageEvent.publicApi()
+  private readonly replayEvent = new Event()
+  /** Slice 13B: raised when Lihat ulang (watch again) is pressed. */
+  readonly onReplay: PublicApi<void> = this.replayEvent.publicApi()
   /** 5h item 1: presses are ignored for pinchGuard.seconds after the panel shows. */
   readonly pinchGuard = new PinchGuard()
 
@@ -156,6 +159,7 @@ export class ResultPanel extends BaseScriptComponent {
   private scoreEn: Text
   private restart: SoftButton | null = null
   private changeLang: SoftButton | null = null
+  private replay: SoftButton | null = null
   private cards: Card[] = []
   private placement: Placement | null = null
   private panelH = 0 // the last layout's height (local units)
@@ -197,6 +201,7 @@ export class ResultPanel extends BaseScriptComponent {
     for (let i = 0; i < CARD_SLOTS; i++) {
       this.cards.push(this.addCard(content, "Card" + (i + 1))) // before the buttons: the Restart label stays last in texts
     }
+    this.addReplayRow(content) // 13B: above the Restart row, so the Restart label stays last in texts
     this.addButtonRow(content)
     this.setRow(this.title, null, BIG_EM_CM)
     for (const row of this.details) {
@@ -336,8 +341,19 @@ export class ResultPanel extends BaseScriptComponent {
     this.sceneObject.enabled = true
     if (this.restart) this.restart.reset()
     if (this.changeLang) this.changeLang.reset()
+    if (this.replay) this.replay.reset()
     drawOnTopWhenReady(this, this.sceneObject) // 5j-19f: again once the layout settles
     this.pinchGuard.arm()
+  }
+
+  /** Slice 13B: hidden while the ghost replay plays; mode and cards stay. */
+  hideForReplay(): void {
+    this.sceneObject.enabled = false
+  }
+
+  /** Slice 13B: back after the replay, as it was. */
+  showAgain(): void {
+    if (this._mode !== null) this.showPanel()
   }
 
   hide(): void {
@@ -457,6 +473,20 @@ export class ResultPanel extends BaseScriptComponent {
     const text = this.addText(so, name + ".text", CARD_EM_CM, true)
     text.horizontalAlignment = HorizontalAlignment.Left
     return {item, frame, bar, text, key: null}
+  }
+
+  /** Slice 13B (5m item 12): Lihat ulang on its own row above the two buttons, secondary style, centered. */
+  private addReplayRow(parent: SceneObject): void {
+    const row = global.scene.createSceneObject("ReplayRow")
+    row.setParent(parent)
+    const item = row.createComponent(FlexItem.getTypeName()) as FlexItem
+    item.alignSelf = FlexAlignSelf.Center
+    item.marginTop = BUTTON_GAP
+    item.overrideWidth = INNER_W
+    item.overrideHeight = BUTTON_H
+    this.replay = this.addButton(row, "Replay", 0, false, "btn.replay", () => {
+      if (this.pinchGuard.open) this.replayEvent.invoke()
+    })
   }
 
   /**

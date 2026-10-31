@@ -1710,6 +1710,16 @@
     resultBelowEye: true
     pinchGuardSeconds: true
     timerMode: true
+    hudStepNumberColor: true
+    hudStepNameColor: true
+    hudStepDoneAlpha: true
+    hudLabelColor: true
+    hudSecondaryOutlineColor: true
+    hudSecondaryOutlineSize: true
+    hudStepFill: true
+    hudStepDoneFill: true
+    hudStepOnFill: true
+    hudBarTrack: true
     labelGapCm: true
     labelMaxCenterCm: true
     labelBesideCenterCm: true
@@ -1767,6 +1777,14 @@
     gripHandleHeight: true
     calibHoldSeconds: true
     calibDoneSeconds: true
+    replaySampleSeconds: true
+    replaySeconds: true
+    replayHoldSeconds: true
+    replaySimplifyCm: true
+    replayLineWidthCm: true
+    replayLiftCm: true
+    replayDotSpacingCm: true
+    replayMarkerCm: true
     testMode: true
     testWaitSeconds: true
     testDurationSeconds: true
@@ -1811,6 +1829,17 @@
       resultBelowEye: !<float> 10.000000
       pinchGuardSeconds: 0.500000
       timerMode: elapsed
+      hudStepNumberColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      hudStepNameColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      hudStepDoneColor: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 1.000000}
+      hudStepDoneAlpha: !<float> 1.000000
+      hudLabelColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      hudSecondaryOutlineColor: !<Vec4> {x: 0.120000, y: 0.140000, z: 0.180000, w: 1.000000}
+      hudSecondaryOutlineSize: 0.350000
+      hudStepFill: !<Vec4> {x: 0.600000, y: 0.660000, z: 0.740000, w: 0.350000}
+      hudStepDoneFill: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 0.100000}
+      hudStepOnFill: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 0.220000}
+      hudBarTrack: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.180000}
       labelGapCm: !<float> 10.000000
       labelMaxCenterCm: !<float> 205.000000
       labelBesideCenterCm: !<float> 150.000000
@@ -1876,6 +1905,14 @@
       gripHandleHeight: !<float> 40.000000
       calibHoldSeconds: 0.400000
       calibDoneSeconds: 1.200000
+      replaySampleSeconds: 0.100000
+      replaySeconds: !<float> 8.000000
+      replayHoldSeconds: !<float> 2.000000
+      replaySimplifyCm: !<float> 8.000000
+      replayLineWidthCm: !<float> 4.000000
+      replayLiftCm: 0.500000
+      replayDotSpacingCm: !<float> 30.000000
+      replayMarkerCm: !<float> 18.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -3654,12 +3691,12 @@
   Enabled: true
   ScriptAsset: !<reference> b63ac728-77db-4529-960c-0b0d1bc7b0a1
   ScriptInputsDefault:
-    {}
+    only: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
-      {}
+      only: ""
   ScriptTypes:
     "":
       {}

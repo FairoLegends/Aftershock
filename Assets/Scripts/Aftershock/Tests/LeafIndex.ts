@@ -24,6 +24,7 @@ import {DC21_ChangeLanguage} from "./DC21_ChangeLanguage"
 import {DC22_GlassBreak} from "./DC22_GlassBreak"
 import {DC23_DesignPass} from "./DC23_DesignPass"
 import {DC24_HudContrast} from "./DC24_HudContrast"
+import {DC25_GhostReplay} from "./DC25_GhostReplay"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -52,6 +53,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc21-change-language", typename: DC21_ChangeLanguage.getTypeName()},
     {id: "dc22-glass-break", typename: DC22_GlassBreak.getTypeName()},
     {id: "dc23-design-pass", typename: DC23_DesignPass.getTypeName()},
-    {id: "dc24-hud-contrast", typename: DC24_HudContrast.getTypeName()}
+    {id: "dc24-hud-contrast", typename: DC24_HudContrast.getTypeName()},
+    {id: "dc25-ghost-replay", typename: DC25_GhostReplay.getTypeName()}
   ]
 }
