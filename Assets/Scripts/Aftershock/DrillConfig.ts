@@ -23,8 +23,27 @@ export class DrillConfig extends BaseScriptComponent {
   quakeWaitMax: number = 15
 
   @input
-  @hint("How long the warning banner shows, in seconds")
-  warningShowSeconds: number = 2.5
+  @hint("How long the warning banner shows, in seconds (5m-1: 2.5 → 1.2; the HUD panel appears only after it)")
+  warningShowSeconds: number = 1.2
+  @ui.group_end
+
+  @ui.group_start("Warning banner")
+  @input
+  @hint("Banner center above eye level at hudDistance (cm, 5m-1 option B): it clears a 180 cm cabinet seen from the start spot, its top edge inside ±16° of the view")
+  warnRaiseCm: number = 18
+
+  @input
+  @hint("Banner text width (cm, 5m-1: 40 → 30)")
+  warnWidthCm: number = 30
+
+  @input
+  @hint("Banner main line em size (cm, 5m-1: one step smaller)")
+  warnEmCm: number = 6.5
+
+  @input
+  @hint("Banner fill: alarm red #FF5A4F at 88% (mockup .banner), no border. Light colors only: the display is additive.")
+  @widget(new ColorWidget())
+  warnFill: vec4 = new vec4(1, 0.353, 0.31, 0.88)
   @ui.group_end
 
   @ui.group_start("Take cover")
@@ -116,6 +135,52 @@ export class DrillConfig extends BaseScriptComponent {
   timerMode: string = "elapsed"
   @ui.group_end
 
+  @ui.group_start("Room labels")
+  @input
+  @hint("A hazard label's bottom sits this far above its item's top (cm, 5m-3): over the wall or air, never over the wood")
+  labelGapCm: number = 10
+
+  @input
+  @hint("A hazard label's center may be at most this high above the floor (cm); higher, it goes beside the item on the wall (e.g. the window). Decided once per drill at labelEmMaxCm (5m-8a).")
+  labelMaxCenterCm: number = 205
+
+  @input
+  @hint("Beside a tall item (5m-8b): the label's center sits this high above the floor (cm, about eye level), never above the item's top")
+  labelBesideCenterCm: number = 150
+
+  @input
+  @hint("Smallest label em size (cm), for a head close by")
+  labelEmMinCm: number = 2.4
+
+  @input
+  @hint("Label em size per metre from the head to the label (cm per m): about 1.3° of view at any distance")
+  labelEmPerMeterCm: number = 2.2
+
+  @input
+  @hint("Largest label em size (cm), for a head far away")
+  labelEmMaxCm: number = 6
+
+  @input
+  @hint("The 'Zona bahaya' line's em, as a share of the hazard line's em")
+  labelDangerEmRatio: number = 0.62
+
+  @input
+  @hint("Height of the ⚠ icon (hazards), as a multiple of the label em; the safe-zone and door dot is half of it")
+  labelIconPerEm: number = 1.5
+
+  @input
+  @hint("Label backing: white at this opacity (5m-3). Never dark: the display is additive.")
+  labelBackingAlpha: number = 0.6
+
+  @input
+  @hint("Normal, quake to evacuation (5m-4 risotto): a label collapsed to its ⚠ grows back while the head looks within this angle of it, in degrees")
+  labelFocusDeg: number = 10
+
+  @input
+  @hint("…or while the head is closer to it than this (cm)")
+  labelNearCm: number = 150
+  @ui.group_end
+
   @ui.group_start("Room")
   @input
   @hint("Floor sits this far below the head's start height (cm). The preview starts the head at Y = 0.")
@@ -133,6 +198,10 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Latin font for every id/en/de line, title and number (Fonts/Manrope-Aftershock.ttf, 600; Slice 7A-soft: one family)")
   fontBody: Font
+
+  @input
+  @hint("Extra-bold Latin font for the red hazard line in id/en/de (Fonts/Manrope-Aftershock-ExtraBold.ttf, 800; 5m-3). ja/zh keep fontJa/fontZh.")
+  fontHazard: Font
   @ui.group_end
 
   @ui.group_start("Layout and danger zones")

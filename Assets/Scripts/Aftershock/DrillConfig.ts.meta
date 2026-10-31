@@ -54,6 +54,7 @@
     fallMarginSeconds: false
     fallNoticeSeconds: false
     fontBody: false
+    fontHazard: false
     fontJa: false
     fontZh: false
     fovHalfAngleHorizontal: false
@@ -72,6 +73,17 @@
     healthStart: false
     hudBelowEye: false
     hudDistance: false
+    labelBackingAlpha: false
+    labelBesideCenterCm: false
+    labelDangerEmRatio: false
+    labelEmMaxCm: false
+    labelEmMinCm: false
+    labelEmPerMeterCm: false
+    labelFocusDeg: false
+    labelGapCm: false
+    labelIconPerEm: false
+    labelMaxCenterCm: false
+    labelNearCm: false
     layoutSeed: false
     markerBlinkHz: false
     normalAftershockChance: false
@@ -114,6 +126,10 @@
     tripRadius: false
     tvDangerFront: false
     walkSpeed: false
+    warnEmCm: false
+    warnFill: false
+    warnRaiseCm: false
+    warnWidthCm: false
     warningShowSeconds: false
   ScriptTypesHidden:
     {}
@@ -129,6 +145,10 @@
       quakeWaitMin: !<float> 8.000000
       quakeWaitMax: !<float> 15.000000
       warningShowSeconds: 2.500000
+      warnRaiseCm: !<float> 18.000000
+      warnWidthCm: !<float> 30.000000
+      warnEmCm: 6.500000
+      warnFill: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 0.880000}
       duckDrop: !<float> 40.000000
       duckHysteresis: !<float> 10.000000
       safeZoneMargin: !<float> 15.000000
@@ -149,10 +169,22 @@
       resultBelowEye: !<float> 10.000000
       pinchGuardSeconds: 0.500000
       timerMode: elapsed
+      labelGapCm: !<float> 10.000000
+      labelMaxCenterCm: !<float> 205.000000
+      labelBesideCenterCm: !<float> 150.000000
+      labelEmMinCm: 2.400000
+      labelEmPerMeterCm: 2.200000
+      labelEmMaxCm: !<float> 6.000000
+      labelDangerEmRatio: 0.620000
+      labelIconPerEm: 1.500000
+      labelBackingAlpha: 0.600000
+      labelFocusDeg: !<float> 10.000000
+      labelNearCm: !<float> 150.000000
       eyeHeight: !<float> 160.000000
       fontJa: !<reference.Font> 00000000-0000-0000-0000-000000000000
       fontZh: !<reference.Font> 00000000-0000-0000-0000-000000000000
       fontBody: !<reference.Font> 00000000-0000-0000-0000-000000000000
+      fontHazard: !<reference.Font> 00000000-0000-0000-0000-000000000000
       tableDistanceMin: !<float> 100.000000
       tableDistanceMax: !<float> 200.000000
       hazardDistanceMin: !<float> 120.000000
@@ -222,7 +254,13 @@
     - '// @input float quakeDurationMax = 60 {"hint":"Longest quake, in seconds"}'
     - '// @input float quakeWaitMin = 8 {"hint":"Shortest random wait before the quake, in seconds"}'
     - '// @input float quakeWaitMax = 15 {"hint":"Longest random wait before the quake, in seconds"}'
-    - '// @input float warningShowSeconds = 2.5 {"hint":"How long the warning banner shows, in seconds"}'
+    - '// @input float warningShowSeconds = 1.2 {"hint":"How long the warning banner shows, in seconds (5m-1: 2.5 → 1.2; the HUD panel appears only after it)"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Warning banner"}'
+    - '// @input float warnRaiseCm = 18 {"hint":"Banner center above eye level at hudDistance (cm, 5m-1 option B): it clears a 180 cm cabinet seen from the start spot, its top edge inside ±16° of the view"}'
+    - '// @input float warnWidthCm = 30 {"hint":"Banner text width (cm, 5m-1: 40 → 30)"}'
+    - '// @input float warnEmCm = 6.5 {"hint":"Banner main line em size (cm, 5m-1: one step smaller)"}'
+    - '// @input vec4 warnFill = {1,0.353,0.31,0.88} {"hint":"Banner fill: alarm red #FF5A4F at 88% (mockup .banner), no border. Light colors only: the display is additive.", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Take cover"}'
     - '// @input float duckDrop = 90 {"hint":"Ducked when head Y is this far below the baseline (cm). 90 puts the head under the 75 cm table top (learner, 27 Oct)."}'
@@ -252,6 +290,19 @@
     - '// @input float pinchGuardSeconds = 0.5 {"hint":"A newly shown panel ignores button presses for this long, in seconds (ENGINEERING_PLAN 5h item 1)"}'
     - '// @input string timerMode = "elapsed" {"hint":"Timer shows elapsed time since the quake started (learner, Q3)", "widget":"combobox", "values":[{"label":"Elapsed", "value":"elapsed"}]}'
     - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Room labels"}'
+    - "// @input float labelGapCm = 10 {\"hint\":\"A hazard label's bottom sits this far above its item's top (cm, 5m-3): over the wall or air, never over the wood\"}"
+    - "// @input float labelMaxCenterCm = 205 {\"hint\":\"A hazard label's center may be at most this high above the floor (cm); higher, it goes beside the item on the wall (e.g. the window). Decided once per drill at labelEmMaxCm (5m-8a).\"}"
+    - "// @input float labelBesideCenterCm = 150 {\"hint\":\"Beside a tall item (5m-8b): the label's center sits this high above the floor (cm, about eye level), never above the item's top\"}"
+    - '// @input float labelEmMinCm = 2.4 {"hint":"Smallest label em size (cm), for a head close by"}'
+    - '// @input float labelEmPerMeterCm = 2.2 {"hint":"Label em size per metre from the head to the label (cm per m): about 1.3° of view at any distance"}'
+    - '// @input float labelEmMaxCm = 6 {"hint":"Largest label em size (cm), for a head far away"}'
+    - "// @input float labelDangerEmRatio = 0.62 {\"hint\":\"The 'Zona bahaya' line's em, as a share of the hazard line's em\"}"
+    - '// @input float labelIconPerEm = 1.5 {"hint":"Height of the ⚠ icon (hazards), as a multiple of the label em; the safe-zone and door dot is half of it"}'
+    - '// @input float labelBackingAlpha = 0.6 {"hint":"Label backing: white at this opacity (5m-3). Never dark: the display is additive."}'
+    - '// @input float labelFocusDeg = 10 {"hint":"Normal, quake to evacuation (5m-4 risotto): a label collapsed to its ⚠ grows back while the head looks within this angle of it, in degrees"}'
+    - '// @input float labelNearCm = 150 {"hint":"…or while the head is closer to it than this (cm)"}'
+    - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Room"}'
     - "// @input float eyeHeight = 160 {\"hint\":\"Floor sits this far below the head's start height (cm). The preview starts the head at Y = 0.\"}"
     - '// @ui {"widget":"group_end"}'
@@ -259,6 +310,7 @@
     - '// @input Asset.Font fontJa {"hint":"Japanese font for every ja line (Fonts/NotoSansJP-Aftershock.ttf). The default font has no CJK glyphs."}'
     - '// @input Asset.Font fontZh {"hint":"Simplified Chinese font for every zh line (Fonts/NotoSansSC-Aftershock.ttf)"}'
     - '// @input Asset.Font fontBody {"hint":"Latin font for every id/en/de line, title and number (Fonts/Manrope-Aftershock.ttf, 600; Slice 7A-soft: one family)"}'
+    - '// @input Asset.Font fontHazard {"hint":"Extra-bold Latin font for the red hazard line in id/en/de (Fonts/Manrope-Aftershock-ExtraBold.ttf, 800; 5m-3). ja/zh keep fontJa/fontZh."}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Layout and danger zones"}'
     - '// @input float tableDistanceMin = 120 {"hint":"Closest a table center may be to the start spot (cm)"}'

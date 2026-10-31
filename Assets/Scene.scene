@@ -751,14 +751,13 @@
   Enabled: true
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.lamp
       textColor: !<Vec4> {x: 0.851000, y: 0.282000, z: 0.059000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -1354,14 +1353,13 @@
   Enabled: true
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.tv
       textColor: !<Vec4> {x: 0.851000, y: 0.282000, z: 0.059000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -1672,7 +1670,10 @@
     quakeDurationMax: true
     quakeWaitMin: true
     quakeWaitMax: true
-    warningShowSeconds: true
+    warnRaiseCm: true
+    warnWidthCm: true
+    warnEmCm: true
+    warnFill: true
     duckHysteresis: true
     safeZoneMargin: true
     safeHoldSeconds: true
@@ -1691,6 +1692,17 @@
     resultBelowEye: true
     pinchGuardSeconds: true
     timerMode: true
+    labelGapCm: true
+    labelMaxCenterCm: true
+    labelBesideCenterCm: true
+    labelEmMinCm: true
+    labelEmPerMeterCm: true
+    labelEmMaxCm: true
+    labelDangerEmRatio: true
+    labelIconPerEm: true
+    labelBackingAlpha: true
+    labelFocusDeg: true
+    labelNearCm: true
     eyeHeight: true
     tableCountMin: true
     tableCountMax: true
@@ -1754,7 +1766,11 @@
       quakeDurationMax: !<float> 60.000000
       quakeWaitMin: !<float> 8.000000
       quakeWaitMax: !<float> 15.000000
-      warningShowSeconds: 2.500000
+      warningShowSeconds: 1.200000
+      warnRaiseCm: !<float> 18.000000
+      warnWidthCm: !<float> 30.000000
+      warnEmCm: 6.500000
+      warnFill: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 0.880000}
       duckDrop: !<float> 90.000000
       duckHysteresis: !<float> 10.000000
       safeZoneMargin: !<float> 15.000000
@@ -1775,10 +1791,22 @@
       resultBelowEye: !<float> 10.000000
       pinchGuardSeconds: 0.500000
       timerMode: elapsed
+      labelGapCm: !<float> 10.000000
+      labelMaxCenterCm: !<float> 205.000000
+      labelBesideCenterCm: !<float> 150.000000
+      labelEmMinCm: 2.400000
+      labelEmPerMeterCm: 2.200000
+      labelEmMaxCm: !<float> 6.000000
+      labelDangerEmRatio: 0.620000
+      labelIconPerEm: 1.500000
+      labelBackingAlpha: 0.600000
+      labelFocusDeg: !<float> 10.000000
+      labelNearCm: !<float> 150.000000
       eyeHeight: !<float> 160.000000
       fontJa: !<reference.Font> 0dd7ea67-5428-41a0-943a-f6d12cd1b5a6
       fontZh: !<reference.Font> 6436afc0-6595-4825-b7a9-71e841f50bb4
       fontBody: !<reference.Font> edecb9ee-4461-4f09-a961-75e55d4b7a4f
+      fontHazard: !<reference.Font> 98a3eaff-77b6-4240-80c7-8968e640d46d
       tableDistanceMin: !<float> 120.000000
       tableDistanceMax: !<float> 250.000000
       hazardDistanceMin: !<float> 140.000000
@@ -1954,14 +1982,12 @@
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
     key: true
-    backingColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.cabinet
       textColor: !<Vec4> {x: 0.851000, y: 0.282000, z: 0.059000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -3640,14 +3666,13 @@
   Enabled: true
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.safe
       textColor: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -4380,14 +4405,13 @@
   Enabled: true
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.glass
       textColor: !<Vec4> {x: 0.851000, y: 0.282000, z: 0.059000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -4994,14 +5018,13 @@
   Enabled: true
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.safe
       textColor: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -5297,14 +5320,12 @@
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
     textColor: true
-    backingColor: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.door
       textColor: !<Vec4> {x: 1.000000, y: 0.690000, z: 0.125000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}
@@ -5647,14 +5668,13 @@
   Enabled: true
   ScriptAsset: !<reference> b394139a-c539-4f50-a888-749c8e2f7b98
   ScriptInputsDefault:
-    backingColor: true
+    {}
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       key: label.shelf
       textColor: !<Vec4> {x: 0.851000, y: 0.282000, z: 0.059000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     "":
       {}

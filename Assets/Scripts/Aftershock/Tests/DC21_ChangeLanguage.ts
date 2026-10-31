@@ -114,14 +114,15 @@ export class DC21_ChangeLanguage extends Scenario {
       expect(c.state).toBe("BRIEFING")
       const tBrief = getTime()
       await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
-      expect(
-        await waitFor(() => vg.lastSaid !== null && vg.lastSaid.key === "warn.quake" && vg.lastSaid.time > tBrief, 2000)
-      ).toBe(true)
-      expect(vg.lastSaid.lang).toBe("de")
+      // 5m-1: the banner shows only warningShowSeconds, so check it at quake start, before waiting on the voice.
       expect(c.hud.isWarningShown).toBe(true)
       expect(c.hud.warningKey).toBe("warn.quake")
       expect(textOf("Warning.id")).toBe(getString("warn.quake", "de"))
       expect(textOf("Warning.id")).not.toBe(getString("warn.quake", "id"))
+      expect(
+        await waitFor(() => vg.lastSaid !== null && vg.lastSaid.key === "warn.quake" && vg.lastSaid.time > tBrief, 2000)
+      ).toBe(true)
+      expect(vg.lastSaid.lang).toBe("de")
 
       // (d) A quick GAME_OVER (as DC4), still in de.
       c.config.testDurationSeconds = GAME_OVER_DURATION_S

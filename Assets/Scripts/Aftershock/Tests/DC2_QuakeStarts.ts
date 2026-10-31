@@ -2,7 +2,7 @@ import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {lines} from "../Strings"
-import {expectState, getController, restore, toFreshBriefing, walkOut} from "./DrillTestKit"
+import {expectState, getController, restore, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 const SHAKE_SAMPLES = 15
 
@@ -34,11 +34,13 @@ export class DC2_QuakeStarts extends Scenario {
       expect(c.hud.isWarningShown).toBe(true)
       expect((findSceneObjectByName("Warning.id").getComponent("Component.Text") as Text).text).toBe(warn.primary)
       expect((findSceneObjectByName("Warning.en").getComponent("Component.Text") as Text).text).toBe(warn.secondary)
+      expect(c.hud.timerText).toBe("00:00") // 5m-1: read at quake start, before the banner's warningShowSeconds pass
 
       expect(c.hud.isShown).toBe(true)
+      // 5m-1: the panel (timer included) shows only after the banner.
+      expect(await waitFor(() => c.hud.isPanelShown, (c.config.warningShowSeconds + 1) * 1000)).toBe(true)
       const timer = findSceneObjectByName("TimerText")
       expect(timer.isEnabledInHierarchy).toBe(true)
-      expect(c.hud.timerText).toBe("00:00")
 
       // The shake envelope ramps up, so sample a while and keep the largest offset.
       let moved = 0

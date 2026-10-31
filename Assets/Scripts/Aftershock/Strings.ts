@@ -579,12 +579,27 @@ export function latinFont(): Font | null {
   return fontLatin
 }
 
+// 5m-3: the red hazard line is extra-bold Manrope (800) in id/en/de; ja and zh keep the Noto subsets.
+let fontHazard: Font | null = null
+
+export function setHazardFont(font: Font | null): void {
+  fontHazard = font ? font : null
+}
+
+/** The red hazard line's font in this language, or null for the default font. */
+export function hazardFontFor(lang: Lang): Font | null {
+  if (lang === "ja" || lang === "zh") {
+    return fontFor(lang)
+  }
+  return fontHazard || fontLatin
+}
+
 /**
  * Sets a Text's string and its font for `lang`. The default font is taken
  * from the first Text that still has it.
  */
 export function setLineText(t: Text, text: string, lang: Lang): void {
-  if (defaultFont === null && t.font && t.font !== fontJa && t.font !== fontZh && t.font !== fontLatin) {
+  if (defaultFont === null && t.font && t.font !== fontJa && t.font !== fontZh && t.font !== fontLatin && t.font !== fontHazard) {
     defaultFont = t.font
   }
   const want = fontFor(lang) || defaultFont

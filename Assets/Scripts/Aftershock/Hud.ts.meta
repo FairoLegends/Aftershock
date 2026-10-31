@@ -59,7 +59,7 @@
   InputLines:
     - '// @ui {"widget":"label", "label":"Quake HUD (R5, R7, R8)"}'
     - '// @ui {"widget":"separator"}'
-    - '// @input AssignableType_1 config {"hint":"DrillConfig component (hudDistance, hudBelowEye, warningShowSeconds, healthStart, healthAlarmBelow)"}'
+    - '// @input AssignableType_1 config {"hint":"DrillConfig component (hudDistance, hudBelowEye, warningShowSeconds, warn*, healthStart, healthAlarmBelow)"}'
     - '// @input AssignableType_2 headPose {"hint":"HeadPose component the HUD follows"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input float followSpeed = 3 {"hint":"How fast the HUD catches up with the head (per second). Higher = stiffer.", "widget":"slider", "min":0.5, "max":10, "step":0.5}'

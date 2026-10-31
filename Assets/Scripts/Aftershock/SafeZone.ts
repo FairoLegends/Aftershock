@@ -131,6 +131,12 @@ export class SafeZone extends BaseScriptComponent {
     return this._blinking
   }
 
+  /** The "safe zone" label on the marker, or null (5m-3 LEAF checks). */
+  get label(): HazardLabel | null {
+    const so = this.findLabel()
+    return so ? (so.getComponent(HazardLabel.getTypeName()) as HazardLabel) : null
+  }
+
   /** Blinks the marker outline at markerBlinkHz (QUAKE). */
   startBlink(): void {
     if (this.blinkParts.length === 0) {

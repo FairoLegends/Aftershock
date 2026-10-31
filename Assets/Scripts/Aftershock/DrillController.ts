@@ -1,11 +1,11 @@
 import {BriefingPanel} from "./BriefingPanel"
-import {DANGER_LABEL_HALF_H, DangerZone} from "./DangerZone"
+import {DangerZone} from "./DangerZone"
 import {DrillConfig} from "./DrillConfig"
 import {EdgeWarning} from "./EdgeWarning"
 import {FALL_SOURCES, FallFrom, FallingObjects, FallSource} from "./FallingObjects"
 import {FloorPath} from "./FloorPath"
 import {GripHandles} from "./GripHandles"
-import {HazardLabel} from "./HazardLabel"
+import {HazardLabel, setLabelContext} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
 import {LanguagePanel} from "./LanguagePanel"
@@ -34,7 +34,7 @@ import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
 import {ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
-import {getLanguage, getString, Lang, lines, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
+import {getLanguage, getString, Lang, lines, setHazardFont, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {buildCardFacts, CardFacts, FURNITURE_HAZARDS, pickCards} from "./EducationCards"
 import {SOFT_RED} from "./UiBacking"
 import {VoiceGuide} from "./VoiceGuide"
@@ -593,6 +593,10 @@ export class DrillController extends BaseScriptComponent {
   get revealShown(): boolean {
     return this._revealShown
   }
+  /** The hazard labels of this drill (5m-3, 5m-4 LEAF checks). */
+  get activeHazardLabels(): HazardLabel[] {
+    return this.activeHazards.map((h) => this.labels[h])
+  }
   /** True when any hazard label of this drill shows (Easy keeps them through the quake). */
   get hazardLabelsShown(): boolean {
     for (const h of this.activeHazards) {
@@ -809,14 +813,12 @@ export class DrillController extends BaseScriptComponent {
     this._floorY = p.y - this.config.eyeHeight
     console.log(`${LOG} room floor at Y = ${fmt(this._floorY)} cm (eyeHeight ${fmt(this.config.eyeHeight)} cm)`)
     // Labels follow their hazard: same pose relative to it as authored (Slice 2).
+    // 5m-3: the danger line is now part of the hazard label (DangerZone keeps its pill hidden).
     for (const h of HAZARDS) {
       this.labels[h].sceneObject.setParentPreserveWorldTransform(this.zones[h].hazard)
-      // ENGINEERING_PLAN 5i item 1 (replaces 5g): the danger label sits just above the hazard label, with its facing.
-      const dangerLabel = this.zones[h].label
-      if (dangerLabel) {
-        this.labels[h].attachAbove(dangerLabel, DANGER_LABEL_HALF_H)
-      }
     }
+    // 5m-3: labels place, scale and (5m-4) collapse from the head each frame.
+    setLabelContext(this.config, this.headPose, this._floorY)
     this.placeRoom()
 
     // Slice 5L: ja and zh lines need their own fonts; the default font has no CJK glyphs.
@@ -825,6 +827,7 @@ export class DrillController extends BaseScriptComponent {
     }
     // Slice 7A-soft: Manrope for every Latin line; unwired falls back to the default font.
     setLanguageFonts(this.config.fontJa, this.config.fontZh, this.config.fontBody)
+    setHazardFont(this.config.fontHazard) // 5m-3: extra-bold red hazard line (id/en/de)
     this.languagePanel.onPick.add((lang) => this.onLanguagePicked(lang))
     this.safetyPanel.onContinue.add(() => this.onContinuePressed())
     this.resultPanel.onRestart.add(() => this.onRestartPressed())
@@ -1444,7 +1447,14 @@ export class DrillController extends BaseScriptComponent {
     this.speak("warn.quake")
     this.scanIntro.stop()
     this.scanIntro.hideBrackets()
-    if (!labelsStayInQuake(this._level)) this.hideHazardLabels() // Slice 7C: Easy keeps them
+    // Slice 7C: Easy keeps full labels. 5m-4 risotto: Normal collapses them to the ⚠ until looked at or near; Hard has none.
+    if (!labelsStayInQuake(this._level)) {
+      if (guidesOn(this._level)) {
+        this.setLabelsRisotto(true)
+      } else {
+        this.hideHazardLabels()
+      }
+    }
     for (const z of this.activeTables) {
       z.startBlink() // a hidden marker (guides off) stays hidden: its parts are under it
     }
@@ -2352,9 +2362,10 @@ export class DrillController extends BaseScriptComponent {
     return quat.angleAxis((aim.offsetDeg * Math.PI) / 180, vec3.up()).multiplyVec3(f)
   }
 
-  /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. */
+  /** Hazard labels and the steady safe-zone marker (R3, R4). Furniture stays visible. Labels come back full (5m-4). */
   private setRoomLabelsShown(shown: boolean): void {
     const on = shown && this._guidesVisible
+    this.setLabelsRisotto(false)
     for (const h of HAZARDS) {
       if (on && this.activeHazards.indexOf(h) >= 0) {
         this.labels[h].show()
@@ -2363,6 +2374,13 @@ export class DrillController extends BaseScriptComponent {
       }
     }
     this.setMarkersShown(shown)
+  }
+
+  /** 5m-4 risotto on every hazard label: on from the quake (Normal) to the next BRIEFING or the result reveal. */
+  private setLabelsRisotto(on: boolean): void {
+    for (const h of HAZARDS) {
+      this.labels[h].setRisotto(on)
+    }
   }
 
   /** The safe-zone marker of every table in this drill (guides on only). */
@@ -2468,7 +2486,7 @@ export class DrillController extends BaseScriptComponent {
       if (at) {
         placeItem(anchor, at)
         this.aimLabel(this.labels[h], at)
-        this.addModel(h, anchor)
+        this.labels[h].setModel(this.addModel(h, anchor)) // 5m-3: the label sits above (or beside) the model
         this.logItem(h, at)
       }
     }
@@ -2492,12 +2510,12 @@ export class DrillController extends BaseScriptComponent {
   /**
    * The item's real model (Slice 7R) as a child of its anchor: root at the
    * anchor (bottom center), its authored scale kept, its +Z front turned to
-   * the item's front.
+   * the item's front. Returns the model, or null without a prefab.
    */
-  private addModel(item: LayoutItem, anchor: SceneObject): void {
+  private addModel(item: LayoutItem, anchor: SceneObject): SceneObject | null {
     const prefab = this.prefabs[item]
     if (!prefab) {
-      return
+      return null
     }
     const so = prefab.instantiate(anchor)
     const t = so.getTransform()
@@ -2523,6 +2541,7 @@ export class DrillController extends BaseScriptComponent {
       }
       this.poseTv(0)
     }
+    return so
   }
 
   /** Turns a label (a child of its hazard at `at`) so its +Z faces the start spot. */

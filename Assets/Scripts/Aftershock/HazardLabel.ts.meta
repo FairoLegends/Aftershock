@@ -28,7 +28,6 @@
   ExportUid: 00000000-0000-0000-0000-000000000000
   PackagePolicy: CanBeUnpacked
   ScriptInputsHidden:
-    backingColor: false
     key: false
     textColor: false
   ScriptTypesHidden:
@@ -42,15 +41,13 @@
   DefaultScriptInputs:
     - key: label.cabinet
       textColor: !<Vec4> {x: 1.000000, y: 0.690000, z: 0.125000, w: 1.000000}
-      backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.250000}
   ScriptTypes:
     -
       {}
   InputLines:
-    - '// @ui {"widget":"label", "label":"World label on a hazard or the safe zone (R3, R4)"}'
+    - '// @ui {"widget":"label", "label":"World label on a hazard, the safe zone or the door (R3, R4, 5m-3)"}'
     - '// @ui {"widget":"separator"}'
     - '// @ui {"widget":"group_start", "label":"Settings"}'
     - '// @input string key = "label.cabinet" {"hint":"Strings.ts key this label shows", "widget":"combobox", "values":[{"label":"Cabinet", "value":"label.cabinet"}, {"label":"Shelf", "value":"label.shelf"}, {"label":"Glass", "value":"label.glass"}, {"label":"Lamp", "value":"label.lamp"}, {"label":"TV", "value":"label.tv"}, {"label":"Safe zone", "value":"label.safe"}, {"label":"Exit door", "value":"label.door"}]}'
-    - '// @input vec4 textColor = {0.851,0.282,0.059,1} {"hint":"Safe zone text and dot color: green #3DDC84. Hazards always use white text and a red #FF5A4F dot (Slice 7A-soft).", "widget":"color"}'
-    - '// @input vec4 backingColor = {1,1,1,0.25} {"hint":"Backing color: light and semi-transparent (DESIGN_BRIEF §5.1). Never dark: the display is additive.", "widget":"color"}'
+    - '// @input vec4 textColor = {0.851,0.282,0.059,1} {"hint":"Safe zone text and dot color: green #3DDC84. Hazards use red #FF5A4F text and a red ⚠; the door is green (5m-3).", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

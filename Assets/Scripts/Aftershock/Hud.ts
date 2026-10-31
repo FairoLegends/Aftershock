@@ -15,9 +15,9 @@ import {
   TabularText
 } from "./UiBacking"
 
-// DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm.
+// DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm. The banner's
+// size, raise and fill are DrillConfig tunables (5m-1: warnEmCm, warnWidthCm, warnRaiseCm, warnFill).
 const SIZE_PER_CM = 43.886
-const WARNING_EM_CM = 7
 const INSTRUCTION_EM_CM = 3.5
 const SMALL_EM_CM = 2
 
@@ -36,10 +36,6 @@ const BAR_H = 1.6
 const TIMER_W = 10 // 5j-12 defect 4: its own column, wide enough for "00:59" at TIMER_EM_CM
 const TIMER_EM_CM = 2.5
 const ROW_COL_GAP = 1.2 // label, bar, label, timer: 8 + 16 + 8 + 10 + 3 x 1.2 = 45.6 <= INNER_W
-const WARN_W = 40
-const WARN_ID_H = 9
-const WARN_RAISE = 2 // banner sits this far above eye level so it clears the HUD panel (learner, 27 Oct)
-const WARN_FILL = new vec4(1, 0.353, 0.31, 0.88) // mockup .banner: rgba(255,90,79,.88), no border
 const CONTENT_Z = 0.6 // keeps content off the backing (z-fighting)
 
 // Numbered steps (01 goUnder, 02 duck, 03 hold, 04 evac): four rounded cells over the
@@ -68,6 +64,11 @@ const STEP_ON_FILL = new vec4(0.239, 0.863, 0.518, 0.22)
 const STEP_ON_BORDER_CM = 0.18
 const STEP_DONE = new vec4(1, 1, 1, STEP_DONE_ALPHA)
 
+// 5m-2: a notice takes the step row's place inside the panel, on a soft red
+// tint (red at the active step's 22%, red outline), so it is never a second panel.
+const NOTICE_FILL = new vec4(SOFT_RED.x, SOFT_RED.y, SOFT_RED.z, STEP_ON_FILL.w)
+const NOTICE_TEXT_W = INNER_W - STEP_PAD * 2
+
 // Health: one rounded bar (mockup .bar): track white 18%, fill white, red below healthAlarmBelow.
 const BAR_TRACK = new vec4(1, 1, 1, 0.18)
 
@@ -79,13 +80,15 @@ export const HUD_PANEL_HEIGHT = PAD * 2 + INSTR_ID_H + ROW_GAP + ROW_H
  * level with one instruction, health and the elapsed timer, plus a warning
  * banner at the center of view. It sits under AftershockRoot, not the Room,
  * so it never shakes. It owns no drill state: DrillController calls it.
+ * 5m-1/5m-2: one panel at a time. The panel is hidden while the banner shows,
+ * and a notice shows inside the panel in the step row's place.
  */
 @component
 export class Hud extends BaseScriptComponent {
   @ui.label("Quake HUD (R5, R7, R8)")
   @ui.separator
   @input
-  @hint("DrillConfig component (hudDistance, hudBelowEye, warningShowSeconds, healthStart, healthAlarmBelow)")
+  @hint("DrillConfig component (hudDistance, hudBelowEye, warningShowSeconds, warn*, healthStart, healthAlarmBelow)")
   config: DrillConfig
 
   @input
@@ -125,6 +128,7 @@ export class Hud extends BaseScriptComponent {
   @ui.group_end
 
   private transform: Transform | null = null
+  private panel: SceneObject | null = null
   private banner: SceneObject | null = null
   private warningTimer: DelayedCallbackEvent | null = null
   private notice: SceneObject | null = null
@@ -153,7 +157,6 @@ export class Hud extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
     this.buildPanel()
     this.buildBanner()
-    this.buildNotice()
 
     this.warningTimer = this.createEvent("DelayedCallbackEvent")
     this.warningTimer.bind(() => this.hideWarning())
@@ -184,18 +187,27 @@ export class Hud extends BaseScriptComponent {
     this.sceneObject.enabled = false
   }
 
-  /** Warning banner (warn.quake, or warn.aftershock in Slice 7C) at the center of view for warningShowSeconds. */
+  /**
+   * Warning banner (warn.quake, or warn.aftershock in Slice 7C) at the center of
+   * view for warningShowSeconds. 5m-1: the panel (steps, health, timer) is hidden
+   * until the banner has gone.
+   */
   showWarning(key: StringKey = "warn.quake"): void {
     this.hideNotice()
     if (this.bannerPair && this.bannerPair.key !== key) {
       this.bannerPair.key = key
       setLinePair(this.bannerPair.primary, this.bannerPair.secondary, lines(key))
     }
+    this.panel.enabled = false
     this.banner.enabled = true
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
 
-  /** A notice (warn.bed §5j-15 bed trap, hit.fell Slice 7D) in the banner spot for `seconds`; it replaces the warning banner. */
+  /**
+   * A notice (warn.bed §5j-15 bed trap, hit.fell Slice 7D, hit.glass, warn.trip)
+   * for `seconds`. 5m-2: inside the panel in the step row's place, on a soft red
+   * tint, with health and the timer still shown; it ends the warning banner.
+   */
   showNotice(seconds: number, key: StringKey = "warn.bed"): void {
     this.hideWarning()
     if (this.noticePair && this.noticePair.key !== key) {
@@ -203,6 +215,9 @@ export class Hud extends BaseScriptComponent {
       setLinePair(this.noticePair.primary, this.noticePair.secondary, lines(key))
     }
     this.notice.enabled = true
+    this.stepsRoot.enabled = false
+    this.instructionId.enabled = false
+    this.instructionEn.enabled = false
     this.noticeTimer.reset(seconds)
   }
 
@@ -229,14 +244,16 @@ export class Hud extends BaseScriptComponent {
    * goUnder / duck / hold / evac show the numbered steps (that step active,
    * earlier ones done); any other key (instr.brief, instr.comeOut, instr.grip)
    * the single line. Slice 8B: instr.grip is a single line so "Hold the table
-   * leg" can be read; step 03 is still the open step while it shows.
+   * leg" can be read; step 03 is still the open step while it shows. While a
+   * notice shows (5m-2) the new key is kept and shown when the notice ends.
    */
   setInstruction(key: StringKey): void {
     const step =
       key === "instr.goUnder" ? 0 : key === "instr.duck" ? 1 : key === "instr.hold" ? 2 : key === "instr.evac" ? 3 : -1
-    this.stepsRoot.enabled = step >= 0
-    this.instructionId.enabled = step < 0
-    this.instructionEn.enabled = step < 0
+    const noticeUp = this.notice !== null && this.notice.enabled
+    this.stepsRoot.enabled = !noticeUp && step >= 0
+    this.instructionId.enabled = !noticeUp && step < 0
+    this.instructionEn.enabled = !noticeUp && step < 0
     if (step < 0) {
       setLinePair(this.instructionId, this.instructionEn, lines(key))
     } else {
@@ -331,14 +348,19 @@ export class Hud extends BaseScriptComponent {
   get isWarningShown(): boolean {
     return this.banner !== null && this.banner.isEnabledInHierarchy
   }
+  /** 5m-1: the panel (instruction or steps, health, timer); false while the warning banner shows. */
+  get isPanelShown(): boolean {
+    return this.panel !== null && this.panel.isEnabledInHierarchy
+  }
   /** String key the warning banner shows ("warn.quake" or "warn.aftershock"). */
   get warningKey(): StringKey | null {
     return this.bannerPair ? this.bannerPair.key : null
   }
+  /** 5m-2: the notice row inside the panel (there is no floating notice). */
   get isNoticeShown(): boolean {
     return this.notice !== null && this.notice.isEnabledInHierarchy
   }
-  /** The notice's current key (warn.bed or hit.fell), or null before it is built. */
+  /** The notice's current key (warn.bed, hit.fell, hit.glass or warn.trip), or null before it is built. */
   get noticeKey(): StringKey | null {
     return this.noticePair ? this.noticePair.key : null
   }
@@ -349,6 +371,7 @@ export class Hud extends BaseScriptComponent {
     return this.timerLabel ? this.timerLabel.text : ""
   }
 
+  /** Ends the banner and shows the panel again (5m-1). */
   private hideWarning(): void {
     if (this.warningTimer) {
       this.warningTimer.cancel()
@@ -356,14 +379,23 @@ export class Hud extends BaseScriptComponent {
     if (this.banner) {
       this.banner.enabled = false
     }
+    if (this.panel) {
+      this.panel.enabled = true
+    }
   }
 
+  /** Ends the notice and puts the current instruction or steps back in its row. */
   private hideNotice(): void {
     if (this.noticeTimer) {
       this.noticeTimer.cancel()
     }
-    if (this.notice) {
+    if (this.notice && this.notice.enabled) {
       this.notice.enabled = false
+      if (this._instructionKey) {
+        this.setInstruction(this._instructionKey)
+      } else {
+        this.instructionId.enabled = true
+      }
     }
   }
 
@@ -402,6 +434,7 @@ export class Hud extends BaseScriptComponent {
 
   private buildPanel(): void {
     const panel = this.child(this.sceneObject, "Panel")
+    this.panel = panel
     const backing = new SoftFrame(panel, this.backingColor)
     const content = this.child(panel, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
@@ -414,6 +447,7 @@ export class Hud extends BaseScriptComponent {
     this.instructionId = this.addText(content, "InstructionText.id", "", INSTRUCTION_EM_CM, INNER_W, INSTR_ID_H, this.textColor, true)
     this.instructionEn = this.addText(content, "InstructionText.en", "", INSTRUCTION_EM_CM, INNER_W, HIDDEN_H, this.textColor, true)
     this.buildSteps(panel)
+    this.buildNotice(panel)
 
     const row = this.child(content, "Row")
     const rowItem = row.createComponent(FlexItem.getTypeName()) as FlexItem
@@ -492,49 +526,75 @@ export class Hud extends BaseScriptComponent {
     return t
   }
 
-  /** Created after Panel so it draws on top; WARN_RAISE above eye level (center of view). Slice 7A-soft: rounded red block, no plate. */
+  /**
+   * Created after Panel so it draws on top; warnRaiseCm above eye level (center
+   * of view, 5m-1 option B: higher, narrower, one step smaller). Slice 7A-soft:
+   * rounded red block, no plate.
+   */
   private buildBanner(): void {
+    const cfg = this.config
     const banner = this.child(this.sceneObject, "WarningBanner")
-    banner.getTransform().setLocalPosition(new vec3(0, (this.config ? this.config.hudBelowEye : 0) + WARN_RAISE, 0))
-    const backing = new SoftFrame(banner, WARN_FILL, SOFT_PANEL_RADIUS_CM, null)
+    banner.getTransform().setLocalPosition(new vec3(0, cfg.hudBelowEye + cfg.warnRaiseCm, 0))
+    const backing = new SoftFrame(banner, cfg.warnFill, SOFT_PANEL_RADIUS_CM, null)
     const content = this.child(banner, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
     const flex = this.column(content, 0, PAD)
-    flex.width = WARN_W + PAD * 2
+    flex.width = cfg.warnWidthCm + PAD * 2
     flex.onLayoutComplete.add((r) => {
       backing.setSize(r.containerWidth, r.containerHeight)
     })
-    this.addPair(
-      "warn.quake",
-      this.addText(content, "Warning.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, SOFT_WHITE, false),
-      this.addText(content, "Warning.en", "", WARNING_EM_CM, WARN_W, HIDDEN_H, SOFT_WHITE, false)
-    )
+    const lineH = cfg.warnEmCm * LINE_H_PER_EM
+    const primary = this.addText(content, "Warning.id", "", cfg.warnEmCm, cfg.warnWidthCm, lineH, SOFT_WHITE, false)
+    const secondary = this.addText(content, "Warning.en", "", cfg.warnEmCm, cfg.warnWidthCm, HIDDEN_H, SOFT_WHITE, false)
+    primary.horizontalOverflow = HorizontalOverflow.Shrink // a long word (de) stays inside the narrower banner
+    secondary.horizontalOverflow = HorizontalOverflow.Shrink
+    this.addPair("warn.quake", primary, secondary)
     this.bannerPair = this.pairs[this.pairs.length - 1]
     onLanguageChanged.add(() => this.refreshTexts())
     banner.enabled = false
     this.banner = banner
   }
 
-  /** §5j-15 bed trap: warn.bed in the same spot and style as the warning banner. */
-  private buildNotice(): void {
-    const notice = this.child(this.sceneObject, "NoticeBanner")
-    notice.getTransform().setLocalPosition(new vec3(0, (this.config ? this.config.hudBelowEye : 0) + WARN_RAISE, 0))
-    const backing = new SoftFrame(notice, WARN_FILL, SOFT_PANEL_RADIUS_CM, null)
-    const content = this.child(notice, "Content")
-    content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
-    const flex = this.column(content, 0, PAD)
-    flex.width = WARN_W + PAD * 2
-    flex.onLayoutComplete.add((r) => {
-      backing.setSize(r.containerWidth, r.containerHeight)
-    })
-    this.addPair(
-      "warn.bed",
-      this.addText(content, "Notice.id", "", WARNING_EM_CM, WARN_W, WARN_ID_H, SOFT_WHITE, false),
-      this.addText(content, "Notice.en", "", WARNING_EM_CM, WARN_W, HIDDEN_H, SOFT_WHITE, false)
-    )
+  /**
+   * 5m-2: the notice row, in the step row's place inside the panel (not a flex
+   * item, so the panel keeps HUD_PANEL_HEIGHT): a soft red tint with the notice
+   * text, wrapped to two lines and shrunk if it is longer. Hidden until showNotice.
+   */
+  private buildNotice(panel: SceneObject): void {
+    const notice = this.child(panel, "Notice")
+    const areaTop = HUD_PANEL_HEIGHT / 2 - PAD
+    notice.getTransform().setLocalPosition(new vec3(0, areaTop - STEP_H / 2, CONTENT_Z))
+    const frame = new SoftFrame(notice, NOTICE_FILL, STEP_RADIUS_CM, null)
+    frame.setSize(INNER_W, STEP_H)
+    frame.setBorder(SOFT_RED, STEP_ON_BORDER_CM)
+    const top = STEP_H / 2 - STEP_PAD
+    const primary = this.noticeText(notice, "Notice.id", top)
+    const secondary = this.noticeText(notice, "Notice.en", -top + HIDDEN_H)
+    this.addPair("warn.bed", primary, secondary)
     this.noticePair = this.pairs[this.pairs.length - 1]
     notice.enabled = false
     this.notice = notice
+  }
+
+  private noticeText(parent: SceneObject, name: string, top: number): Text {
+    const so = this.child(parent, name)
+    so.getTransform().setLocalPosition(new vec3(0, 0, STEP_TEXT_Z))
+    const t = so.createComponent("Component.Text") as Text
+    t.size = INSTRUCTION_EM_CM * SIZE_PER_CM
+    ;(t as Text & {weight?: number}).weight = 700
+    t.depthTest = true
+    t.textFill.color = SOFT_WHITE
+    if (this.textOutlineSize > 0) {
+      t.outlineSettings.enabled = true
+      t.outlineSettings.size = this.textOutlineSize
+      t.outlineSettings.fill.color = this.textOutlineColor
+    }
+    t.horizontalAlignment = HorizontalAlignment.Center
+    t.verticalAlignment = VerticalAlignment.Center
+    t.horizontalOverflow = HorizontalOverflow.Wrap
+    t.verticalOverflow = VerticalOverflow.Shrink
+    t.layoutRect = Rect.create(-NOTICE_TEXT_W / 2, NOTICE_TEXT_W / 2, -STEP_H / 2 + STEP_PAD, top)
+    return t
   }
 
   /** Small dimmed label (hud.health, hud.time); its English line is collapsed. */

@@ -168,9 +168,9 @@ export class DangerZone extends BaseScriptComponent {
     if (this.visual) {
       this.visual.enabled = shown
     }
+    // 5m-3: the "Zona bahaya" line is now the hazard label's second line, so the pill stays off (label kept for lookups).
     if (this._label) {
-      this._label.enabled = shown
-      if (shown) this.refreshLabel() // fonts are registered by now, so measure in the real font
+      this._label.enabled = false
     }
   }
 
