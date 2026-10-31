@@ -29,8 +29,16 @@ export class DrillConfig extends BaseScriptComponent {
 
   @ui.group_start("Warning banner")
   @input
-  @hint("Banner center above eye level at hudDistance (cm, 5m-1 option B): it clears a 180 cm cabinet seen from the start spot, its top edge inside ±16° of the view")
-  warnRaiseCm: number = 18
+  @hint("Banner center this far above the center of view, in degrees, at hudDistance along the head's forward (5m-9: it follows the head's pitch; looking level it clears a 180 cm cabinet seen from the start spot)")
+  warnAboveGazeDeg: number = 8
+
+  @input
+  @hint("Lowest head pitch the banner follows, in degrees (5m-9: looking further down, it stays here, off the floor)")
+  warnPitchMinDeg: number = -50
+
+  @input
+  @hint("Highest head pitch the banner follows, in degrees (5m-9: looking further up, it stays here, off the ceiling)")
+  warnPitchMaxDeg: number = 30
 
   @input
   @hint("Banner text width (cm, 5m-1: 40 → 30)")

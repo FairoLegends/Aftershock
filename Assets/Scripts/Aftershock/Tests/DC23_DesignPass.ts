@@ -14,12 +14,15 @@ const EM_DISTANCES_M = [1, 2.5, 4]
 const LIGHT_MIN = 0.8
 const SETTLE_MS = 300
 const REACT_MS = 1000
+const DOWN_DEG = 35 // 5m-9: the head looks this far down at the table at the quake start
+const BANNER_SLACK_DEG = 6 // 5m-9: the banner center within warnAboveGazeDeg + this of the head's forward
 
 // DC23 (Slice 12, ENGINEERING_PLAN 5m): the warning banner and the HUD panel
 // take turns at quake and aftershock start (5m-1); a notice shows inside the
 // panel (5m-2); the label em follows the head distance and every backing is
 // light (5m-3); Normal collapses hazard labels to the ⚠ until looked at,
 // Easy keeps them full, Hard has none (5m-4).
+// 5m-9: the banner follows the head's pitch (looking down at the table, it is in view).
 @component
 export class DC23_DesignPass extends Scenario {
   async run(): Promise<void> {
@@ -79,6 +82,10 @@ export class DC23_DesignPass extends Scenario {
       expect(c.level).toBe("easy")
       pinDucked(c)
       await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
+      // 5m-9: looking level (pinDucked), the banner center is above eye level.
+      await sleep(SAMPLE_MS * 2)
+      expect(c.hud.isWarningShown).toBe(true)
+      expect(c.hud.warningPosition.y > c.headPose.position.y).toBe(true)
       const easy = c.activeHazardLabels[0]
       const q = labelPosition(easy)
       const out = levelLook(startSpot(c), q)
@@ -124,6 +131,22 @@ export class DC23_DesignPass extends Scenario {
         expect(l.isShown).toBe(false)
       }
       expect(c.hazardLabelsShown).toBe(false)
+
+      // 5m-9: at a quake start with the head at the start spot looking DOWN_DEG
+      // down at the table, the banner shows and its center lies within
+      // warnAboveGazeDeg + BANNER_SLACK_DEG of the head's forward.
+      c.setLevelForTest("normal")
+      c.forceAftershockForTest(false)
+      await toFreshBriefing(c)
+      const eye = startSpot(c)
+      const flat = levelLook(eye, c.safeZone.center)
+      const r = (DOWN_DEG * Math.PI) / 180
+      c.headPose.setOverride(eye, flat.uniformScale(Math.cos(r)).add(new vec3(0, -Math.sin(r), 0)))
+      await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
+      await sleep(SAMPLE_MS * 2)
+      expect(c.hud.isWarningShown).toBe(true)
+      const gazeToBanner = (c.headPose.forward.angleTo(c.hud.warningPosition.sub(eye)) * 180) / Math.PI
+      expect(gazeToBanner <= c.config.warnAboveGazeDeg + BANNER_SLACK_DEG).toBe(true)
     } finally {
       c.setLevelForTest("normal")
       restore(c, prevTestMode, prevDuration)

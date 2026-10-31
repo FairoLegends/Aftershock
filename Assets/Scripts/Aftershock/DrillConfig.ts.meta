@@ -126,9 +126,11 @@
     tripRadius: false
     tvDangerFront: false
     walkSpeed: false
+    warnAboveGazeDeg: false
     warnEmCm: false
     warnFill: false
-    warnRaiseCm: false
+    warnPitchMaxDeg: false
+    warnPitchMinDeg: false
     warnWidthCm: false
     warningShowSeconds: false
   ScriptTypesHidden:
@@ -145,7 +147,9 @@
       quakeWaitMin: !<float> 8.000000
       quakeWaitMax: !<float> 15.000000
       warningShowSeconds: 2.500000
-      warnRaiseCm: !<float> 18.000000
+      warnAboveGazeDeg: !<float> 8.000000
+      warnPitchMinDeg: !<float> -50.000000
+      warnPitchMaxDeg: !<float> 30.000000
       warnWidthCm: !<float> 30.000000
       warnEmCm: 6.500000
       warnFill: !<Vec4> {x: 1.000000, y: 0.353000, z: 0.310000, w: 0.880000}
@@ -257,7 +261,9 @@
     - '// @input float warningShowSeconds = 1.2 {"hint":"How long the warning banner shows, in seconds (5m-1: 2.5 → 1.2; the HUD panel appears only after it)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Warning banner"}'
-    - '// @input float warnRaiseCm = 18 {"hint":"Banner center above eye level at hudDistance (cm, 5m-1 option B): it clears a 180 cm cabinet seen from the start spot, its top edge inside ±16° of the view"}'
+    - "// @input float warnAboveGazeDeg = 8 {\"hint\":\"Banner center this far above the center of view, in degrees, at hudDistance along the head's forward (5m-9: it follows the head's pitch; looking level it clears a 180 cm cabinet seen from the start spot)\"}"
+    - '// @input float warnPitchMinDeg = -50 {"hint":"Lowest head pitch the banner follows, in degrees (5m-9: looking further down, it stays here, off the floor)"}'
+    - '// @input float warnPitchMaxDeg = 30 {"hint":"Highest head pitch the banner follows, in degrees (5m-9: looking further up, it stays here, off the ceiling)"}'
     - '// @input float warnWidthCm = 30 {"hint":"Banner text width (cm, 5m-1: 40 → 30)"}'
     - '// @input float warnEmCm = 6.5 {"hint":"Banner main line em size (cm, 5m-1: one step smaller)"}'
     - '// @input vec4 warnFill = {1,0.353,0.31,0.88} {"hint":"Banner fill: alarm red #FF5A4F at 88% (mockup .banner), no border. Light colors only: the display is additive.", "widget":"color"}'

@@ -16,7 +16,8 @@ import {
 } from "./UiBacking"
 
 // DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm. The banner's
-// size, raise and fill are DrillConfig tunables (5m-1: warnEmCm, warnWidthCm, warnRaiseCm, warnFill).
+// size, place and fill are DrillConfig tunables (5m-1, 5m-9: warnEmCm, warnWidthCm, warnFill,
+// warnAboveGazeDeg, warnPitchMinDeg, warnPitchMaxDeg).
 const SIZE_PER_CM = 43.886
 const INSTRUCTION_EM_CM = 3.5
 const SMALL_EM_CM = 2
@@ -82,6 +83,8 @@ export const HUD_PANEL_HEIGHT = PAD * 2 + INSTR_ID_H + ROW_GAP + ROW_H
  * so it never shakes. It owns no drill state: DrillController calls it.
  * 5m-1/5m-2: one panel at a time. The panel is hidden while the banner shows,
  * and a notice shows inside the panel in the step row's place.
+ * 5m-9: the panel keeps its level lazy follow; the banner follows the head's
+ * pitch (placeBanner).
  */
 @component
 export class Hud extends BaseScriptComponent {
@@ -130,6 +133,12 @@ export class Hud extends BaseScriptComponent {
   private transform: Transform | null = null
   private panel: SceneObject | null = null
   private banner: SceneObject | null = null
+  private bannerTransform: Transform | null = null
+  private readonly bannerPos = new vec3(0, 0, 0)
+  private readonly bannerRot = quat.quatIdentity()
+  private bannerFx = 0 // last level heading of the head (unit XZ); the camera looks down −Z
+  private bannerFz = -1
+  private bannerSnapNext = true
   private warningTimer: DelayedCallbackEvent | null = null
   private notice: SceneObject | null = null
   private noticeTimer: DelayedCallbackEvent | null = null
@@ -190,7 +199,7 @@ export class Hud extends BaseScriptComponent {
   /**
    * Warning banner (warn.quake, or warn.aftershock in Slice 7C) at the center of
    * view for warningShowSeconds. 5m-1: the panel (steps, health, timer) is hidden
-   * until the banner has gone.
+   * until the banner has gone. 5m-9: it snaps along the head's forward now.
    */
   showWarning(key: StringKey = "warn.quake"): void {
     this.hideNotice()
@@ -200,6 +209,10 @@ export class Hud extends BaseScriptComponent {
     }
     this.panel.enabled = false
     this.banner.enabled = true
+    if (this.config && this.headPose) {
+      this.placeBanner(true)
+    }
+    this.bannerSnapNext = true // and again in this frame's follow, if the root moves after this call
     this.warningTimer.reset(this.config.warningShowSeconds)
   }
 
@@ -356,6 +369,10 @@ export class Hud extends BaseScriptComponent {
   get warningKey(): StringKey | null {
     return this.bannerPair ? this.bannerPair.key : null
   }
+  /** 5m-9: the banner's world center (cm). */
+  get warningPosition(): vec3 {
+    return this.bannerTransform ? this.bannerTransform.getWorldPosition() : vec3.zero()
+  }
   /** 5m-2: the notice row inside the panel (there is no floating notice). */
   get isNoticeShown(): boolean {
     return this.notice !== null && this.notice.isEnabledInHierarchy
@@ -399,11 +416,21 @@ export class Hud extends BaseScriptComponent {
     }
   }
 
-  /** Lazy follow: eases toward hudDistance in front of the head, hudBelowEye below it, facing the head. */
+  /** The panel's level follow, then the banner's (5m-9), each frame the HUD shows. */
   private follow(): void {
     if (!this.config || !this.headPose) {
       return
     }
+    this.followPanel()
+    // After the root moved: the banner's world pose is set, so the root's move does not carry it.
+    if (this.banner && this.banner.enabled) {
+      this.placeBanner(this.bannerSnapNext)
+      this.bannerSnapNext = false
+    }
+  }
+
+  /** Lazy follow: eases toward hudDistance in front of the head, hudBelowEye below it, facing the head. */
+  private followPanel(): void {
     const head = this.headPose.position
     const f = this.headPose.forward
     const len = Math.sqrt(f.x * f.x + f.z * f.z)
@@ -430,6 +457,51 @@ export class Hud extends BaseScriptComponent {
     q.y = Math.sin(half)
     q.z = 0
     this.transform.setWorldRotation(q)
+  }
+
+  /**
+   * 5m-9: the banner along the head's real forward, warnAboveGazeDeg above the
+   * center of view at hudDistance, the gaze pitch clamped to
+   * warnPitchMinDeg..warnPitchMaxDeg (never on the floor or the ceiling),
+   * facing the head (yaw and pitch, no roll). It snaps when it shows, then
+   * eases at followSpeed like the panel, so it does not jitter with the head.
+   */
+  private placeBanner(snap: boolean): void {
+    const cfg = this.config
+    const head = this.headPose.position
+    const f = this.headPose.forward
+    const len = Math.sqrt(f.x * f.x + f.z * f.z)
+    if (len > 1e-4) {
+      this.bannerFx = f.x / len // looking straight up or down: keep the last heading
+      this.bannerFz = f.z / len
+    }
+    const gaze = (Math.asin(Math.max(-1, Math.min(1, f.y))) * 180) / Math.PI
+    const pitch = Math.max(cfg.warnPitchMinDeg, Math.min(cfg.warnPitchMaxDeg, gaze))
+    const el = ((pitch + cfg.warnAboveGazeDeg) * Math.PI) / 180
+    const flat = cfg.hudDistance * Math.cos(el)
+    const k = snap ? 1 : 1 - Math.exp(-this.followSpeed * getDeltaTime())
+    const p = this.bannerPos
+    p.x += (head.x + this.bannerFx * flat - p.x) * k
+    p.y += (head.y + cfg.hudDistance * Math.sin(el) - p.y) * k
+    p.z += (head.z + this.bannerFz * flat - p.z) * k
+    this.bannerTransform.setWorldPosition(p)
+
+    // Local +Z toward the head: pitch about X, then yaw about Y (half angles).
+    const dx = head.x - p.x
+    const dy = head.y - p.y
+    const dz = head.z - p.z
+    const yaw = Math.atan2(dx, dz) * 0.5
+    const tilt = Math.atan2(-dy, Math.sqrt(dx * dx + dz * dz)) * 0.5
+    const cy = Math.cos(yaw)
+    const sy = Math.sin(yaw)
+    const cp = Math.cos(tilt)
+    const sp = Math.sin(tilt)
+    const q = this.bannerRot
+    q.w = cy * cp
+    q.x = cy * sp
+    q.y = sy * cp
+    q.z = -sy * sp
+    this.bannerTransform.setWorldRotation(q)
   }
 
   private buildPanel(): void {
@@ -527,14 +599,15 @@ export class Hud extends BaseScriptComponent {
   }
 
   /**
-   * Created after Panel so it draws on top; warnRaiseCm above eye level (center
-   * of view, 5m-1 option B: higher, narrower, one step smaller). Slice 7A-soft:
-   * rounded red block, no plate.
+   * Created after Panel so it draws on top. A child of the HUD root, so it
+   * shows, hides and draws on top with it, but placed in world space by
+   * placeBanner (5m-9), not by the root's level follow. 5m-1 option B:
+   * narrower, one step smaller. Slice 7A-soft: rounded red block, no plate.
    */
   private buildBanner(): void {
     const cfg = this.config
     const banner = this.child(this.sceneObject, "WarningBanner")
-    banner.getTransform().setLocalPosition(new vec3(0, cfg.hudBelowEye + cfg.warnRaiseCm, 0))
+    this.bannerTransform = banner.getTransform()
     const backing = new SoftFrame(banner, cfg.warnFill, SOFT_PANEL_RADIUS_CM, null)
     const content = this.child(banner, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
