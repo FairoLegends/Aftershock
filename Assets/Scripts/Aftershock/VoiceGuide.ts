@@ -180,6 +180,25 @@ export class VoiceGuide extends BaseScriptComponent {
     if (this.updateEvent) this.updateEvent.enabled = false
   }
 
+  /**
+   * 5m-10 (M4): the warning banner has hidden (Hud, warningShowSeconds), so a
+   * warn.quake or warn.aftershock clip still playing is cut and the instruction
+   * waiting for it plays at once. warn.trip and warn.bed play on.
+   */
+  endWarning(): void {
+    const c = this.current
+    if (!this.speaking || !c || (c.key !== "warn.quake" && c.key !== "warn.aftershock") || !this.pending) {
+      return
+    }
+    const next = this.pending
+    this.pending = null
+    this.voiceAudio.stop(false)
+    this.speaking = false
+    this.current = null
+    this.say(next.key, next.lang)
+    if (!this.speaking && this.updateEvent) this.updateEvent.enabled = false
+  }
+
   private play(key: StringKey, lang: Lang, track: AudioTrackAsset): void {
     const now = getTime()
     const last = this.lastAt[key]

@@ -7,15 +7,18 @@ import {
   BED_TABLE_GAP,
   BED_WALKWAY,
   bedWalkways,
+  bedWalls,
   FOOTPRINTS,
   footprintRect,
   generateLayout,
   glassClearRect,
+  HAZARDS,
   isLampByBed,
   Layout,
   LayoutItem,
   overlaps,
   Placement,
+  Rect,
   rectDistance,
   ROOM_MAX,
   ROOM_MIN,
@@ -24,9 +27,11 @@ import {
   WALL_BACKED,
   WALL_GAP,
   WALL_SIDES,
+  WallSide,
   wallFronts,
   wallInward,
-  wallLine
+  wallLine,
+  zoneRect
 } from "../LayoutGenerator"
 import {CLASSIC, getController, itemWorld, restore, sameLayout, copyLayout, startSpot, toFreshBriefing} from "./DrillTestKit"
 
@@ -39,6 +44,12 @@ import {CLASSIC, getController, itemWorld, restore, sameLayout, copyLayout, star
 // Slice 11 (§5l item 7b–f): the same 30 layouts keep the room rules
 // (checkRoomRules), the lamp stands by the bed in 40–80 % of those with a lamp,
 // and fewer than 4 fall back to the fixed layout.
+// 5m-10 (M2, M3): over the same 30 layouts, no danger zone (the lamp's,
+// clipped at the walkway, included) overlaps a bed walkway strip, the TV is on
+// no wall the bed touches, none falls back, and the lamp stands by the bed in
+// at least half of those with a lamp.
+const LAMP_BY_BED_MIN = 0.5
+const BED_TOUCH_CM = 5 // a wall the bed's footprint comes this close to (the wall-backed rule's 5 cm)
 @component
 export class DC14_WallsAndDoor extends Scenario {
   async run(): Promise<void> {
@@ -50,6 +61,8 @@ export class DC14_WallsAndDoor extends Scenario {
       let fallbacks = 0
       let lamps = 0
       let byBed = 0
+      let zonesOnWalkway = 0
+      let tvOnBedWall = 0
       for (let k = 0; k < 30; k++) {
         const seed = k + 1 // fixed seeds 1..30: the same 30 layouts, so the same rates, every run
         const layout = generateLayout({...params, layoutSeed: seed})
@@ -60,14 +73,22 @@ export class DC14_WallsAndDoor extends Scenario {
           lamps++
           if (isLampByBed(layout.items)) byBed++
         }
+        if (zoneOnWalkway(layout, params.dangerMargin, params.tvDangerFront, `seed ${seed}`)) zonesOnWalkway++
+        if (tvOnBedTouchedWall(layout, `seed ${seed}`)) tvOnBedWall++
       }
       // Slice 11 (5l-7c): the lamp stands by the bed in 40–80 % of the layouts with a lamp; fewer than 4 of 30 fall back.
-      console.log(`[Aftershock] DC14: ${fallbacks} of 30 fell back; lamp by the bed ${byBed} of ${lamps}`)
+      // 5m-10 (M2, M3): no danger zone on a bed walkway, no TV on a wall the bed touches, no fallback, the lamp by the bed in at least half.
+      const rate = lamps > 0 ? byBed / lamps : 0
+      console.log(`[Aftershock] DC14: ${fallbacks} of 30 fell back; lamp by the bed ${byBed} of ${lamps} (${(rate * 100).toFixed(1)} %); zones on a bed walkway ${zonesOnWalkway}; TV on a bed wall ${tvOnBedWall}`)
       expect(fallbacks).toBeLessThan(4)
+      expect(fallbacks).toBe(0)
+      expect(zonesOnWalkway).toBe(0)
+      expect(tvOnBedWall).toBe(0)
       expect(lamps).toBeGreaterThan(0)
       if (lamps > 0) {
         expect(byBed / lamps).toBeGreaterThan(0.4 - 1e-9)
         expect(byBed / lamps).toBeLessThan(0.8 + 1e-9)
+        expect(byBed / lamps).toBeGreaterThan(LAMP_BY_BED_MIN - 1e-9)
       }
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
@@ -257,6 +278,70 @@ function checkRoomRules(layout: Layout, label: string): void {
 }
 
 /** 5l-7b/f: the yaw is a multiple of 90° (±0.5°). */
+/** 5m-10 (M2): whether any hazard's danger zone (zoneRect, as DangerZone draws it) overlaps a bed walkway strip; logs each hit. */
+function zoneOnWalkway(layout: Layout, margin: number, tvFront: number, label: string): boolean {
+  const bed = layout.items.bed
+  if (!bed) {
+    return false
+  }
+  const strips = bedWalkways(bed, layout.room)
+  let hit = false
+  for (const h of HAZARDS) {
+    if (!layout.items[h]) continue
+    const z = zoneRect(h, layout.items, layout.room, margin, tvFront)
+    for (const s of strips) {
+      if (overlaps(z, s)) {
+        hit = true
+        console.log(`[Aftershock] DC14 ${label}: the ${h} zone overlaps a bed walkway`)
+      }
+    }
+  }
+  return hit
+}
+
+/**
+ * 5m-10 (M3): whether the TV is on a wall the bed touches. The bed's walls are
+ * measured here from its footprint corners (within BED_TOUCH_CM) and joined with
+ * the generator's bedWalls; the TV's wall is layout.walls.tv and the wall
+ * nearest its footprint.
+ */
+function tvOnBedTouchedWall(layout: Layout, label: string): boolean {
+  const bed = layout.items.bed
+  const tv = layout.items.tv
+  if (!bed || !tv) {
+    return false
+  }
+  const touched = WALL_SIDES.filter((w) => wallGap(footprintRect("bed", bed), layout.room, w) <= BED_TOUCH_CM)
+  const walls = touched.concat(bedWalls(bed, layout.room))
+  const tvRect = footprintRect("tv", tv)
+  let nearest: WallSide = WALL_SIDES[0]
+  for (const w of WALL_SIDES) {
+    if (wallGap(tvRect, layout.room, w) < wallGap(tvRect, layout.room, nearest)) nearest = w
+  }
+  const bad = walls.indexOf(nearest) >= 0 || (!!layout.walls.tv && walls.indexOf(layout.walls.tv) >= 0)
+  if (bad) {
+    console.log(`[Aftershock] DC14 ${label}: the TV is on ${layout.walls.tv} (nearest ${nearest}); the bed touches ${walls.join(",")}`)
+  }
+  return bad
+}
+
+/** The gap (cm) from the rect's nearest corner to wall `w`, into the room. */
+function wallGap(r: Rect, room: RoomRect, w: WallSide): number {
+  const n = wallInward(w)
+  const line = wallLine(room, w)
+  const cos = Math.cos(r.yaw)
+  const sin = Math.sin(r.yaw)
+  let gap = Infinity
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      const x = r.x + sx * r.hx * cos + sz * r.hz * sin // local X = (cos, −sin), local Z = (sin, cos)
+      const z = r.z - sx * r.hx * sin + sz * r.hz * cos
+      gap = Math.min(gap, n.x !== 0 ? n.x * (x - line) : n.z * (z - line))
+    }
+  }
+  return gap
+}
+
 function checkSquare(item: LayoutItem, at: Placement, label: string): void {
   const q = at.yaw / (Math.PI / 2)
   const offDeg = Math.abs(q - Math.round(q)) * 90

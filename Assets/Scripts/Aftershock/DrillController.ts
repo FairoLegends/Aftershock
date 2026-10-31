@@ -5,7 +5,7 @@ import {EdgeWarning} from "./EdgeWarning"
 import {FALL_SOURCES, FallFrom, FallingObjects, FallSource} from "./FallingObjects"
 import {FloorPath} from "./FloorPath"
 import {GripHandles} from "./GripHandles"
-import {HazardLabel, setLabelContext} from "./HazardLabel"
+import {HazardLabel, setLabelContext, setLabelRoom} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
 import {LanguagePanel} from "./LanguagePanel"
@@ -819,6 +819,10 @@ export class DrillController extends BaseScriptComponent {
     }
     // 5m-3: labels place, scale and (5m-4) collapse from the head each frame.
     setLabelContext(this.config, this.headPose, this._floorY)
+    setLabelRoom(this.room, () => (this.layout ? this.layout.room : null)) // 5m-10 (M1)
+    this.hud.onWarningEnd = () => {
+      if (this.voiceGuide) this.voiceGuide.endWarning() // 5m-10 (M4)
+    }
     this.placeRoom()
 
     // Slice 5L: ja and zh lines need their own fonts; the default font has no CJK glyphs.
@@ -2486,7 +2490,7 @@ export class DrillController extends BaseScriptComponent {
       if (at) {
         placeItem(anchor, at)
         this.aimLabel(this.labels[h], at)
-        this.labels[h].setModel(this.addModel(h, anchor)) // 5m-3: the label sits above (or beside) the model
+        this.labels[h].setModel(h === "glass" ? this.windowBox(anchor) : this.addModel(h, anchor)) // 5m-3: the label sits above (or beside) the model
         this.logItem(h, at)
       }
     }
@@ -2512,6 +2516,14 @@ export class DrillController extends BaseScriptComponent {
    * anchor (bottom center), its authored scale kept, its +Z front turned to
    * the item's front. Returns the model, or null without a prefab.
    */
+  /** 5m-10 (M1): the window's GlassPane box under the glass anchor, the glass label's model (the anchor holds the label itself). */
+  private windowBox(anchor: SceneObject): SceneObject | null {
+    for (let i = 0; i < anchor.getChildrenCount(); i++) {
+      if (anchor.getChild(i).name === "GlassPane") return anchor.getChild(i)
+    }
+    return null
+  }
+
   private addModel(item: LayoutItem, anchor: SceneObject): SceneObject | null {
     const prefab = this.prefabs[item]
     if (!prefab) {

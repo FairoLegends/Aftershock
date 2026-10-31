@@ -140,6 +140,8 @@ export class Hud extends BaseScriptComponent {
   private bannerFz = -1
   private bannerSnapNext = true
   private warningTimer: DelayedCallbackEvent | null = null
+  /** 5m-10 (M4): DrillController, called when the banner's warningShowSeconds are up. */
+  onWarningEnd: (() => void) | null = null
   private notice: SceneObject | null = null
   private noticeTimer: DelayedCallbackEvent | null = null
   private instructionId: Text | null = null
@@ -168,7 +170,10 @@ export class Hud extends BaseScriptComponent {
     this.buildBanner()
 
     this.warningTimer = this.createEvent("DelayedCallbackEvent")
-    this.warningTimer.bind(() => this.hideWarning())
+    this.warningTimer.bind(() => {
+      this.hideWarning()
+      if (this.onWarningEnd) this.onWarningEnd() // 5m-10 (M4)
+    })
     this.noticeTimer = this.createEvent("DelayedCallbackEvent")
     this.noticeTimer.bind(() => this.hideNotice())
 

@@ -1,6 +1,6 @@
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
-import {clipToRoom, dangerRect, FOOTPRINTS, insideRect, Layout, LayoutItem} from "./LayoutGenerator"
+import {FOOTPRINTS, insideRect, Layout, LayoutItem, zoneRect} from "./LayoutGenerator"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
 import {createLightBacking, SOFT_BORDER_CM, SOFT_RED, SoftFrame} from "./UiBacking"
 
@@ -129,7 +129,7 @@ export class DangerZone extends BaseScriptComponent {
   captureRest(room?: SceneObject, layout?: Layout | null): void {
     const at = layout ? layout.items[this.item] : undefined
     if (room && layout && at && this.visual) {
-      const r = clipToRoom(dangerRect(this.item, at, this.config.dangerMargin, this.config.tvDangerFront), layout.room)
+      const r = zoneRect(this.item, layout.items, layout.room, this.config.dangerMargin, this.config.tvDangerFront) // 5m-10 (M2): drawn = drains
       const rt = room.getTransform()
       const c = rt.getWorldTransform().multiplyPoint(new vec3(r.x, 0, r.z))
       const vt = this.visual.getTransform()

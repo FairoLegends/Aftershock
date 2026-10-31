@@ -105,6 +105,7 @@ const CHAIR_TABLE_REACH = 150 // cm: a chair faces a table whose center is this 
 const RELAX = 60 // cm: a wall item's max distance grows to reach its wall's center line + this
 
 // Slice 11 room rules (ENGINEERING_PLAN §5l item 7b–e). Not drill tunables.
+export const BED_WALL_SLACK = 1 // cm: a bed footprint within WALL_GAP + this of a wall is against it (5m-10 M3)
 export const BED_WALKWAY = 60 // cm kept free of footprints and danger zones beside each long side not on a wall
 export const BED_TABLE_GAP = 100 // cm: least distance from a table's footprint to the bed's
 export const TV_BED_GAP = 150 // cm: least distance from the TV's footprint to the bed's
@@ -408,6 +409,60 @@ export function clipToRoom(r: Rect, room: RoomRect): Rect {
   return {x: (minX + maxX) / 2, z: (minZ + maxZ) / 2, yaw: r.yaw, hx: turned ? hz : hx, hz: turned ? hx : hz}
 }
 
+/**
+ * 5m-10 (M2): the zone the game draws and drains health in (DangerZone) and the
+ * walkway rule tests: dangerRect, cut on the bed side for a bedside lamp
+ * (clipToBedWalkway), then cut to the walls.
+ */
+export function zoneRect(item: LayoutItem, items: Partial<Record<LayoutItem, Placement>>, room: RoomRect, margin: number, tvFront: number): Rect {
+  return clipToRoom(clipToBedWalkway(dangerRect(item, items[item] as Placement, margin, tvFront), item, items), room)
+}
+
+/**
+ * 5m-10 (M2): a bedside lamp's (5l-7c) room-aligned zone `r` cut on the bed side
+ * so it ends at the bed walkway's outer edge (5l-7b), bed-local
+ * |x| = halfX + BED_WALKWAY. Any other item's rect comes back as is.
+ */
+export function clipToBedWalkway(r: Rect, item: LayoutItem, items: Partial<Record<LayoutItem, Placement>>): Rect {
+  const bed = items.bed
+  const lamp = items.lamp
+  if (item !== "lamp" || !bed || !lamp || !isLampByBed(items)) {
+    return r
+  }
+  const c = Math.cos(bed.yaw)
+  const s = Math.sin(bed.yaw)
+  const side = (lamp.x - bed.x) * c - (lamp.z - bed.z) * s >= 0 ? 1 : -1 // the lamp's side, bed-local X
+  const reach = FOOTPRINTS.bed.halfX + BED_WALKWAY
+  const onX = Math.abs(c) > 0.5 // the bed's X runs along room X (beds are square to the walls)
+  const keepAbove = (onX ? c : -s) * side > 0
+  const line = onX ? bed.x + side * reach * c : bed.z - side * reach * s
+  const turned = Math.abs(Math.sin(r.yaw)) > 0.5 // local X runs along room Z
+  const ex = turned ? r.hz : r.hx
+  const ez = turned ? r.hx : r.hz
+  const mid = onX ? r.x : r.z
+  const half = onX ? ex : ez
+  let lo = mid - half
+  let hi = mid + half
+  if (keepAbove) lo = Math.min(hi, Math.max(lo, line))
+  else hi = Math.max(lo, Math.min(hi, line))
+  const nx = onX ? (hi - lo) / 2 : ex
+  const nz = onX ? ez : (hi - lo) / 2
+  return {x: onX ? (lo + hi) / 2 : r.x, z: onX ? r.z : (lo + hi) / 2, yaw: r.yaw, hx: turned ? nz : nx, hz: turned ? nx : nz}
+}
+
+/** 5m-10 (M3): every wall the bed's footprint is against: its head wall and, for a corner bed, the long-side wall (5l-7b). */
+export function bedWalls(bed: Placement | undefined, room: RoomRect): WallSide[] {
+  if (!bed) {
+    return []
+  }
+  const r = footRect("bed", bed, 0)
+  return WALL_SIDES.filter((w) => {
+    const alongX = w === "+x" || w === "-x"
+    const gap = Math.abs((alongX ? r.x : r.z) - wallLine(room, w)) - projectedHalf(r, alongX ? 1 : 0, alongX ? 0 : 1)
+    return gap <= WALL_GAP + BED_WALL_SLACK
+  })
+}
+
 /** The room: each side ROOM_SIDE_MIN..MAX, the start spot (origin) startClearRadius + START_WALL_CLEAR from every wall. */
 function drawRoom(random: () => number, p: LayoutParams): RoomRect {
   const c = p.startClearRadius + START_WALL_CLEAR
@@ -478,7 +533,8 @@ function drawItem(
   p: LayoutParams
 ): Spot | null {
   if (WALL_BACKED.indexOf(item) >= 0) {
-    return drawOnWall(random, item, room, p, item === "tv" ? walls.bed : undefined) // 5l-7d: never on the bed's wall
+    const avoid = item === "tv" ? bedWalls(items.bed, room).concat(walls.bed ? [walls.bed] : []) : []
+    return drawOnWall(random, item, room, p, avoid) // 5l-7d, 5m-10 (M3): never on a wall the bed touches
   }
   if (isTable(item)) {
     const at = draw(random, item, p.tableDistanceMin, p.tableDistanceMax)
@@ -500,9 +556,9 @@ function drawItem(
  * hazardDistanceMin..max from the start spot, where max is hazardDistanceMax or,
  * when that cannot reach this wall, the wall's center-line distance + RELAX.
  */
-function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams, avoid?: WallSide): Spot | null {
+function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams, avoid: WallSide[] = []): Spot | null {
   const f = FOOTPRINTS[item]
-  const sides = WALL_SIDES.filter((w) => w !== avoid)
+  const sides = WALL_SIDES.filter((w) => avoid.indexOf(w) < 0)
   const side = sides[Math.floor(random() * sides.length)]
   const front = wallFronts(item)[0]
   const sideways = Math.abs(Math.sin(front)) > 0.5 // front along the item's X
@@ -747,8 +803,9 @@ function walkwaysClear(items: Partial<Record<LayoutItem, Placement>>, present: L
   const bedside = lampByBed && isLampByBed(items)
   for (const strip of strips) {
     for (const other of present) {
-      if (other === "bed" || (other === "lamp" && bedside)) continue
-      if (overlaps(strip, rectOf(items, other, 0)) || (isHazard(other) && overlaps(strip, zoneOf(items, other, p)))) return false
+      if (other === "bed") continue
+      if (!(other === "lamp" && bedside) && overlaps(strip, rectOf(items, other, 0))) return false // the bedside lamp stands just past it
+      if (isHazard(other) && overlaps(strip, clipToBedWalkway(zoneOf(items, other, p), other, items))) return false // 5m-10 (M2): its zone ends at the walkway
     }
   }
   return true

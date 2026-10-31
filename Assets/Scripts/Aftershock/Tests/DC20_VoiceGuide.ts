@@ -6,6 +6,8 @@ import {VoiceGuide, VoiceLine} from "../VoiceGuide"
 import {atHeight, CLASSIC, expectState, getController, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 const SETTLE_MS = 150
+const POLL_MS = 10 // 5m-10 (M4): the panel-shown poll
+const GO_UNDER_MAX_SECONDS = 0.3 // 5m-10 (M4): instr.goUnder within this of the panel showing
 
 /** The last line with `key` said after `t` (s), or null. */
 function lineSince(vg: VoiceGuide, key: StringKey, t: number): VoiceLine | null {
@@ -143,6 +145,24 @@ export class DC20_VoiceGuide extends Scenario {
       await expectState(c, "QUAKE", (c.config.testWaitSeconds + c.config.testScanSeconds + 2) * 1000)
       expect(await waitFor(() => lastKey(vg) === "warn.quake" && vg.lastSaid.time > tBriefJa, 2000)).toBe(true)
       expect(vg.lastSaid.lang).toBe("ja")
+      // 5m-10 (M4): the banner hides and the panel shows (warningShowSeconds);
+      // at that moment warn.quake is no longer playing and instr.goUnder starts
+      // within GO_UNDER_MAX_SECONDS of it, in ja.
+      expect(c.hud.isPanelShown).toBe(false)
+      const panelBy = getTime() + c.config.warningShowSeconds + 2
+      while (!c.hud.isPanelShown && getTime() < panelBy) {
+        await sleep(POLL_MS)
+      }
+      const panelAt = getTime()
+      expect(c.hud.isPanelShown).toBe(true)
+      const warnOn = vg.isSpeaking && lastKey(vg) === "warn.quake"
+      expect(warnOn).toBe(false)
+      expect(await waitFor(() => lineSince(vg, "instr.goUnder", tBriefJa) !== null, GO_UNDER_MAX_SECONDS * 1000 + 500)).toBe(true)
+      const goUnder = lineSince(vg, "instr.goUnder", tBriefJa)
+      const delay = goUnder.time - panelAt
+      console.log(`[Aftershock] DC20: ja instr.goUnder ${delay.toFixed(3)} s after the panel showed; warn.quake playing then: ${warnOn}`)
+      expect(Math.abs(delay) <= GO_UNDER_MAX_SECONDS).toBe(true)
+      expect(goUnder.lang).toBe("ja")
     } finally {
       c.headPose.clearOverride()
       if (c.language !== "id") {

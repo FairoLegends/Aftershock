@@ -1,5 +1,5 @@
 import {DrillConfig} from "./DrillConfig"
-import {FOOTPRINTS, LayoutItem} from "./LayoutGenerator"
+import {FOOTPRINTS, LayoutItem, RoomRect} from "./LayoutGenerator"
 import {getLanguage, hazardFontFor, lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
 import {createRoundRect, SOFT_GREEN, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
 
@@ -53,12 +53,20 @@ interface ItemBox {
 let ctxConfig: DrillConfig | null = null
 let ctxHead: HeadLike | null = null
 let ctxFloorY = 0
+let ctxRoom: SceneObject | null = null
+let ctxRoomRect: (() => RoomRect | null) | null = null
 
 /** DrillController registers the tunables, the head and the floor height (cm, world) once at start (5m-3). */
 export function setLabelContext(config: DrillConfig, head: HeadLike, floorY: number): void {
   ctxConfig = config
   ctxHead = head
   ctxFloorY = floorY
+}
+
+/** 5m-10 (M1): the Room and its current rect (Room-local cm), so a label beside its item stays inside the walls. */
+export function setLabelRoom(room: SceneObject, rect: () => RoomRect | null): void {
+  ctxRoom = room
+  ctxRoomRect = rect
 }
 
 /**
@@ -205,6 +213,10 @@ export class HazardLabel extends BaseScriptComponent {
   }
   get isCollapsed(): boolean {
     return this._collapsed
+  }
+  /** 5m-10 (M1): measured on its model and placed beside it on the wall (5m-8a). */
+  get isBeside(): boolean {
+    return this.beside && this.box !== null
   }
 
   /**
@@ -396,6 +408,29 @@ export class HazardLabel extends BaseScriptComponent {
       frontReach: Math.abs(fx) * fp.halfX + Math.abs(fz) * fp.halfZ
     }
     this.beside = this.box.top + c.labelGapCm + (this.fullH * c.labelEmMaxCm) / 2 > c.labelMaxCenterCm
+    const b = this.box
+    if (this.beside && !this.besideInRoom(c, b)) {
+      b.sideX = -b.sideX // 5m-10 (M1): the head side would reach into a wall
+      b.sideZ = -b.sideZ
+      if (!this.besideInRoom(c, b)) {
+        b.sideX = -b.sideX // neither side fits: keep the head side
+        b.sideZ = -b.sideZ
+      }
+    }
+  }
+
+  /** 5m-10 (M1): whether the full label at labelEmMaxCm, beside the item on b's side, stays inside the room's walls. */
+  private besideInRoom(c: DrillConfig, b: ItemBox): boolean {
+    const anchor = this.sceneObject.getParent()
+    const rect = ctxRoomRect ? ctxRoomRect() : null
+    if (!anchor || !ctxRoom || !rect) {
+      return true
+    }
+    const r = b.sideReach + c.labelGapCm + this.fullW * c.labelEmMaxCm // the label's far edge
+    const at = anchor.getTransform()
+    const p = at.getWorldPosition().add(at.getWorldRotation().multiplyVec3(new vec3(b.sideX * r + b.frontX * b.frontReach, 0, b.sideZ * r + b.frontZ * b.frontReach)))
+    const q = ctxRoom.getTransform().getInvertedWorldTransform().multiplyPoint(p)
+    return q.x >= rect.minX && q.x <= rect.maxX && q.z >= rect.minZ && q.z <= rect.maxZ
   }
 
   /** Hazards: the ⚠ (unit height, centered); safe zone and door: a unit dot. applyCollapse scales it. */

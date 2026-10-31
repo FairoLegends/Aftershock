@@ -3,6 +3,7 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {DrillController} from "../DrillController"
 import {HazardLabel} from "../HazardLabel"
+import {FOOTPRINTS} from "../LayoutGenerator"
 import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
 
 const SAMPLE_MS = 50
@@ -16,6 +17,11 @@ const SETTLE_MS = 300
 const REACT_MS = 1000
 const DOWN_DEG = 35 // 5m-9: the head looks this far down at the table at the quake start
 const BANNER_SLACK_DEG = 6 // 5m-9: the banner center within warnAboveGazeDeg + this of the head's forward
+// 5m-10 (M1): the widest hazard label, in em (HazardLabel's layout: ⚠ 1.5 × 1.155 + ICON_GAP 0.4 + INNER_W 13.6 + SLACK 0.12 + 2 × PAD_X 0.64), halved
+const LABEL_MAX_HALF_W_EM = (1.5 * 1.155 + 0.4 + 13.6 + 0.12 + 2 * 0.64) / 2
+const POS_TOL_CM = 1 // the label is placed with the previous frame's em
+const FAR_MIN_CM = 175 // the window look-away spot: still beyond labelNearCm
+const FAR_STEP_CM = 25
 
 // DC23 (Slice 12, ENGINEERING_PLAN 5m): the warning banner and the HUD panel
 // take turns at quake and aftershock start (5m-1); a notice shows inside the
@@ -23,6 +29,7 @@ const BANNER_SLACK_DEG = 6 // 5m-9: the banner center within warnAboveGazeDeg + 
 // light (5m-3); Normal collapses hazard labels to the ⚠ until looked at,
 // Easy keeps them full, Hard has none (5m-4).
 // 5m-9: the banner follows the head's pitch (looking down at the table, it is in view).
+// 5m-10 (M1): the window label sits beside the frame, inside the room, and collapses with risotto.
 @component
 export class DC23_DesignPass extends Scenario {
   async run(): Promise<void> {
@@ -67,6 +74,35 @@ export class DC23_DesignPass extends Scenario {
       await sleep(SETTLE_MS)
       expect(await waitFor(() => aimThen(c, far, label, OFF_DEG, () => label.isCollapsed), REACT_MS)).toBe(true)
       expect(await waitFor(() => aimThen(c, far, label, c.config.labelFocusDeg / 2, () => !label.isCollapsed), REACT_MS)).toBe(true)
+
+      // 5m-10 (M1): the window label is measured on its GlassPane and sits
+      // beside it: along the anchor's side axis, past the pane's half-width +
+      // labelGapCm, no farther than that + the widest label's half at
+      // labelEmMaxCm; centered at most labelBesideCenterCm high; inside the
+      // room. Risotto collapses and expands it as the cabinet's above.
+      expect(!!(c.layout && c.layout.items.glass)).toBe(true)
+      const glass = c.glassLabel
+      expect(glass.isShown).toBe(true)
+      const anchor = glass.getSceneObject().getParent()
+      const pane = anchor ? childNamed(anchor, "GlassPane") : null
+      expect(!!pane).toBe(true)
+      expect(glass.isBeside).toBe(true)
+      const g = labelPosition(glass)
+      const side = anchor.getTransform().getWorldRotation().multiplyVec3(vec3.right())
+      const lateral = Math.abs(g.sub(pane.getTransform().getWorldPosition()).dot(side))
+      const edge = FOOTPRINTS.glass.halfX + c.config.labelGapCm
+      console.log(`[Aftershock] DC23: window label ${lateral.toFixed(1)} cm beside the pane center (frame edge + gap ${edge} cm), ${(g.y - c.floorY).toFixed(1)} cm high`)
+      expect(lateral > edge).toBe(true)
+      expect(lateral <= edge + LABEL_MAX_HALF_W_EM * c.config.labelEmMaxCm + POS_TOL_CM).toBe(true)
+      expect(g.y - c.floorY <= c.config.labelBesideCenterCm + POS_TOL_CM).toBe(true)
+      expect(isInsideRoom(c, g)).toBe(true)
+      const awayG = levelLook(start, g)
+      const farG = insideBack(c, g, awayG)
+      expect(farG !== null).toBe(true)
+      aim(c, farG, glass, OFF_DEG)
+      await sleep(SETTLE_MS)
+      expect(await waitFor(() => aimThen(c, farG, glass, OFF_DEG, () => glass.isCollapsed), REACT_MS)).toBe(true)
+      expect(await waitFor(() => aimThen(c, farG, glass, c.config.labelFocusDeg / 2, () => !glass.isCollapsed), REACT_MS)).toBe(true)
 
       // Aftershock start: the banner again, then the panel.
       pinDucked(c)
@@ -199,6 +235,25 @@ function isInsideRoom(c: DrillController, at: vec3): boolean {
   const r = c.layout ? c.layout.room : null
   const q = c.room.getTransform().getInvertedWorldTransform().multiplyPoint(at)
   return !!r && q.x > r.minX && q.x < r.maxX && q.z > r.minZ && q.z < r.maxZ
+}
+
+/**
+ * 5m-10: FAR_CM back from `p` along -`away` (the start side), or the farthest
+ * point inside the room at least FAR_MIN_CM back; null if none.
+ */
+function insideBack(c: DrillController, p: vec3, away: vec3): vec3 | null {
+  for (let d = FAR_CM; d >= FAR_MIN_CM; d -= FAR_STEP_CM) {
+    const at = new vec3(p.x - away.x * d, p.y, p.z - away.z * d)
+    if (isInsideRoom(c, at)) return at
+  }
+  return null
+}
+
+function childNamed(so: SceneObject, name: string): SceneObject | null {
+  for (let i = 0; i < so.getChildrenCount(); i++) {
+    if (so.getChild(i).name === name) return so.getChild(i)
+  }
+  return null
 }
 
 function isUnder(so: SceneObject | null, root: SceneObject): boolean {
