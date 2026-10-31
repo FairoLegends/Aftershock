@@ -143,6 +143,63 @@ export class DrillConfig extends BaseScriptComponent {
   timerMode: string = "elapsed"
   @ui.group_end
 
+  @ui.group_start("HUD contrast (Slice 13A, ENGINEERING_PLAN 5m item 11)")
+  @input
+  @hint("Upcoming step number text (02, 03, 04). Bright and opaque: on the additive display a see-through white vanishes on the light backing.")
+  @widget(new ColorWidget())
+  hudStepNumberColor: vec4 = new vec4(1, 1, 1, 1)
+
+  @input
+  @hint("Upcoming step name text (Merunduk, Tahan, Keluar)")
+  @widget(new ColorWidget())
+  hudStepNameColor: vec4 = new vec4(1, 1, 1, 1)
+
+  @input
+  @hint("Done step number and name text: green tinted, between the active step (green) and the upcoming ones")
+  @widget(new ColorWidget())
+  hudStepDoneColor: vec4 = new vec4(0.62, 0.94, 0.76, 1)
+
+  @input
+  @hint("Done step cell opacity (was 0.45)")
+  @widget(new SliderWidget(0, 1, 0.05))
+  hudStepDoneAlpha: number = 1
+
+  @input
+  @hint("Health and time labels (Nyawa, Waktu)")
+  @widget(new ColorWidget())
+  hudLabelColor: vec4 = new vec4(1, 1, 1, 1)
+
+  @input
+  @hint("Outline of the step and label texts. Dark only as a thin edge, never a panel or shadow (the display is additive).")
+  @widget(new ColorWidget())
+  hudSecondaryOutlineColor: vec4 = new vec4(0.12, 0.14, 0.18, 1)
+
+  @input
+  @hint("Outline strength of the step and label texts, 0 (none) to 1 (very strong)")
+  @widget(new SliderWidget(0, 1, 0.05))
+  hudSecondaryOutlineSize: number = 0.35
+
+  @input
+  @hint("Upcoming step cell fill. Light only: each of r, g, b at least 0.5.")
+  @widget(new ColorWidget())
+  hudStepFill: vec4 = new vec4(0.6, 0.66, 0.74, 0.35)
+
+  @input
+  @hint("Done step cell fill: pale green. Light only: each of r, g, b at least 0.5.")
+  @widget(new ColorWidget())
+  hudStepDoneFill: vec4 = new vec4(0.62, 0.94, 0.76, 0.2)
+
+  @input
+  @hint("Active step cell fill (green), with the green outline")
+  @widget(new ColorWidget())
+  hudStepOnFill: vec4 = new vec4(0.239, 0.863, 0.518, 0.22)
+
+  @input
+  @hint("Health bar track behind the fill. Light only.")
+  @widget(new ColorWidget())
+  hudBarTrack: vec4 = new vec4(1, 1, 1, 0.18)
+  @ui.group_end
+
   @ui.group_start("Room labels")
   @input
   @hint("A hazard label's bottom sits this far above its item's top (cm, 5m-3): over the wall or air, never over the wood")

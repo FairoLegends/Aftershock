@@ -87,14 +87,24 @@ export class DC23_DesignPass extends Scenario {
       const pane = anchor ? childNamed(anchor, "GlassPane") : null
       expect(!!pane).toBe(true)
       expect(glass.isBeside).toBe(true)
+      // Measured in the Room's current frame (its origin is on the floor): the
+      // quake moves and tilts the Room with the label in it, so world heights
+      // against the static floorY would measure the shake, not the placement.
       const g = labelPosition(glass)
-      const side = anchor.getTransform().getWorldRotation().multiplyVec3(vec3.right())
-      const lateral = Math.abs(g.sub(pane.getTransform().getWorldPosition()).dot(side))
+      const roomT = c.room.getTransform()
+      const toRoom = roomT.getInvertedWorldTransform()
+      const gR = toRoom.multiplyPoint(g)
+      const side = toRoom.multiplyDirection(anchor.getTransform().getWorldRotation().multiplyVec3(vec3.right())).normalize()
+      const lateral = Math.abs(gR.sub(toRoom.multiplyPoint(pane.getTransform().getWorldPosition())).dot(side))
       const edge = FOOTPRINTS.glass.halfX + c.config.labelGapCm
-      console.log(`[Aftershock] DC23: window label ${lateral.toFixed(1)} cm beside the pane center (frame edge + gap ${edge} cm), ${(g.y - c.floorY).toFixed(1)} cm high`)
+      const tiltDeg = (roomT.getWorldRotation().multiplyVec3(vec3.up()).angleTo(vec3.up()) * 180) / Math.PI
+      console.log(
+        `[Aftershock] DC23: window label ${lateral.toFixed(1)} cm beside the pane center (frame edge + gap ${edge} cm), ${gR.y.toFixed(1)} cm high in the room` +
+          ` (${(g.y - c.floorY).toFixed(1)} cm over the static floor; room origin ${(roomT.getWorldPosition().y - c.floorY).toFixed(2)} cm off it, tilt ${tiltDeg.toFixed(2)} deg)`
+      )
       expect(lateral > edge).toBe(true)
       expect(lateral <= edge + LABEL_MAX_HALF_W_EM * c.config.labelEmMaxCm + POS_TOL_CM).toBe(true)
-      expect(g.y - c.floorY <= c.config.labelBesideCenterCm + POS_TOL_CM).toBe(true)
+      expect(gR.y <= c.config.labelBesideCenterCm + POS_TOL_CM).toBe(true)
       expect(isInsideRoom(c, g)).toBe(true)
       const awayG = levelLook(start, g)
       const farG = insideBack(c, g, awayG)

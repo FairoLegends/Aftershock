@@ -23,6 +23,7 @@ import {DC20_VoiceGuide} from "./DC20_VoiceGuide"
 import {DC21_ChangeLanguage} from "./DC21_ChangeLanguage"
 import {DC22_GlassBreak} from "./DC22_GlassBreak"
 import {DC23_DesignPass} from "./DC23_DesignPass"
+import {DC24_HudContrast} from "./DC24_HudContrast"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -50,6 +51,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc20-voice-guide", typename: DC20_VoiceGuide.getTypeName()},
     {id: "dc21-change-language", typename: DC21_ChangeLanguage.getTypeName()},
     {id: "dc22-glass-break", typename: DC22_GlassBreak.getTypeName()},
-    {id: "dc23-design-pass", typename: DC23_DesignPass.getTypeName()}
+    {id: "dc23-design-pass", typename: DC23_DesignPass.getTypeName()},
+    {id: "dc24-hud-contrast", typename: DC24_HudContrast.getTypeName()}
   ]
 }

@@ -6,7 +6,6 @@ import {HeadPose} from "./HeadPose"
 import {getLanguage, latinFont, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
 import {
   drawOnTopWhenReady,
-  SOFT_DIM,
   SOFT_GREEN,
   SOFT_PANEL_RADIUS_CM,
   SOFT_RED,
@@ -58,20 +57,17 @@ const STEP_NAME_MIN_EM = 1.3
 const STEP_NAME_TOP = STEP_NUMBER_Y - STEP_NUMBER_H / 2 - 0.3
 const STEP_NAME_BOTTOM = -STEP_H / 2 + STEP_PAD
 const LINE_H_PER_EM = 1.25 // as ResultPanel
-const STEP_DONE_ALPHA = 0.45
 const STEP_TEXT_Z = 0.1
-const STEP_FILL = new vec4(1, 1, 1, 0.06)
-const STEP_ON_FILL = new vec4(0.239, 0.863, 0.518, 0.22)
 const STEP_ON_BORDER_CM = 0.18
-const STEP_DONE = new vec4(1, 1, 1, STEP_DONE_ALPHA)
+// Slice 13A: the step fills, the done opacity, the step and label text colors
+// and the bar track are DrillConfig tunables (HUD contrast group).
 
 // 5m-2: a notice takes the step row's place inside the panel, on a soft red
-// tint (red at the active step's 22%, red outline), so it is never a second panel.
-const NOTICE_FILL = new vec4(SOFT_RED.x, SOFT_RED.y, SOFT_RED.z, STEP_ON_FILL.w)
+// tint (red at 22%, red outline), so it is never a second panel.
+const NOTICE_FILL = new vec4(SOFT_RED.x, SOFT_RED.y, SOFT_RED.z, 0.22)
 const NOTICE_TEXT_W = INNER_W - STEP_PAD * 2
 
-// Health: one rounded bar (mockup .bar): track white 18%, fill white, red below healthAlarmBelow.
-const BAR_TRACK = new vec4(1, 1, 1, 0.18)
+// Health: one rounded bar (mockup .bar): track DrillConfig.hudBarTrack, fill white, red below healthAlarmBelow.
 
 /** Height of the HUD panel backing (cm): the instruction area and the health/timer row (buildPanel). */
 export const HUD_PANEL_HEIGHT = PAD * 2 + INSTR_ID_H + ROW_GAP + ROW_H
@@ -280,20 +276,25 @@ export class Hud extends BaseScriptComponent {
     this._instructionKey = key
   }
 
-  /** Active: green fill 22%, green outline, green number. Done: 45%, number dimmed. Upcoming: plain. */
+  /**
+   * Active: hudStepOnFill, green outline, green number. Done: hudStepDoneFill at
+   * hudStepDoneAlpha, hudStepDoneColor text. Upcoming: hudStepFill, hudStepNumberColor
+   * and hudStepNameColor (Slice 13A: opaque, never a dark fill).
+   */
   private setSteps(active: number): void {
+    const cfg = this.config
     for (let i = 0; i < STEP_KEYS.length; i++) {
       const frame = this.stepFrames[i]
       const done = i < active
       const on = i === active
       setLineText(this.stepNames[i], lines(STEP_KEYS[i]).primary, getLanguage())
       this.fitStepName(i)
-      frame.setFill(on ? STEP_ON_FILL : STEP_FILL)
+      frame.setFill(on ? cfg.hudStepOnFill : done ? cfg.hudStepDoneFill : cfg.hudStepFill)
       frame.setBorder(on ? SOFT_GREEN : null, STEP_ON_BORDER_CM)
-      frame.setOpacity(done ? STEP_DONE_ALPHA : 1)
-      // The Manrope subset has no ✓, so a done step shows its number only, dimmed.
-      this.stepNumbers[i].textFill.color = on ? SOFT_GREEN : done ? STEP_DONE : SOFT_DIM
-      this.stepNames[i].textFill.color = done ? STEP_DONE : SOFT_WHITE
+      frame.setOpacity(done ? cfg.hudStepDoneAlpha : 1)
+      // The Manrope subset has no ✓, so a done step shows its number only, in the done color.
+      this.stepNumbers[i].textFill.color = on ? SOFT_GREEN : done ? cfg.hudStepDoneColor : cfg.hudStepNumberColor
+      this.stepNames[i].textFill.color = done ? cfg.hudStepDoneColor : cfg.hudStepNameColor
     }
   }
 
@@ -545,7 +546,7 @@ export class Hud extends BaseScriptComponent {
     const barItem = bar.createComponent(FlexItem.getTypeName()) as FlexItem
     barItem.overrideWidth = BAR_W
     barItem.overrideHeight = BAR_H
-    const track = new SoftFrame(bar, BAR_TRACK, BAR_H / 2, null, "Track")
+    const track = new SoftFrame(bar, this.config.hudBarTrack, BAR_H / 2, null, "Track")
     track.setSize(BAR_W, BAR_H)
     this.barFill = new SoftFrame(bar, this.barColor, BAR_H / 2, null, "Fill")
     this.barFill.setSize(BAR_W, BAR_H)
@@ -567,12 +568,12 @@ export class Hud extends BaseScriptComponent {
     for (let i = 0; i < STEP_KEYS.length; i++) {
       const cell = this.child(root, "Step" + (i + 1))
       cell.getTransform().setLocalPosition(new vec3(-INNER_W / 2 + STEP_W / 2 + i * (STEP_W + STEP_GAP), 0, 0))
-      const frame = new SoftFrame(cell, STEP_FILL, STEP_RADIUS_CM, null)
+      const frame = new SoftFrame(cell, this.config.hudStepFill, STEP_RADIUS_CM, null)
       frame.setSize(STEP_W, STEP_H)
       this.stepFrames.push(frame)
       const n = this.stepText(cell, "Step" + (i + 1) + ".number", STEP_NUMBER_EM, STEP_NUMBER_Y + STEP_NUMBER_H / 2, STEP_NUMBER_Y - STEP_NUMBER_H / 2)
       n.text = "0" + (i + 1)
-      n.textFill.color = SOFT_DIM
+      n.textFill.color = this.config.hudStepNumberColor
       this.stepNumbers.push(n)
       const name = this.stepText(cell, "Step" + (i + 1) + ".name", STEP_NAME_EM, STEP_NAME_TOP, STEP_NAME_BOTTOM)
       name.verticalAlignment = VerticalAlignment.Center // one- and two-line names sit alike in the two-line slot
@@ -589,12 +590,8 @@ export class Hud extends BaseScriptComponent {
     t.size = emCm * SIZE_PER_CM
     ;(t as Text & {weight?: number}).weight = 700
     t.depthTest = true
-    t.textFill.color = SOFT_WHITE
-    if (this.textOutlineSize > 0) {
-      t.outlineSettings.enabled = true
-      t.outlineSettings.size = this.textOutlineSize
-      t.outlineSettings.fill.color = this.textOutlineColor
-    }
+    t.textFill.color = this.config.hudStepNameColor
+    this.secondaryOutline(t)
     t.horizontalAlignment = HorizontalAlignment.Center
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Wrap
@@ -675,7 +672,7 @@ export class Hud extends BaseScriptComponent {
     return t
   }
 
-  /** Small dimmed label (hud.health, hud.time); its English line is collapsed. */
+  /** Small label (hud.health, hud.time) in hudLabelColor; its English line is collapsed. */
   private addLabel(parent: SceneObject, name: string, key: StringKey): void {
     const so = this.child(parent, name)
     const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
@@ -683,11 +680,22 @@ export class Hud extends BaseScriptComponent {
     item.overrideHeight = LABEL_H
     const flex = this.column(so, 0, 0)
     flex.width = LABEL_W
-    const primary = this.addText(so, name + ".id", "", SMALL_EM_CM, LABEL_W, LABEL_H, SOFT_DIM, false)
-    const secondary = this.addText(so, name + ".en", "", SMALL_EM_CM, LABEL_W, HIDDEN_H, SOFT_DIM, false)
+    const color = this.config.hudLabelColor
+    const primary = this.addText(so, name + ".id", "", SMALL_EM_CM, LABEL_W, LABEL_H, color, false)
+    const secondary = this.addText(so, name + ".en", "", SMALL_EM_CM, LABEL_W, HIDDEN_H, color, false)
+    this.secondaryOutline(primary)
+    this.secondaryOutline(secondary)
     primary.horizontalOverflow = HorizontalOverflow.Shrink // 5j-12 defect 4: never wider than its column
     secondary.horizontalOverflow = HorizontalOverflow.Shrink
     this.addPair(key, primary, secondary)
+  }
+
+  /** Slice 13A: the step and label texts' thin outline (hudSecondaryOutlineColor / Size); never a dark panel. */
+  private secondaryOutline(t: Text): void {
+    const size = this.config.hudSecondaryOutlineSize
+    t.outlineSettings.enabled = size > 0
+    t.outlineSettings.size = size
+    t.outlineSettings.fill.color = this.config.hudSecondaryOutlineColor
   }
 
   private column(so: SceneObject, gap: number, pad: number): FlexLayout {

@@ -71,8 +71,19 @@
     healthAlarmBelow: false
     healthDrainPerSecond: false
     healthStart: false
+    hudBarTrack: false
     hudBelowEye: false
     hudDistance: false
+    hudLabelColor: false
+    hudSecondaryOutlineColor: false
+    hudSecondaryOutlineSize: false
+    hudStepDoneAlpha: false
+    hudStepDoneColor: false
+    hudStepDoneFill: false
+    hudStepFill: false
+    hudStepNameColor: false
+    hudStepNumberColor: false
+    hudStepOnFill: false
     labelBackingAlpha: false
     labelBesideCenterCm: false
     labelDangerEmRatio: false
@@ -173,6 +184,17 @@
       resultBelowEye: !<float> 10.000000
       pinchGuardSeconds: 0.500000
       timerMode: elapsed
+      hudStepNumberColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      hudStepNameColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      hudStepDoneColor: !<Vec4> {x: 0.620000, y: 0.940000, z: 0.760000, w: 1.000000}
+      hudStepDoneAlpha: !<float> 1.000000
+      hudLabelColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+      hudSecondaryOutlineColor: !<Vec4> {x: 0.120000, y: 0.140000, z: 0.180000, w: 1.000000}
+      hudSecondaryOutlineSize: 0.350000
+      hudStepFill: !<Vec4> {x: 0.600000, y: 0.660000, z: 0.740000, w: 0.350000}
+      hudStepDoneFill: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 0.100000}
+      hudStepOnFill: !<Vec4> {x: 0.239000, y: 0.863000, z: 0.518000, w: 0.220000}
+      hudBarTrack: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.180000}
       labelGapCm: !<float> 10.000000
       labelMaxCenterCm: !<float> 205.000000
       labelBesideCenterCm: !<float> 150.000000
@@ -295,6 +317,19 @@
     - '// @input float resultBelowEye = 10 {"hint":"Result / game-over panel center sits this far below eye level (cm). Smaller than hudBelowEye so the taller panel, Restart included, stays in view with the head level (ENGINEERING_PLAN 5i item 4)."}'
     - '// @input float pinchGuardSeconds = 0.5 {"hint":"A newly shown panel ignores button presses for this long, in seconds (ENGINEERING_PLAN 5h item 1)"}'
     - '// @input string timerMode = "elapsed" {"hint":"Timer shows elapsed time since the quake started (learner, Q3)", "widget":"combobox", "values":[{"label":"Elapsed", "value":"elapsed"}]}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"HUD contrast (Slice 13A, ENGINEERING_PLAN 5m item 11)"}'
+    - '// @input vec4 hudStepNumberColor = {1,1,1,1} {"hint":"Upcoming step number text (02, 03, 04). Bright and opaque: on the additive display a see-through white vanishes on the light backing.", "widget":"color"}'
+    - '// @input vec4 hudStepNameColor = {1,1,1,1} {"hint":"Upcoming step name text (Merunduk, Tahan, Keluar)", "widget":"color"}'
+    - '// @input vec4 hudStepDoneColor = {0.62,0.94,0.76,1} {"hint":"Done step number and name text: green tinted, between the active step (green) and the upcoming ones", "widget":"color"}'
+    - '// @input float hudStepDoneAlpha = 1 {"hint":"Done step cell opacity (was 0.45)", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - '// @input vec4 hudLabelColor = {1,1,1,1} {"hint":"Health and time labels (Nyawa, Waktu)", "widget":"color"}'
+    - '// @input vec4 hudSecondaryOutlineColor = {0.12,0.14,0.18,1} {"hint":"Outline of the step and label texts. Dark only as a thin edge, never a panel or shadow (the display is additive).", "widget":"color"}'
+    - '// @input float hudSecondaryOutlineSize = 0.35 {"hint":"Outline strength of the step and label texts, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - '// @input vec4 hudStepFill = {0.6,0.66,0.74,0.35} {"hint":"Upcoming step cell fill. Light only: each of r, g, b at least 0.5.", "widget":"color"}'
+    - '// @input vec4 hudStepDoneFill = {0.239,0.863,0.518,0.1} {"hint":"Done step cell fill. Light only.", "widget":"color"}'
+    - '// @input vec4 hudStepOnFill = {0.239,0.863,0.518,0.22} {"hint":"Active step cell fill (green), with the green outline", "widget":"color"}'
+    - '// @input vec4 hudBarTrack = {1,1,1,0.18} {"hint":"Health bar track behind the fill. Light only.", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Room labels"}'
     - "// @input float labelGapCm = 10 {\"hint\":\"A hazard label's bottom sits this far above its item's top (cm, 5m-3): over the wall or air, never over the wood\"}"
