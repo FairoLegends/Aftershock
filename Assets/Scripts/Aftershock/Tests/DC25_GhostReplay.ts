@@ -1,8 +1,10 @@
 import {Scenario} from "Leaf.lspkg/Scenarios/scenario/Scenario"
 import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
+import {DrillConfig} from "../DrillConfig"
 import {DrillController} from "../DrillController"
-import {ReplaySample, ReplayTrack} from "../ReplayTrack"
+import {ReplayKind, ReplaySample, ReplayTrack} from "../ReplayTrack"
+import {ReplayView, SKIP_BUTTON_ASPECT} from "../ReplayView"
 import {atHeight, CLASSIC, doorPoint, expectState, getController, itemWorld, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 const SEED = 1155577471 // DC10's fixed layout
@@ -17,6 +19,8 @@ const LANDED_TOL_CM = 1
 const TIME_TOL_S = 0.3
 const POOL_MARK = 12 // ReplayView's marker pool
 const SIMPLIFY_CM = 8
+const SIZE_TOL_CM = 0.02 // Text.size may round to a whole number (0.5 / 43.886 cm)
+const LEGEND_ORDER: ReplayKind[] = ["landed", "cover", "hit"]
 
 // DC25 (Slice 13B, ENGINEERING_PLAN 5m item 12): the ghost replay.
 // (a) ReplayTrack alone: simplify keeps every inDanger change and drops close
@@ -28,7 +32,10 @@ const SIMPLIFY_CM = 8
 // and draws the trail (danger run red) with the right caption; it ends by
 // itself after replaySeconds + replayHoldSeconds; Lewati ends it at once;
 // Restart reaches LEVEL with the track cleared; a second drill's Change
-// language reaches LANGUAGE with the track cleared.
+// language reaches LANGUAGE with the track cleared. (d) Slice 13D (5m item
+// 14): the caption line, legend and Lewati sizes are the DrillConfig values;
+// the legend has one row per marker kind drawn (landed and cover give exactly
+// those two rows, only cover gives one) and the panel grows with it.
 @component
 export class DC25_GhostReplay extends Scenario {
   async run(): Promise<void> {
@@ -131,6 +138,12 @@ export class DC25_GhostReplay extends Scenario {
         const want = itemWorld(c, at.x, at.y, 0)
         expect(mark !== null && flat(mark, want) <= LANDED_TOL_CM).toBe(true)
       }
+      // (d) This drill drew landed and cover markers: their legend rows, and the sizes.
+      const drawnKinds = t.events.slice(0, POOL_MARK).map((e) => e.kind)
+      expect(drawnKinds.indexOf("landed") >= 0 && drawnKinds.indexOf("cover") >= 0).toBe(true)
+      expect(view.legendKeys.join()).toBe(legendFor(drawnKinds))
+      expectSizes(view, cfg)
+      console.log(`[Aftershock] DC25: legend ${view.legendKeys.join(", ")}, caption ${view.captionSize.x.toFixed(1)} x ${view.captionSize.y.toFixed(1)} cm`)
       expect(await waitFor(() => !view.isPlaying, (cfg.replayHoldSeconds + 1) * 1000)).toBe(true)
       const took = getTime() - started
       console.log(`[Aftershock] DC25: the replay ended after ${took.toFixed(2)} s (want ${cfg.replaySeconds + cfg.replayHoldSeconds})`)
@@ -146,6 +159,22 @@ export class DC25_GhostReplay extends Scenario {
       expect(view.isPlaying).toBe(false)
       expect(c.resultPanel.isShown).toBe(true)
       expect(c.state).toBe("RESULT")
+
+      // (d) Made-up tracks: landed + cover give exactly those two rows, only
+      // cover one, none no row; each row grows the panel. Stopped, not ended.
+      const toWorld = (x: number, z: number): vec3 => itemWorld(c, x, z, 0)
+      const floorY = itemWorld(c, 0, 0, 0).y
+      const heights: number[] = []
+      for (const kinds of [["landed", "cover"], ["cover"], []] as ReplayKind[][]) {
+        view.play(legendTrack(kinds), toWorld, floorY, "replay.danger", () => {})
+        expect(view.legendKeys.join()).toBe(kinds.map((k) => "replay.legend." + k).join())
+        expectSizes(view, cfg)
+        heights.push(view.captionSize.y)
+        view.stop()
+      }
+      expect(heights[0] > heights[1] && heights[1] > heights[2]).toBe(true)
+      expect(view.legendKeys.length).toBe(0)
+      expect(c.resultPanel.isShown).toBe(true)
 
       // Restart: LEVEL, the trail cleared.
       await press("RestartButton")
@@ -201,6 +230,31 @@ function expectCleared(c: DrillController): void {
 /** XZ distance. */
 function flat(a: vec3, b: vec3): number {
   return Math.hypot(a.x - b.x, a.z - b.z)
+}
+
+/** The legend keys ReplayView should show for the marker kinds drawn, in its order. */
+function legendFor(kinds: ReplayKind[]): string {
+  return LEGEND_ORDER.filter((k) => kinds.indexOf(k) >= 0)
+    .map((k) => "replay.legend." + k)
+    .join()
+}
+
+/** A 60 cm line with one event per kind in `kinds`. */
+function legendTrack(kinds: ReplayKind[]): ReplayTrack {
+  const t = new ReplayTrack()
+  t.addSample(0, 0, 0, false)
+  t.addSample(1, 60, 0, false)
+  kinds.forEach((k, i) => t.addEvent(0.2 + i * 0.2, 20 + i * 10, 0, k, k === "cover" ? null : "shelf"))
+  return t
+}
+
+/** Slice 13D: the caption line, legend and Lewati sizes are the DrillConfig values. */
+function expectSizes(view: ReplayView, cfg: DrillConfig): void {
+  expect(Math.abs(view.captionEmCm - cfg.replayCaptionEmCm) <= SIZE_TOL_CM).toBe(true)
+  expect(Math.abs(view.legendEmCm - cfg.replayLegendEmCm) <= SIZE_TOL_CM).toBe(true)
+  const b = view.skipButtonSize
+  expect(Math.abs(b.y - cfg.replaySkipButtonCm) < 1e-3).toBe(true)
+  expect(Math.abs(b.x - cfg.replaySkipButtonCm * SKIP_BUTTON_ASPECT) < 1e-3).toBe(true)
 }
 
 /** The largest XZ distance from a room-local point to the world polyline `path`. */

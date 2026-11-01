@@ -514,6 +514,18 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Landed, hit and cover marker size (cm)")
   replayMarkerCm: number = 18
+
+  @input
+  @hint("Replay caption line em size (cm, 5m-14: 1.5x the 13B line)")
+  replayCaptionEmCm: number = 1.5
+
+  @input
+  @hint("Replay legend rows (red ring / green ring / red dot) em size (cm)")
+  replayLegendEmCm: number = 1.2
+
+  @input
+  @hint("Replay Lewati button height (cm, width 3.2x; 5m-14: 1.5x the 13B button); its label em is 0.2x this")
+  replaySkipButtonCm: number = 7.5
   @ui.group_end
 
   @ui.group_start("Panel follow (Slice 13C, ENGINEERING_PLAN 5m item 13)")

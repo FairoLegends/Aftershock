@@ -111,14 +111,17 @@
     quakeWaitMax: false
     quakeWaitMin: false
     replayCaptionBelowEye: false
+    replayCaptionEmCm: false
     replayDotSpacingCm: false
     replayHoldSeconds: false
+    replayLegendEmCm: false
     replayLiftCm: false
     replayLineWidthCm: false
     replayMarkerCm: false
     replaySampleSeconds: false
     replaySeconds: false
     replaySimplifyCm: false
+    replaySkipButtonCm: false
     resultBelowEye: false
     safeHoldSeconds: false
     safeZoneMargin: false
@@ -280,6 +283,9 @@
       replayLiftCm: 0.500000
       replayDotSpacingCm: !<float> 30.000000
       replayMarkerCm: !<float> 18.000000
+      replayCaptionEmCm: 1.500000
+      replayLegendEmCm: 1.200000
+      replaySkipButtonCm: 7.500000
       panelFollowDeg: !<float> 25.000000
       panelFollowCm: !<float> 50.000000
       panelFollowSpeed: !<float> 3.000000
@@ -453,6 +459,9 @@
     - '// @input float replayLiftCm = 0.5 {"hint":"Trail and markers sit this far above the floor (cm), clear of z-fighting"}'
     - '// @input float replayDotSpacingCm = 30 {"hint":"A small dot on the trail every this many cm"}'
     - '// @input float replayMarkerCm = 18 {"hint":"Landed, hit and cover marker size (cm)"}'
+    - '// @input float replayCaptionEmCm = 1.5 {"hint":"Replay caption line em size (cm, 5m-14: 1.5x the 13B line)"}'
+    - '// @input float replayLegendEmCm = 1.2 {"hint":"Replay legend rows (red ring / green ring / red dot) em size (cm)"}'
+    - '// @input float replaySkipButtonCm = 7.5 {"hint":"Replay Lewati button height (cm, width 3.2x; 5m-14: 1.5x the 13B button); its label em is 0.2x this"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Panel follow (Slice 13C, ENGINEERING_PLAN 5m item 13)"}'
     - '// @input float panelFollowDeg = 25 {"hint":"Result, game-over and replay-caption panels stay put while the look is within this many degrees (yaw) of them"}'

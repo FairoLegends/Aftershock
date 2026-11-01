@@ -1753,6 +1753,9 @@
     replayLiftCm: true
     replayDotSpacingCm: true
     replayMarkerCm: true
+    replayCaptionEmCm: true
+    replayLegendEmCm: true
+    replaySkipButtonCm: true
     panelFollowDeg: true
     panelFollowCm: true
     panelFollowSpeed: true
@@ -1885,6 +1888,9 @@
       replayLiftCm: 0.500000
       replayDotSpacingCm: !<float> 30.000000
       replayMarkerCm: !<float> 18.000000
+      replayCaptionEmCm: 1.500000
+      replayLegendEmCm: 1.200000
+      replaySkipButtonCm: 7.500000
       panelFollowDeg: !<float> 25.000000
       panelFollowCm: !<float> 50.000000
       panelFollowSpeed: !<float> 3.000000

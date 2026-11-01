@@ -43,6 +43,9 @@ export type StringKey =
   | "replay.hit"
   | "replay.danger"
   | "replay.safe"
+  | "replay.legend.landed"
+  | "replay.legend.cover"
+  | "replay.legend.hit"
   | "over.why.danger"
   | "over.why.grip"
   | "label.danger"
@@ -266,6 +269,28 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "Dein Weg war sicher. Gut gemacht!",
     ja: "安全な道でした。よくできました！",
     zh: "你的路线很安全。做得好！"
+  },
+  // Slice 13D replay legend (5m item 14): de, ja, zh are the orchestrator's (default) translations.
+  "replay.legend.landed": {
+    id: "Lingkaran merah: benda jatuh di sini",
+    en: "Red ring: an item fell here",
+    de: "Roter Ring: Hier ist etwas heruntergefallen",
+    ja: "赤い輪：ここに物が落ちました",
+    zh: "红圈：物品掉落在这里"
+  },
+  "replay.legend.cover": {
+    id: "Lingkaran hijau: kamu berlindung di sini",
+    en: "Green ring: you took cover here",
+    de: "Grüner Ring: Hier bist du in Deckung gegangen",
+    ja: "緑の輪：ここで身を守りました",
+    zh: "绿圈：你在这里躲避"
+  },
+  "replay.legend.hit": {
+    id: "Titik merah: kamu terkena di sini",
+    en: "Red dot: you were hit here",
+    de: "Roter Punkt: Hier wurdest du getroffen",
+    ja: "赤い点：ここで当たりました",
+    zh: "红点：你在这里被砸中"
   },
   "over.why.danger": {
     id: "Kamu berdiri di dekat benda yang bisa jatuh",

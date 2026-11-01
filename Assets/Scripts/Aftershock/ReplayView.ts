@@ -3,7 +3,7 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {anchorInFront, faceHead, PanelFollow} from "./PanelFollow"
-import {ReplaySample, ReplayTrack} from "./ReplayTrack"
+import {ReplayKind, ReplaySample, ReplayTrack} from "./ReplayTrack"
 import {getLanguage, getString, onLanguageChanged, setLineText, StringKey} from "./Strings"
 import {createRoundRect, drawOnTopWhenReady, PinchGuard, SOFT_GREEN, SOFT_RED, SoftButton, SoftFrame} from "./UiBacking"
 
@@ -14,6 +14,8 @@ import {createRoundRect, drawOnTopWhenReady, PinchGuard, SOFT_GREEN, SOFT_RED, S
 // small light caption panel says one line and has a Lewati (skip) button. All
 // shapes are pooled: built parked and enabled once (a UI Kit shape makes its
 // visual on its own OnStartEvent), then hidden. Soft palette, never dark.
+// Slice 13D (5m item 14): the caption line and Lewati read 1.5x larger, and a
+// legend under the line explains each marker kind this replay draws.
 
 const FLAT = quat.angleAxis(-Math.PI / 2, vec3.right()) // rect face up on the floor
 const PARKED = new vec3(0, -100000, 0)
@@ -28,23 +30,43 @@ const DOT_PER_LINE = 1.5 // dot diameter as a multiple of the line width
 const HEAD_PER_LINE = 2.6
 const RING_CM = 2 // marker ring stroke
 const RING_FILL_ALPHA = 0.2
+const HIT_PER_MARK = 0.6 // a hit is a small solid dot
 const ORDER_SEG = 3 // after the danger zone fills (0), like the floor path
 const ORDER_DOT = 4
 const ORDER_MARK = 5
 const ORDER_HEAD = 6
 
-// Caption panel (cm at 110 cm), as CalibratePanel. Not drill tunables: they only shape this panel.
-const CAPTION_W = 42
-const PAD = 2.5
-const TEXT_H = 3
-const GAP = 1.6
-const BUTTON_W = 16
-const BUTTON_H = 5
-const CAPTION_H = PAD + TEXT_H + GAP + BUTTON_H + PAD
+// Caption panel (cm at hudDistance), as CalibratePanel. The text, legend and
+// Lewati sizes are DrillConfig tunables (Slice 13D); the panel grows to fit.
+const SIZE_PER_CM = 43.886 // Text.size / 43.886 = em-square in cm, as in Hud.ts
+const LINE_H_PER_EM = 1.25 // as ResultPanel
+const PAD = 3
+const GAP = 2
+const CAPTION_TEXT_EM = 29 // caption line box width, in caption em
+const LEGEND_TEXT_EM = 24 // legend line box width, in legend em
+const ROW_H_PER_EM = 1.8 // legend row pitch
+const SWATCH_PER_EM = 1.2 // legend swatch, drawn like its marker
+const SWATCH_GAP_EM = 0.6
+const SWATCH_RING = 0.16 // swatch ring stroke, as a share of the swatch
+export const SKIP_BUTTON_ASPECT = 3.2 // Lewati width / height
+const SKIP_LABEL_PER_H = 0.2 // Lewati label em / button height
 const CONTENT_Z = 0.6
 const BUTTON_LABEL_Z = 0.08
-const TEXT_SIZE = 44
 const CAPTION_FILL = new vec4(1, 1, 1, 0.25)
+
+// Slice 13D: one legend row per marker kind drawn, in this order.
+const LEGEND: {kind: ReplayKind; key: StringKey}[] = [
+  {kind: "landed", key: "replay.legend.landed"},
+  {kind: "cover", key: "replay.legend.cover"},
+  {kind: "hit", key: "replay.legend.hit"}
+]
+
+interface LegendRow {
+  kind: ReplayKind
+  key: StringKey
+  so: SceneObject
+  text: Text
+}
 
 interface Placed {
   start: number // arc length at the segment's first point (cm)
@@ -62,7 +84,13 @@ export class ReplayView {
   private readonly marks: RoundedRectangle[] = []
   private readonly head: RoundedRectangle
   private readonly caption: SceneObject
+  private readonly captionFrame: SoftFrame
+  private readonly captionW: number
   private readonly captionText: Text
+  private readonly legend: LegendRow[] = []
+  private readonly legendX: number
+  private readonly skipObject: SceneObject
+  private readonly skipKitButton: Button
   private readonly skipButton: SoftButton
   private readonly guard = new PinchGuard()
   private readonly follow = new PanelFollow() // Slice 13C: the caption
@@ -98,31 +126,56 @@ export class ReplayView {
     this.caption = global.scene.createSceneObject("ReplayCaption")
     this.caption.createComponent("Component.Canvas")
     this.caption.getTransform().setWorldPosition(PARKED)
-    new SoftFrame(this.caption, CAPTION_FILL).setSize(CAPTION_W, CAPTION_H)
+    this.captionFrame = new SoftFrame(this.caption, CAPTION_FILL)
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.caption)
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
-    this.captionText = this.addText(content, "ReplayCaptionText", CAPTION_W - PAD * 2, TEXT_H)
-    this.captionText.getSceneObject().getTransform().setLocalPosition(new vec3(0, CAPTION_H / 2 - PAD - TEXT_H / 2, 0))
+    const capEm = config.replayCaptionEmCm
+    const legendEm = config.replayLegendEmCm
+    const buttonH = config.replaySkipButtonCm
+    const buttonW = buttonH * SKIP_BUTTON_ASPECT
+    const sw = legendEm * SWATCH_PER_EM
+    const swGap = legendEm * SWATCH_GAP_EM
+    const legendTextW = legendEm * LEGEND_TEXT_EM
+    const legendW = sw + swGap + legendTextW
+    this.captionW = PAD * 2 + Math.max(capEm * CAPTION_TEXT_EM, legendW, buttonW)
+    this.captionText = this.addText(content, "ReplayCaptionText", capEm, this.captionW - PAD * 2, HorizontalAlignment.Center)
+
+    // Slice 13D: the legend rows (placed and shown by layoutCaption).
+    this.legendX = -legendW / 2
+    for (const l of LEGEND) {
+      const row = global.scene.createSceneObject("ReplayLegend." + l.kind)
+      row.setParent(content)
+      const swatch = global.scene.createSceneObject("Swatch")
+      swatch.setParent(row)
+      swatch.getTransform().setLocalPosition(new vec3(sw / 2, 0, 0))
+      styleMarker(createRoundRect(swatch, SOFT_RED, sw, sw, sw / 2), l.kind, sw, sw * SWATCH_RING)
+      const text = this.addText(row, "ReplayLegendText", legendEm, legendTextW, HorizontalAlignment.Left)
+      text.getSceneObject().getTransform().setLocalPosition(new vec3(sw + swGap + legendTextW / 2, 0, 0))
+      this.legend.push({kind: l.kind, key: l.key, so: row, text})
+    }
 
     const so = global.scene.createSceneObject("ReplaySkipButton")
     so.setParent(content)
-    so.getTransform().setLocalPosition(new vec3(0, -CAPTION_H / 2 + PAD + BUTTON_H / 2, 0))
+    this.skipObject = so
     const btn = so.createComponent(Button.getTypeName()) as Button
-    btn.size = new vec3(BUTTON_W, BUTTON_H, 1)
-    this.skipButton = new SoftButton(owner, btn, BUTTON_W, BUTTON_H, false, () => {
+    btn.size = new vec3(buttonW, buttonH, 1)
+    this.skipKitButton = btn
+    this.skipButton = new SoftButton(owner, btn, buttonW, buttonH, false, () => {
       if (this.guard.open) this.skip()
     })
     const label = global.scene.createSceneObject("ReplaySkipLabel")
     label.setParent(this.skipButton.face)
     label.getTransform().setLocalPosition(new vec3(0, 0, BUTTON_LABEL_Z))
-    const skipText = this.addText(label, "btn.skip", BUTTON_W - 1, BUTTON_H - 1)
+    const skipText = this.addText(label, "btn.skip", buttonH * SKIP_LABEL_PER_H, buttonW - 1, HorizontalAlignment.Center)
     const refresh = (): void => {
       setLineText(skipText, getString("btn.skip"), getLanguage())
       if (this._captionKey) setLineText(this.captionText, getString(this._captionKey), getLanguage())
+      for (const r of this.legend) setLineText(r.text, getString(r.key), getLanguage())
     }
     refresh()
     onLanguageChanged.add(refresh)
+    this.layoutCaption(LEGEND.map((l) => l.kind)) // all rows on while parked, so their swatches start
 
     this.update = owner.createEvent("UpdateEvent")
     this.update.bind(() => this.onUpdate())
@@ -150,6 +203,26 @@ export class ReplayView {
   }
   get captionLine(): string {
     return this.captionText.text
+  }
+  /** Slice 13D: the caption line's em (cm). */
+  get captionEmCm(): number {
+    return this.captionText.size / SIZE_PER_CM
+  }
+  /** Slice 13D: the legend lines' em (cm). */
+  get legendEmCm(): number {
+    return this.legend[0].text.size / SIZE_PER_CM
+  }
+  /** Slice 13D: the legend rows shown, in order (empty when not playing). */
+  get legendKeys(): StringKey[] {
+    return this.isPlaying ? this.legend.filter((r) => r.so.enabled).map((r) => r.key) : []
+  }
+  /** Slice 13D: the Lewati button's size (cm). */
+  get skipButtonSize(): vec2 {
+    return new vec2(this.skipKitButton.size.x, this.skipKitButton.size.y)
+  }
+  /** Slice 13D: the caption panel's size (cm). */
+  get captionSize(): vec2 {
+    return new vec2(this.captionFrame.width, this.captionFrame.height)
   }
   /** Slice 13C: the caption's world position and rotation (follows the head). */
   get captionPosition(): vec3 {
@@ -238,20 +311,13 @@ export class ReplayView {
     const m = this.config.replayMarkerCm
     events.forEach((e, i) => {
       const r = this.marks[i]
-      const hit = e.kind === "hit"
-      const color = e.kind === "cover" ? SOFT_GREEN : SOFT_RED
-      const size = hit ? m * 0.6 : m
-      r.size = new vec2(size, size)
-      r.cornerRadius = size / 2
-      r.backgroundColor = hit ? color : new vec4(color.x, color.y, color.z, RING_FILL_ALPHA)
-      r.border = true
-      r.borderColor = hit ? DOT_COLOR : color
-      r.borderSize = hit ? RING_CM / 2 : RING_CM
+      styleMarker(r, e.kind, m, RING_CM)
       r.getSceneObject().getTransform().setWorldPosition(this.world(e.x, e.z))
       this.markAt.push(this.arcAtTime(e.t))
     })
     this._captionKey = key
     setLineText(this.captionText, getString(key), getLanguage())
+    this.layoutCaption(events.map((e) => e.kind))
     this.onDone = onDone
     this.placeCaption()
     this.caption.enabled = true
@@ -368,6 +434,26 @@ export class ReplayView {
     t.setWorldRotation(faceHead(at, head))
   }
 
+  /** Slice 13D: the caption line, a legend row per kind in `kinds`, then Lewati; the panel grows to fit. */
+  private layoutCaption(kinds: readonly ReplayKind[]): void {
+    const c = this.config
+    const capH = c.replayCaptionEmCm * LINE_H_PER_EM
+    const rowH = c.replayLegendEmCm * ROW_H_PER_EM
+    const buttonH = c.replaySkipButtonCm
+    const shown = this.legend.filter((r) => kinds.indexOf(r.kind) >= 0)
+    const h = PAD + capH + (shown.length > 0 ? GAP + shown.length * rowH : 0) + GAP + buttonH + PAD
+    this.captionFrame.setSize(this.captionW, h)
+    const top = h / 2 - PAD
+    this.captionText.getSceneObject().getTransform().setLocalPosition(new vec3(0, top - capH / 2, 0))
+    const legendTop = top - capH - GAP
+    for (const r of this.legend) {
+      const k = shown.indexOf(r)
+      r.so.enabled = k >= 0
+      if (k >= 0) r.so.getTransform().setLocalPosition(new vec3(this.legendX, legendTop - rowH * (k + 0.5), 0))
+    }
+    this.skipObject.getTransform().setLocalPosition(new vec3(0, -h / 2 + PAD + buttonH / 2, 0))
+  }
+
   private hideAll(): void {
     for (const r of [...this.segs, ...this.dots, ...this.marks, this.head]) r.getSceneObject().enabled = false
     this.caption.enabled = false
@@ -385,19 +471,33 @@ export class ReplayView {
     return rect
   }
 
-  private addText(parent: SceneObject, name: string, w: number, h: number): Text {
+  private addText(parent: SceneObject, name: string, emCm: number, w: number, align: HorizontalAlignment): Text {
     const so = global.scene.createSceneObject(name)
     so.setParent(parent)
     const t = so.createComponent("Component.Text") as Text
     t.text = ""
-    t.size = TEXT_SIZE
+    t.size = emCm * SIZE_PER_CM
     t.depthTest = true
     t.textFill.color = new vec4(1, 1, 1, 1)
-    t.horizontalAlignment = HorizontalAlignment.Center
+    t.horizontalAlignment = align
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Shrink
     t.verticalOverflow = VerticalOverflow.Overflow
+    const h = emCm * LINE_H_PER_EM
     t.layoutRect = Rect.create(-w / 2, w / 2, -h / 2, h / 2)
     return t
   }
+}
+
+/** Draws `r` as the marker for `kind` at `size` cm with a `ring` cm stroke: a ring, or for a hit a small solid dot. */
+function styleMarker(r: RoundedRectangle, kind: ReplayKind, size: number, ring: number): void {
+  const hit = kind === "hit"
+  const color = kind === "cover" ? SOFT_GREEN : SOFT_RED
+  const s = hit ? size * HIT_PER_MARK : size
+  r.size = new vec2(s, s)
+  r.cornerRadius = s / 2
+  r.backgroundColor = hit ? color : new vec4(color.x, color.y, color.z, RING_FILL_ALPHA)
+  r.border = true
+  r.borderColor = hit ? DOT_COLOR : color
+  r.borderSize = hit ? ring / 2 : ring
 }
