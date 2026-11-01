@@ -319,6 +319,10 @@ export class DrillConfig extends BaseScriptComponent {
   layoutSeed: number = 0
 
   @input
+  @hint("0 = a new plan seed each drill, like layoutSeed")
+  planSeed: number = 0 // Slice 14A: the drill plan (DrillPlan.ts): the quake wait and length, the aftershock, every fall, the TV topple, the shards, the room shake
+
+  @input
   @hint("The arrow switches to another table only when it is this much nearer (cm)")
   tableSwitchHysteresis: number = 30
   @ui.group_end

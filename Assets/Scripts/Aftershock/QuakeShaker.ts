@@ -10,6 +10,8 @@ const AXIS_POS_Z = 2
 const AXIS_TILT_X = 3
 const AXIS_TILT_Z = 4
 const AXES = 5
+/** Slice 14A: phases per shake (one per axis and layer), so the drill plan draws this many. */
+export const SHAKE_PHASES = AXES * LAYERS
 const TWO_PI = Math.PI * 2
 const DEG_TO_RAD = Math.PI / 180
 
@@ -72,8 +74,10 @@ export class QuakeShaker extends BaseScriptComponent {
   /**
    * Starts shaking from the target's current (rest) transform for
    * `durationSeconds`, at `strength` × the configured amplitude and tilt.
+   * Slice 14A: `phaseUniforms` (SHAKE_PHASES values in 0..1, from the drill
+   * plan) set the phases; without them they are random.
    */
-  startShake(durationSeconds: number, strength: number = 1): void {
+  startShake(durationSeconds: number, strength: number = 1, phaseUniforms: readonly number[] | null = null): void {
     if (!this.config || !this.targetTransform) {
       console.error("[Aftershock] QuakeShaker: config is not assigned")
       return
@@ -95,7 +99,7 @@ export class QuakeShaker extends BaseScriptComponent {
       this.frequencies[i] = LAYERS > 1 ? fMin + ((fMax - fMin) * i) / (LAYERS - 1) : fMin
     }
     for (let i = 0; i < this.phases.length; i++) {
-      this.phases[i] = Math.random() * TWO_PI
+      this.phases[i] = (phaseUniforms && i < phaseUniforms.length ? phaseUniforms[i] : Math.random()) * TWO_PI
     }
     this.duration = durationSeconds
     this.strength = Math.max(0, strength)

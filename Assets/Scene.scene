@@ -1708,6 +1708,7 @@
     tvDangerFront: true
     startClearRadius: true
     layoutSeed: true
+    planSeed: true
     tableSwitchHysteresis: true
     bedWarnMargin: true
     bedWarnSeconds: true
@@ -1843,6 +1844,7 @@
       tvDangerFront: !<float> 140.000000
       startClearRadius: !<float> 50.000000
       layoutSeed: !<float> 0.000000
+      planSeed: !<float> 0.000000
       tableSwitchHysteresis: !<float> 30.000000
       bedWarnMargin: !<float> 30.000000
       bedWarnSeconds: 2.500000

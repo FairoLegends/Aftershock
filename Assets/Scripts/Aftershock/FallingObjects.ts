@@ -1,5 +1,6 @@
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
+import {FallDraw, PlannedFall} from "./DrillPlan"
 import {FOOTPRINTS, Placement} from "./LayoutGenerator"
 import {createRoundRect} from "./UiBacking"
 
@@ -80,6 +81,16 @@ interface Item {
 interface Pending {
   time: number // s, getTime()
   from: FallFrom
+  draw: FallDraw // Slice 14A: the plan's uniforms for this fall
+  planned: number // s after the shake began
+}
+
+/** Slice 14A: one drop of this drill, for the repeat check (Room-local landing point). */
+export interface DropRecord {
+  source: FallSource
+  planned: number | null // s after its shake began; null for forceFallForTest
+  x: number
+  z: number
 }
 
 @component
@@ -123,8 +134,13 @@ export class FallingObjects extends BaseScriptComponent {
   private nextId = 1
   private _fallsScheduled = 0
   private _fallsLanded = 0
+  private readonly _drops: DropRecord[] = []
 
   // Read-only getters for LEAF assertions (TDD §8).
+  /** Slice 14A: every drop since BRIEFING, in order (where each item was sent to land). */
+  get drops(): readonly DropRecord[] {
+    return this._drops
+  }
   /** Falls scheduled this drill (every shake since BRIEFING). */
   get fallsScheduled(): number {
     return this._fallsScheduled
@@ -210,43 +226,35 @@ export class FallingObjects extends BaseScriptComponent {
   }
 
   /**
-   * Schedules fallCountMin..fallCountMax falls at random times from
-   * fallMarginSeconds after now to fallMarginSeconds before the shake ends,
-   * each from one of `sources`. No sources, nothing falls.
+   * Slice 14A: schedules this shake's falls from the drill plan (planFalls
+   * gives each one's time after now, source and uniforms; the plan's times
+   * run from fallMarginSeconds after the start to fallMarginSeconds before
+   * the end). `fastened` falls were picked from a fastened source and drop
+   * nothing; they are only counted in the log.
    */
-  scheduleShake(durationSeconds: number, sources: FallFrom[]): void {
-    const c = this.config
-    if (sources.length === 0) {
-      console.log(`${LOG} falls: none (no shelf in this drill)`)
-      return
-    }
-    const lo = Math.max(0, Math.round(Math.min(c.fallCountMin, c.fallCountMax)))
-    const hi = Math.max(lo, Math.round(c.fallCountMax))
-    const n = lo + Math.floor(Math.random() * (hi - lo + 1))
-    let first = c.fallMarginSeconds
-    let last = durationSeconds - c.fallMarginSeconds
-    if (last < first) {
-      first = last = durationSeconds / 2 // too short for the margins: the middle
-    }
+  scheduleShake(falls: readonly PlannedFall<FallFrom>[], fastened: number): void {
     const now = getTime()
     const times: string[] = []
-    for (let k = 0; k < n; k++) {
-      const t = first + Math.random() * (last - first)
-      const from = sources[Math.floor(Math.random() * sources.length)]
-      this.pending.push({time: now + t, from})
-      times.push(`${from.source} at ${t.toFixed(1)} s`)
+    for (const f of falls) {
+      this.pending.push({time: now + f.t, from: f.from, draw: f.draw, planned: f.t})
+      times.push(`${f.from.source} at ${f.t.toFixed(1)} s`)
     }
-    this._fallsScheduled += n
-    console.log(`${LOG} falls: ${n} scheduled (${times.join(", ")})`)
+    this._fallsScheduled += falls.length
+    console.log(`${LOG} falls: ${falls.length} scheduled (${times.join(", ")})${fastened > 0 ? `, ${fastened} from a fastened source dropped` : ""}`)
   }
 
-  /** Starts one fall now. With landAt (Room-local x, z), it lands there; otherwise in front of the hazard. Returns false when the pool is full. */
-  drop(from: FallFrom, landAt: vec2 | null = null): boolean {
+  /**
+   * Starts one fall now. With landAt (Room-local x, z), it lands there; otherwise in front of the hazard.
+   * Slice 14A: `draw` (the plan's uniforms) sets the side, the landing depth, the yaw and the spin; without it they are random.
+   * Returns false when the pool is full.
+   */
+  drop(from: FallFrom, landAt: vec2 | null = null, draw: FallDraw | null = null, planned: number | null = null): boolean {
     const item = this.takeItem()
     if (!item) {
       console.warn(`${LOG} falls: pool full (${POOL_SIZE} alive); ${from.source} item skipped`)
       return false
     }
+    const u = draw ? draw : {timeU: 0, sourceU: 0, sideU: Math.random(), depthU: Math.random(), yawU: Math.random(), spinU: Math.random()}
     const at = from.at
     const f = FOOTPRINTS[from.source]
     const theta = at.yaw + f.front
@@ -257,20 +265,21 @@ export class FallingObjects extends BaseScriptComponent {
     const sideways = Math.abs(Math.sin(f.front)) > 0.5 // front along the item's X
     const depth = sideways ? f.halfX : f.halfZ
     const width = sideways ? f.halfZ : f.halfX
-    const side = (Math.random() * 2 - 1) * Math.max(0, width - SIDE_INSET)
+    const side = (u.sideU * 2 - 1) * Math.max(0, width - SIDE_INSET)
     const out = depth + START_OUT
     item.from = new vec3(at.x + fx * out + lx * side, TOP_CM[from.source] + item.size.y / 2, at.z + fz * out + lz * side)
     if (landAt) {
       item.to = new vec3(landAt.x, item.size.y / 2, landAt.y)
     } else {
       const m = this.config.dangerMargin
-      const d = depth + Math.min(LAND_EDGE, m / 2) + Math.random() * Math.max(0, m - 2 * LAND_EDGE)
+      const d = depth + Math.min(LAND_EDGE, m / 2) + u.depthU * Math.max(0, m - 2 * LAND_EDGE)
       item.to = new vec3(at.x + fx * d + lx * side, item.size.y / 2, at.z + fz * d + lz * side)
     }
     item.fallTime = Math.sqrt((2 * Math.max(1, item.from.y - item.to.y)) / GRAVITY)
     item.tumbleAxis = new vec3(lx, 0, lz)
-    item.yaw0 = theta + (Math.random() - 0.5) * 0.6
-    item.spin = (Math.random() * 2 - 1) * SPIN_MAX
+    item.yaw0 = theta + (u.yawU - 0.5) * 0.6
+    item.spin = (u.spinU * 2 - 1) * SPIN_MAX
+    this._drops.push({source: from.source, planned, x: item.to.x, z: item.to.z})
     item.source = from.source
     item.id = this.nextId++
     item.busy = true
@@ -305,6 +314,7 @@ export class FallingObjects extends BaseScriptComponent {
     }
     this._fallsScheduled = 0
     this._fallsLanded = 0
+    this._drops.length = 0
   }
 
   private onUpdate(): void {
@@ -314,7 +324,7 @@ export class FallingObjects extends BaseScriptComponent {
       if (due.length > 0) {
         this.pending = this.pending.filter((p) => p.time > now)
         for (const p of due) {
-          this.drop(p.from)
+          this.drop(p.from, null, p.draw, p.planned)
         }
       }
     }

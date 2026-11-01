@@ -1,6 +1,7 @@
 import {BriefingPanel} from "./BriefingPanel"
 import {DangerZone} from "./DangerZone"
 import {DrillConfig} from "./DrillConfig"
+import {AFTERSHOCK_SHAKE, between, DrillPlan, makePlan, planFalls, QUAKE_SHAKE, tvToppleTime} from "./DrillPlan"
 import {EdgeWarning} from "./EdgeWarning"
 import {FALL_SOURCES, FallFrom, FallingObjects, FallSource} from "./FallingObjects"
 import {FloorPath} from "./FloorPath"
@@ -25,7 +26,7 @@ import {
 } from "./Levels"
 import {OffscreenArrow} from "./OffscreenArrow"
 import {panelYawOffset} from "./PanelAim"
-import {QuakeShaker} from "./QuakeShaker"
+import {QuakeShaker, SHAKE_PHASES} from "./QuakeShaker"
 import {ResultLine, ResultPanel} from "./ResultPanel"
 import {ReplayKind, ReplayTrack} from "./ReplayTrack"
 import {ReplayView} from "./ReplayView"
@@ -35,7 +36,7 @@ import {CalibratePanel} from "./CalibratePanel"
 import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
-import {ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
+import {SHARDS_MAX, ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
 import {getLanguage, getString, Lang, lines, setHazardFont, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {buildCardFacts, CardFacts, FURNITURE_HAZARDS, pickCards} from "./EducationCards"
 import {SOFT_RED} from "./UiBacking"
@@ -65,8 +66,25 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
   POST_QUAKE: ["EVACUATE", "AFTERSHOCK"], // Slice 7C: the aftershock comes after leaving cover; 8B: then the door
   AFTERSHOCK: ["GAME_OVER", "POST_QUAKE"],
   EVACUATE: ["RESULT", "GAME_OVER"], // Slice 8B (5k item 8): the door, the time limit, or health 0
-  RESULT: ["LEVEL", "LANGUAGE"], // 5j-19a: Restart opens the level picker; Slice 10B: Change language
-  GAME_OVER: ["LEVEL", "LANGUAGE"]
+  RESULT: ["LEVEL", "LANGUAGE", "BRIEFING"], // 5j-19a: Restart opens the level picker; Slice 10B: Change language; Slice 14A: repeatSameQuake
+  GAME_OVER: ["LEVEL", "LANGUAGE", "BRIEFING"]
+}
+
+/** Slice 14A: a finished drill, kept as the repeat's baseline (counts from its ReplayTrack). */
+export interface DrillSummary {
+  landed: number
+  hit: number
+  health: number
+  score: number | null // null after GAME_OVER
+  landedBySource: Record<string, number>
+}
+
+/** Slice 14A: one scheduled fall of this drill. */
+export interface PlannedFallRecord {
+  shake: number // QUAKE_SHAKE or AFTERSHOCK_SHAKE
+  index: number // its place in the shake's plan
+  t: number // s after the shake began
+  source: string
 }
 
 const LOG = "[Aftershock]"
@@ -401,9 +419,55 @@ export class DrillController extends BaseScriptComponent {
   private safeSecondsMain = 0 // s safe in the main QUAKE
   private holdSecondsMain = 0 // s of those holding a handle
   private scoreHoldShare = 0 // 5j-19c snapshot
+  // Slice 14A (ENGINEERING_PLAN 5m item 15): the drill plan and the repeat.
+  private _plan: DrillPlan | null = null // made at a fresh BRIEFING; a repeat keeps it
+  private _planSeedState: "new" | "fixed" | "repeat" = "new"
+  private _fastened: string[] = [] // hazards fastened for the repeat: they drop nothing, a TV never topples
+  private _baseline: DrillSummary | null = null // the drill before the repeat
+  private _isRepeat = false
+  private repeatLayoutSeed = 0 // the layout seed a repeat keeps
+  private _fallPlan: PlannedFallRecord[] = [] // this drill's scheduled falls, every shake
+  private _tvPlan: {shake: number; t: number}[] = [] // this drill's TV topple schedules (s after the shake began)
+  private _aftershockDelay: number | null = null // s, this drill's quiet wait before the aftershock
   // Read-only getters for LEAF assertions (TDD §8).
   get state(): DrillState | null {
     return this._state
+  }
+  /** Slice 14A: this drill's plan (null before the first BRIEFING and after Restart or Change language). */
+  get plan(): DrillPlan | null {
+    return this._plan
+  }
+  /** Slice 14A: the plan's seed, 0 when there is no plan. */
+  get planSeed(): number {
+    return this._plan ? this._plan.seed : 0
+  }
+  /** Slice 14A: the hazards repeatSameQuake fastened. */
+  get fastened(): readonly string[] {
+    return this._fastened
+  }
+  /** Slice 14A: the drill before the repeat (landed, hit, health, score, landed per source); null outside a repeat. */
+  get baseline(): DrillSummary | null {
+    return this._baseline
+  }
+  /** Slice 14A: true from repeatSameQuake until Restart, Change language or resetForTest. */
+  get isRepeat(): boolean {
+    return this._isRepeat
+  }
+  /** Slice 14A: this drill's scheduled falls (shake, place in the plan, planned s after the shake began, source). */
+  get fallPlan(): readonly PlannedFallRecord[] {
+    return this._fallPlan
+  }
+  /** Slice 14A: this drill's TV topple schedules (shake, planned s after the shake began). */
+  get tvPlan(): readonly {shake: number; t: number}[] {
+    return this._tvPlan
+  }
+  /** Slice 14A: this drill's aftershock wait (s), null when none came. */
+  get aftershockDelay(): number | null {
+    return this._aftershockDelay
+  }
+  /** Slice 14A: this drill's aftershock length (s), null when none came. */
+  get aftershockLength(): number | null {
+    return this._aftershockHappened ? this.aftershockDuration : null
   }
   /** The selected language (Slice 5L); Restart keeps it. */
   get language(): Lang {
@@ -994,7 +1058,8 @@ export class DrillController extends BaseScriptComponent {
       this.aftershockPending = true
       const delay = this.config.testMode
         ? this.config.testAftershockDelaySeconds
-        : randomBetween(this.config.aftershockDelayMin, this.config.aftershockDelayMax)
+        : between(this.currentPlan().aftershock.delayU, this.config.aftershockDelayMin, this.config.aftershockDelayMax)
+      this._aftershockDelay = delay
       console.log(`${LOG} POST_QUAKE: aftershock in ${fmt(delay)} s`)
       this.aftershockTimer.reset(delay)
       return
@@ -1006,7 +1071,7 @@ export class DrillController extends BaseScriptComponent {
     if (this.forcedAftershock !== null) {
       return this.forcedAftershock
     }
-    return Math.random() < aftershockChance(this._level, this.config)
+    return this.currentPlan().aftershock.happensU < aftershockChance(this._level, this.config) // Slice 14A: the plan's draw
   }
 
   private onAftershockDelayEnded(): void {
@@ -1022,17 +1087,20 @@ export class DrillController extends BaseScriptComponent {
     this.aftershockPending = false
     this._aftershockHappened = false
     this._aftershockTimeToCover = null
+    this._aftershockDelay = null
   }
 
   /**
    * Restart → LEVEL with the current level preselected (5j-19a: one pinch
    * keeps it, or pick another), after a full reset (enterBriefing resets
    * health, cover, standing time, arrow); the language stays.
+   * Slice 14A: drops the plan, the fastened hazards and the baseline.
    */
   onRestartPressed(): void {
     if (!this.endOfDrillReset()) {
       return
     }
+    this.dropPlan()
     this.transitionTo("LEVEL")
   }
 
@@ -1045,7 +1113,95 @@ export class DrillController extends BaseScriptComponent {
     if (!this.endOfDrillReset()) {
       return
     }
+    this.dropPlan()
     this.transitionTo("LANGUAGE")
+  }
+
+  /**
+   * Slice 14A (5m item 15, decisions 1a 2a 3a 4a): the same room and the same
+   * quake again, from RESULT or GAME_OVER. Keeps layout.seed and the plan;
+   * the finished drill's summary becomes the baseline before its replay
+   * track is cleared. The same reset as Restart, then straight to BRIEFING
+   * with the same level (the room placed at the head; LEVEL and CALIBRATE
+   * skipped). A fastened shelf or cabinet drops nothing and a fastened TV
+   * never topples; zones, labels and drains stay (3a). False outside RESULT
+   * and GAME_OVER or without a plan.
+   */
+  repeatSameQuake(fastened: string[]): boolean {
+    if ((this._state !== "RESULT" && this._state !== "GAME_OVER") || !this._plan || !this._layout) {
+      console.warn(`${LOG} repeatSameQuake: refused in ${this._state}${this._plan ? "" : " (no plan)"}`)
+      return false
+    }
+    const baseline = this.summarize()
+    const layoutSeed = this._layout.seed
+    if (!this.endOfDrillReset()) {
+      return false
+    }
+    this._baseline = baseline
+    this._fastened = fastened.slice()
+    this._isRepeat = true
+    this.repeatLayoutSeed = layoutSeed
+    console.log(
+      `${LOG} repeatSameQuake: plan seed ${this._plan.seed}, layout seed ${layoutSeed}, fastened [${this._fastened.join(", ")}]; baseline landed ${baseline.landed}, hit ${baseline.hit}, health ${fmt(baseline.health)}, score ${baseline.score === null ? "-" : baseline.score}`
+    )
+    this.transitionTo("BRIEFING")
+    return true
+  }
+
+  /** Slice 14A: this drill's counts from its ReplayTrack, with health and score. */
+  private summarize(): DrillSummary {
+    const t = this._replayTrack
+    const landedBySource: Record<string, number> = {}
+    for (const e of t.events) {
+      if (e.kind === "landed" && e.source) {
+        landedBySource[e.source] = (landedBySource[e.source] || 0) + 1
+      }
+    }
+    return {
+      landed: t.count("landed"),
+      hit: t.count("hit"),
+      health: this._health,
+      score: this._lastScore ? this._lastScore.score : null,
+      landedBySource
+    }
+  }
+
+  /** Slice 14A: Restart, Change language and resetForTest: the next BRIEFING makes a new plan and a new layout. */
+  private dropPlan(): void {
+    this._plan = null
+    this._fastened = []
+    this._baseline = null
+    this._isRepeat = false
+    this.repeatLayoutSeed = 0
+  }
+
+  /**
+   * Slice 14A: at BRIEFING, a repeat keeps its plan; any other drill gets a
+   * new one (planSeed 0: a new seed each drill, as layoutSeed).
+   */
+  private preparePlan(): void {
+    if (this._isRepeat && this._plan) {
+      this._planSeedState = "repeat"
+      return
+    }
+    const fixed = this.config.planSeed !== 0
+    const seed = fixed ? Math.floor(this.config.planSeed) : 1 + Math.floor(Math.random() * 2147483646)
+    this._plan = makePlan(seed, this.planRanges())
+    this._planSeedState = fixed ? "fixed" : "new"
+  }
+
+  /** Slice 14A: this drill's plan; one is made if a shake starts without a BRIEFING (never in the drill). */
+  private currentPlan(): DrillPlan {
+    if (!this._plan) {
+      this.preparePlan()
+      console.warn(`${LOG} plan: none at ${this._state}; made plan seed ${this.planSeed}`)
+    }
+    return this._plan as DrillPlan
+  }
+
+  private planRanges(): {fallsMax: number; phases: number; shardsMax: number} {
+    const c = this.config
+    return {fallsMax: Math.max(0, Math.round(Math.max(c.fallCountMin, c.fallCountMax))), phases: SHAKE_PHASES, shardsMax: SHARDS_MAX}
   }
 
   /** Restart and Change language: stops voice and effects, clears the drill; false outside RESULT and GAME_OVER. */
@@ -1114,6 +1270,10 @@ export class DrillController extends BaseScriptComponent {
     const at = this._layout ? this._layout.items[item] : undefined
     if (!at || this.activeHazards.indexOf(item) < 0) {
       console.warn(`${LOG} forceFallForTest: no ${item} in this drill`)
+      return false
+    }
+    if (this._fastened.indexOf(item) >= 0) {
+      console.warn(`${LOG} forceFallForTest: ${item} is fastened (Slice 14A), it drops nothing`)
       return false
     }
     console.log(`${LOG} forceFallForTest: ${item}${landAt ? ` at (${fmt(landAt.x)}, ${fmt(landAt.z)})` : ""}`)
@@ -1197,6 +1357,7 @@ export class DrillController extends BaseScriptComponent {
     this._health = this.config.healthStart
     this.clearReplay()
     this.resultPanel.hide()
+    this.dropPlan() // Slice 14A
     this._state = null // a reset, not a drill transition
     if (toLanguage) this.safetySeen = false // Slice 10B: the opening picker leads to SAFETY again
     this.transitionTo(toLanguage ? "LANGUAGE" : "BRIEFING")
@@ -1366,6 +1527,8 @@ export class DrillController extends BaseScriptComponent {
     this._fallHits = 0
     this._glassHits = 0
     this.fallingObjects.clear()
+    this._fallPlan = [] // Slice 14A
+    this._tvPlan = []
     this.resetTvTopple()
     if (this.shakeFx) {
       this.shakeFx.resetCracks()
@@ -1420,7 +1583,7 @@ export class DrillController extends BaseScriptComponent {
 
     const wait = this.config.testMode
       ? this.config.testWaitSeconds
-      : randomBetween(this.config.quakeWaitMin, this.config.quakeWaitMax)
+      : between(this.currentPlan().quakeWaitU, this.config.quakeWaitMin, this.config.quakeWaitMax)
     console.log(`${LOG} BRIEFING: scan ${fmt(scanSeconds)} s, then quake in ${fmt(wait)} s`)
     this.quakeStartTimer.reset(scanSeconds + wait) // the quake wait starts after the scan
   }
@@ -1459,15 +1622,16 @@ export class DrillController extends BaseScriptComponent {
   private enterQuake(): void {
     this.briefingUpdate.enabled = false
     this.briefingPanel.hide()
+    const plan = this.currentPlan()
     this._quakeDuration = this.config.testMode
       ? this.config.testDurationSeconds
-      : randomBetween(this.config.quakeDurationMin, this.config.quakeDurationMax)
+      : between(plan.quakeDurationU, this.config.quakeDurationMin, this.config.quakeDurationMax)
     console.log(`${LOG} QUAKE: lasts ${fmt(this._quakeDuration)} s`)
     this.startReplayRecording()
 
-    this.quakeShaker.startShake(this._quakeDuration)
-    this.scheduleFalls(this._quakeDuration)
-    this.scheduleTvTopple(this._quakeDuration, "QUAKE")
+    this.quakeShaker.startShake(this._quakeDuration, 1, plan.shakes[QUAKE_SHAKE].phases)
+    this.scheduleFalls(this._quakeDuration, QUAKE_SHAKE)
+    this.scheduleTvTopple(this._quakeDuration, "QUAKE", QUAKE_SHAKE)
     if (this.chimeAudio && this.chimeAudio.audioTrack) {
       this.chimeAudio.play(1) // 5k item 6: the alert chime, then the rumble
     }
@@ -1615,8 +1779,11 @@ export class DrillController extends BaseScriptComponent {
     this._nearBed = near
   }
 
-  /** Slice 7D (5j-8): fallCountMin..Max falls this shake from the shelf present (Slice 9A: the only source); none on Easy. */
-  private scheduleFalls(durationSeconds: number): void {
+  /**
+   * Slice 7D (5j-8): fallCountMin..Max falls this shake from the shelf present (Slice 9A: the only source); none on Easy.
+   * Slice 14A: the plan's `shake` decides them; the sources are the drill's, and a fastened one is dropped after the pick.
+   */
+  private scheduleFalls(durationSeconds: number, shake: number): void {
     if (!fallsOn(this._level) || this.fallsDisabled || !this._layout) {
       console.log(`${LOG} falls: off (${this.fallsDisabled ? "disabled for test" : "level " + this._level})`)
       return
@@ -1628,7 +1795,15 @@ export class DrillController extends BaseScriptComponent {
         sources.push({source: s, at})
       }
     }
-    this.fallingObjects.scheduleShake(durationSeconds, sources)
+    if (sources.length === 0) {
+      console.log(`${LOG} falls: none (no shelf in this drill)`)
+      return
+    }
+    const planned = planFalls(this.currentPlan().shakes[shake], durationSeconds, sources, this._fastened, this.config)
+    for (const f of planned.falls) {
+      this._fallPlan.push({shake, index: f.index, t: f.t, source: f.from.source})
+    }
+    this.fallingObjects.scheduleShake(planned.falls, planned.fastened)
   }
 
   /**
@@ -1663,18 +1838,26 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
-  /** Slice 9A (5l item 2): a TV that can topple this drill (present, its model placed, not Easy). */
+  /** Slice 9A (5l item 2): a TV that can topple this drill (present, its model placed, not Easy). Slice 14A: a fastened TV never topples. */
   private canTopple(): boolean {
-    return fallsOn(this._level) && !!this._layout && !!this._layout.items.tv && this.activeHazards.indexOf("tv") >= 0 && !!this.tvModel
+    return (
+      fallsOn(this._level) &&
+      !!this._layout &&
+      !!this._layout.items.tv &&
+      this.activeHazards.indexOf("tv") >= 0 &&
+      !!this.tvModel &&
+      this._fastened.indexOf("tv") < 0
+    )
   }
 
-  /** Slice 9A: once per drill, at a random 25-75 % of this shake; the aftershock's try only when the quake did not topple it. */
-  private scheduleTvTopple(durationSeconds: number, phase: string): void {
+  /** Slice 9A: once per drill, at 25-75 % of this shake (Slice 14A: the plan's fraction for `shake`); the aftershock's try only when the quake did not topple it. */
+  private scheduleTvTopple(durationSeconds: number, phase: string, shake: number): void {
     if (this._tvToppled || this.fallsDisabled || !this.canTopple()) {
       return
     }
-    const t = (TV_TOPPLE_FROM + Math.random() * (TV_TOPPLE_TO - TV_TOPPLE_FROM)) * durationSeconds
+    const t = tvToppleTime(this.currentPlan().shakes[shake], durationSeconds, TV_TOPPLE_FROM, TV_TOPPLE_TO)
     this.tvToppleAt = getTime() + t
+    this._tvPlan.push({shake, t})
     console.log(`${LOG} ${phase}: TV topples at ${t.toFixed(1)} s`)
   }
 
@@ -1829,7 +2012,7 @@ export class DrillController extends BaseScriptComponent {
       this.crackAudio.play(1)
     }
     // 5l-7a: stage 4 breaks the pane, only in an aftershock; the shards land in the glass zone (the pane to its front edge).
-    if (aftershock && this.shakeFx.crackStage >= 4 && this.shakeFx.breakGlass(this.config.dangerMargin + FOOTPRINTS.glass.halfZ)) {
+    if (aftershock && this.shakeFx.crackStage >= 4 && this.shakeFx.breakGlass(this.config.dangerMargin + FOOTPRINTS.glass.halfZ, this.currentPlan().glass)) {
       if (this.glassBreakAudio && this.glassBreakAudio.audioTrack) {
         this.glassBreakAudio.play(1)
       }
@@ -2259,11 +2442,12 @@ export class DrillController extends BaseScriptComponent {
     this._instructionKey = null
     this._nearBed = false
     const c = this.config
-    const d = c.testMode ? c.testAftershockDurationSeconds : randomBetween(c.aftershockDurationMin, c.aftershockDurationMax)
-    this.quakeShaker.startShake(d, c.aftershockStrength)
+    const plan = this.currentPlan()
+    const d = c.testMode ? c.testAftershockDurationSeconds : between(plan.aftershock.durationU, c.aftershockDurationMin, c.aftershockDurationMax)
+    this.quakeShaker.startShake(d, c.aftershockStrength, plan.shakes[AFTERSHOCK_SHAKE].phases)
     this.aftershockDuration = d
-    this.scheduleFalls(d)
-    this.scheduleTvTopple(d, "AFTERSHOCK") // only when the quake did not topple it
+    this.scheduleFalls(d, AFTERSHOCK_SHAKE)
+    this.scheduleTvTopple(d, "AFTERSHOCK", AFTERSHOCK_SHAKE) // only when the quake did not topple it
     this.rumbleAudio.volume = 0
     this._rumbleUnducked = 0
     if (this.rumbleAudio.audioTrack) {
@@ -2559,13 +2743,20 @@ export class DrillController extends BaseScriptComponent {
    * then each hazard; its label keeps its authored offset and turns to the start spot.
    */
   private applyLayout(): void {
-    const layout = generateLayout(layoutParamsFor(this._level, this.config), this.testForce)
+    const params = layoutParamsFor(this._level, this.config)
+    const repeat = this._isRepeat && this.repeatLayoutSeed !== 0
+    if (repeat) {
+      params.layoutSeed = this.repeatLayoutSeed // Slice 14A: the same room
+    }
+    const layout = generateLayout(params, this.testForce)
     this._layout = layout
     if (layout.fallback) {
       console.warn(`${LOG} BRIEFING: no valid layout in ${layout.tries} tries (seed ${layout.seed}); using the Slice 2 fixed layout`)
     } else {
-      console.log(`${LOG} BRIEFING: layout seed ${layout.seed}${this.config.layoutSeed === 0 ? " (new)" : " (fixed)"}, ${layout.tries} tries`)
+      console.log(`${LOG} BRIEFING: layout seed ${layout.seed}${repeat ? " (repeat)" : this.config.layoutSeed === 0 ? " (new)" : " (fixed)"}, ${layout.tries} tries`)
     }
+    this.preparePlan()
+    console.log(`${LOG} BRIEFING: plan seed ${this.planSeed} (${this._planSeedState})${this._fastened.length > 0 ? `, fastened ${this._fastened.join(", ")}` : ""}`)
     const items = layout.items
     // Last drill's models go (5j-14); absent items are disabled, so their zone and label go with them.
     if (this.shakeFx) this.shakeFx.clearModels()
@@ -2685,7 +2876,7 @@ const RAD_TO_DEG = 180 / Math.PI // layout yaw is radians; logs show degrees
 // Slice 9A (5l item 2): the TV topple.
 const TV_TOPPLE_SECONDS = 0.5 // the tip from upright to down, ease in
 const TV_TOPPLE_RAD = (85 * Math.PI) / 180 // down: almost flat, its top on the floor
-const TV_TOPPLE_FROM = 0.25 // of the shake: the topple's random time
+const TV_TOPPLE_FROM = 0.25 // of the shake: the topple's time (Slice 14A: the plan's fraction between these)
 const TV_TOPPLE_TO = 0.75
 const TV_HEIGHT = 110 // cm, TvStand's top (FallingObjects TOP_CM): the landing's reach from the front edge
 
@@ -2698,8 +2889,4 @@ function placeItem(so: SceneObject, at: Placement): void {
 
 function fmt(n: number): string {
   return n.toFixed(2)
-}
-
-function randomBetween(min: number, max: number): number {
-  return min + Math.random() * Math.max(0, max - min)
 }

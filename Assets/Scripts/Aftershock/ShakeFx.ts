@@ -1,4 +1,5 @@
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
+import {ShardPlan} from "./DrillPlan"
 import {QuakeShaker} from "./QuakeShaker"
 import {createRoundRect} from "./UiBacking"
 
@@ -35,7 +36,8 @@ const CRACK_POOL = 64 // at most this many lines
 const MAX_TIPS = 8 // line ends extended per stage
 const MAX_STAGE = 4
 const SHARDS_MIN = 8 // 5l-7a: shards when the pane breaks
-const SHARDS_MAX = 14
+/** Slice 14A: the most shards, so the drill plan draws this many landing points. */
+export const SHARDS_MAX = 14
 const SHARD_MIN = 4 // cm, a shard's side
 const SHARD_MAX = 12
 const SHARD_COLOR = new vec4(0.75, 0.9, 1, 0.55) // light blue, light tint
@@ -180,8 +182,11 @@ export class ShakeFx extends BaseScriptComponent {
    * shards fall from it under gravity, spinning, into the glass danger zone
    * (the room side, `zoneDepth` cm deep from the pane) and lie flat there until
    * resetGlass. Returns false if the glass is already broken or there is none.
+   * Slice 14A: `plan` (the drill plan's shard uniforms) sets the count and
+   * every shard's start and landing point, so the trip hazards repeat; spin
+   * and tilt stay random (looks only). Without it, all random.
    */
-  breakGlass(zoneDepth: number): boolean {
+  breakGlass(zoneDepth: number, plan: ShardPlan | null = null): boolean {
     if (this._glassBroken || !this.glassWindow) {
       return false
     }
@@ -204,11 +209,12 @@ export class ShakeFx extends BaseScriptComponent {
     this.shardsRoot.enabled = true
     const near = SHARD_EDGE
     const far = Math.max(near + 4, zoneDepth - SHARD_EDGE)
-    const n = SHARDS_MIN + Math.floor(Math.random() * (SHARDS_MAX - SHARDS_MIN + 1))
+    const n = Math.min(SHARDS_MAX, SHARDS_MIN + Math.floor((plan ? plan.countU : Math.random()) * (SHARDS_MAX - SHARDS_MIN + 1)))
     for (let i = 0; i < n; i++) {
       const s = this.takeShard(i)
-      const from = new vec3((Math.random() * 2 - 1) * PANE_HALF, PANE_Y + (Math.random() * 2 - 1) * PANE_HALF, CRACK_Z)
-      const to = new vec3((Math.random() * 2 - 1) * (PANE_HALF - SHARD_EDGE), SHARD_FLOOR_Y + i * 0.02, -(near + Math.random() * (far - near)))
+      const u = plan && i < plan.shards.length ? plan.shards[i] : {fromX: Math.random(), fromY: Math.random(), toX: Math.random(), toZ: Math.random()}
+      const from = new vec3((u.fromX * 2 - 1) * PANE_HALF, PANE_Y + (u.fromY * 2 - 1) * PANE_HALF, CRACK_Z)
+      const to = new vec3((u.toX * 2 - 1) * (PANE_HALF - SHARD_EDGE), SHARD_FLOOR_Y + i * 0.02, -(near + u.toZ * (far - near)))
       s.from = from
       s.to = to
       s.fallSeconds = Math.sqrt((2 * (from.y - to.y)) / SHARD_GRAVITY)

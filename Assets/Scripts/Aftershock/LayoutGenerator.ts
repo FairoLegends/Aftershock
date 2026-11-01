@@ -899,8 +899,8 @@ function copyItems(src: Partial<Record<LayoutItem, Placement>>): Partial<Record<
   return out
 }
 
-/** Small seedable PRNG (mulberry32): the same seed gives the same draws, in 0..1. */
-function mulberry32(seed: number): () => number {
+/** Small seedable PRNG (mulberry32): the same seed gives the same draws, in 0..1. Slice 14A: DrillPlan uses it too. */
+export function mulberry32(seed: number): () => number {
   let a = seed >>> 0
   return () => {
     a = (a + 0x6d2b79f5) >>> 0
