@@ -864,6 +864,7 @@ export class DrillController extends BaseScriptComponent {
     this.resultPanel.onChangeLanguage.add(() => this.onChangeLanguagePressed())
     this.resultPanel.onReplay.add(() => this.onReplayPressed())
     this.replayView = new ReplayView(this, this.config, this.headPose)
+    this.resultPanel.setFollow(this.config, this.headPose) // Slice 13C: follows the head past a dead zone
     // 5h item 1: each panel ignores presses for its first pinchGuardSeconds.
     this.languagePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
     this.safetyPanel.pinchGuard.seconds = this.config.pinchGuardSeconds

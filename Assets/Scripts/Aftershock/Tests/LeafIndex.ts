@@ -25,6 +25,7 @@ import {DC22_GlassBreak} from "./DC22_GlassBreak"
 import {DC23_DesignPass} from "./DC23_DesignPass"
 import {DC24_HudContrast} from "./DC24_HudContrast"
 import {DC25_GhostReplay} from "./DC25_GhostReplay"
+import {DC26_PanelFollow} from "./DC26_PanelFollow"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -54,6 +55,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc22-glass-break", typename: DC22_GlassBreak.getTypeName()},
     {id: "dc23-design-pass", typename: DC23_DesignPass.getTypeName()},
     {id: "dc24-hud-contrast", typename: DC24_HudContrast.getTypeName()},
-    {id: "dc25-ghost-replay", typename: DC25_GhostReplay.getTypeName()}
+    {id: "dc25-ghost-replay", typename: DC25_GhostReplay.getTypeName()},
+    {id: "dc26-panel-follow", typename: DC26_PanelFollow.getTypeName()}
   ]
 }

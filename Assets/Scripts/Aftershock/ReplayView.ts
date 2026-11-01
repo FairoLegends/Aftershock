@@ -2,6 +2,7 @@ import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
+import {anchorInFront, faceHead, PanelFollow} from "./PanelFollow"
 import {ReplaySample, ReplayTrack} from "./ReplayTrack"
 import {getLanguage, getString, onLanguageChanged, setLineText, StringKey} from "./Strings"
 import {createRoundRect, drawOnTopWhenReady, PinchGuard, SOFT_GREEN, SOFT_RED, SoftButton, SoftFrame} from "./UiBacking"
@@ -64,6 +65,7 @@ export class ReplayView {
   private readonly captionText: Text
   private readonly skipButton: SoftButton
   private readonly guard = new PinchGuard()
+  private readonly follow = new PanelFollow() // Slice 13C: the caption
   private readonly update: SceneEvent
   private placed: Placed[] = []
   private dotAt: number[] = []
@@ -148,6 +150,17 @@ export class ReplayView {
   }
   get captionLine(): string {
     return this.captionText.text
+  }
+  /** Slice 13C: the caption's world position and rotation (follows the head). */
+  get captionPosition(): vec3 {
+    return this.caption.getTransform().getWorldPosition()
+  }
+  get captionRotation(): quat {
+    return this.caption.getTransform().getWorldRotation()
+  }
+  /** Slice 13C: the caption is easing toward the head. */
+  get captionFollowing(): boolean {
+    return this.follow.isMoving
   }
   get segmentsShown(): number {
     return this.segs.filter((r) => r.getSceneObject().enabled).length
@@ -278,6 +291,7 @@ export class ReplayView {
       return
     }
     const u = Math.min(1, elapsed / replay)
+    this.followCaption()
     const drawn = u * this.total
     const w = this.config.replayLineWidthCm
     this.placed.forEach((p, i) => {
@@ -333,10 +347,25 @@ export class ReplayView {
     const f = this.headPose.forward
     let flat = new vec3(f.x, 0, f.z)
     flat = flat.length > 0.0001 ? flat.normalize() : new vec3(0, 0, -1)
-    const pos = this.headPose.position.add(flat.uniformScale(this.config.hudDistance)).add(new vec3(0, -this.config.resultBelowEye, 0))
+    const head = this.headPose.position
+    const pos = head.add(flat.uniformScale(this.config.hudDistance)).add(new vec3(0, -this.config.replayCaptionBelowEye, 0))
     const t = this.caption.getTransform()
-    t.setWorldPosition(pos)
-    t.setWorldRotation(quat.lookAt(flat.uniformScale(-1), vec3.up()))
+    t.setWorldPosition(this.follow.snap(pos, head)) // Slice 13C: the first placement snaps
+    t.setWorldRotation(faceHead(pos, head))
+  }
+
+  /** Slice 13C: the caption follows the head past the dead zone; never under a pinch held on Lewati. */
+  private followCaption(): void {
+    if (this.skipButton.isPressed) return
+    const head = this.headPose.position
+    const forward = this.headPose.forward
+    const anchor = anchorInFront(head, forward, this.config.hudDistance, this.config.replayCaptionBelowEye)
+    if (!anchor) return
+    const c = this.config
+    const at = this.follow.step(head, forward, anchor, getDeltaTime(), {deg: c.panelFollowDeg, cm: c.panelFollowCm, speed: c.panelFollowSpeed}, false)
+    const t = this.caption.getTransform()
+    t.setWorldPosition(at)
+    t.setWorldRotation(faceHead(at, head))
   }
 
   private hideAll(): void {

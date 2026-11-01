@@ -131,6 +131,7 @@ export class SoftButton {
   private readonly anim: SceneEvent
   private releasedAt = -1 // getTime() of the last release, -1 when not easing back
   private selected = false
+  private pressed = false // Slice 13C: a pinch is down on it (UI Kit trigger down, not yet up or cancelled)
 
   constructor(owner: BaseScriptComponent, btn: Button, w: number, h: number, primary: boolean, action: () => void) {
     this.buttonObject = btn.getSceneObject()
@@ -142,11 +143,18 @@ export class SoftButton {
     }
     this.frame = new SoftFrame(this.buttonObject, this.restFill, SOFT_INNER_RADIUS_CM, this.restBorder)
     this.frame.setSize(w, h)
-    btn.onInitialized.add(() => hideKitVisual(this.buttonObject))
+    btn.onInitialized.add(() => {
+      hideKitVisual(this.buttonObject)
+      if (btn.interactable) btn.interactable.onTriggerCanceled.add(() => (this.pressed = false))
+    })
     btn.onHoverEnter.add(() => this.setFocus(true))
     btn.onHoverExit.add(() => this.setFocus(false))
-    btn.onTriggerDown.add(() => this.press())
+    btn.onTriggerDown.add(() => {
+      this.pressed = true
+      this.press()
+    })
     btn.onTriggerUp.add(() => {
+      this.pressed = false
       this.release()
       action()
     })
@@ -159,8 +167,14 @@ export class SoftButton {
     return this.frame.face
   }
 
+  /** Slice 13C: a pinch is held on this button (a following panel must not move under it). */
+  get isPressed(): boolean {
+    return this.pressed
+  }
+
   /** Back to rest (no focus, full size) and the kit visual hidden; panels call it on show(). */
   reset(): void {
+    this.pressed = false
     this.setFocus(false)
     this.releasedAt = -1
     this.anim.enabled = false

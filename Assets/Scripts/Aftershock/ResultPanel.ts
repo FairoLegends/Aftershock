@@ -3,6 +3,9 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
+import {DrillConfig} from "./DrillConfig"
+import {HeadPose} from "./HeadPose"
+import {anchorInFront, faceHead, PanelFollow} from "./PanelFollow"
 import {ScoreBreakdown} from "./ScoreCalculator"
 import {getLanguage, latinFont, Lines, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
 import {
@@ -165,6 +168,11 @@ export class ResultPanel extends BaseScriptComponent {
   private panelH = 0 // the last layout's height (local units)
   private fitScale = 1
   private baseScale = vec3.one()
+  // Slice 13C: the panel follows the head past a dead zone (ENGINEERING_PLAN 5m item 13).
+  private readonly follow = new PanelFollow()
+  private fitBelow = 0 // the fitted `below` applyPlacement last used
+  private config: DrillConfig | null = null
+  private headPose: HeadPose | null = null
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -212,21 +220,37 @@ export class ResultPanel extends BaseScriptComponent {
   }
 
   /**
+   * Slice 13C: gives the panel the head and the follow tunables, so it eases
+   * back in front of the head once the user turns or walks past the dead zone.
+   * DrillController calls it once. The tick runs only while the panel is shown
+   * (component events are off on a disabled SceneObject).
+   */
+  setFollow(config: DrillConfig, headPose: HeadPose): void {
+    this.config = config
+    this.headPose = headPose
+    const tick = this.createEvent("UpdateEvent")
+    tick.bind(() => this.followTick())
+  }
+
+  /**
    * Places the panel `distance` cm in front of the head along its level look
    * direction and `below` cm under eye level, facing the head. Slice 9B: kept,
-   * so each new layout height re-fits it (applyPlacement).
+   * so each new layout height re-fits it (applyPlacement). Slice 13C: this
+   * first placement snaps, and arms the dead zone where the head stands.
    */
   placeInFront(headPosition: vec3, headForward: vec3, distance: number, below: number): void {
     let flat = new vec3(headForward.x, 0, headForward.z)
     flat = flat.length > 0.0001 ? flat.normalize() : new vec3(0, 0, -1)
     this.placement = {head: headPosition, flat, distance, below}
+    this.follow.reset()
     this.applyPlacement()
   }
 
   /**
    * Slice 9B: the panel center goes `below` under eye level, moved up just
    * enough that the bottom edge stays within ±FIT_HALF_ANGLE_DEG; a panel too
-   * tall even centered on eye level shrinks to fit.
+   * tall even centered on eye level shrinks to fit. Slice 13C: once placed, a
+   * re-fit only shifts it vertically, leaving the follow where it is.
    */
   private applyPlacement(): void {
     const p = this.placement
@@ -239,8 +263,39 @@ export class ResultPanel extends BaseScriptComponent {
     const half = (height * this.fitScale) / 2
     const below = Math.max(half - maxHalf, Math.min(maxHalf - half, p.below))
     t.setLocalScale(this.baseScale.uniformScale(this.fitScale))
-    t.setWorldPosition(p.head.add(p.flat.uniformScale(p.distance)).add(new vec3(0, -below, 0)))
-    t.setWorldRotation(quat.lookAt(p.flat.uniformScale(-1), vec3.up()))
+    const was = this.fitBelow
+    this.fitBelow = below
+    if (!this.follow.isPlaced) {
+      const at = p.head.add(p.flat.uniformScale(p.distance)).add(new vec3(0, -below, 0))
+      t.setWorldPosition(this.follow.snap(at, p.head))
+      t.setWorldRotation(faceHead(at, p.head))
+    } else if (Math.abs(was - below) > 1e-4) {
+      t.setWorldPosition(this.follow.shiftY(was - below))
+    }
+  }
+
+  /** Slice 13C: one follow step toward the spot in front of the head. */
+  private followTick(): void {
+    const p = this.placement
+    const cfg = this.config
+    const hp = this.headPose
+    if (!p || !cfg || !hp || !this.follow.isPlaced) return
+    // A pinch held on one of the panel's own buttons freezes it: the button
+    // must not slide (or rotate) out from under the finger.
+    if (this.isPinchHeld) return
+    const head = hp.position
+    const forward = hp.forward
+    const anchor = anchorInFront(head, forward, p.distance, this.fitBelow)
+    if (!anchor) return // looking straight up or down: nothing to aim at
+    const at = this.follow.step(head, forward, anchor, getDeltaTime(), {deg: cfg.panelFollowDeg, cm: cfg.panelFollowCm, speed: cfg.panelFollowSpeed}, false)
+    const t = this.sceneObject.getTransform()
+    t.setWorldPosition(at)
+    t.setWorldRotation(faceHead(at, head))
+  }
+
+  /** Slice 13C: a pinch is down on Restart, Change language or Lihat ulang (the follow is frozen). */
+  get isPinchHeld(): boolean {
+    return (this.restart !== null && this.restart.isPressed) || (this.changeLang !== null && this.changeLang.isPressed) || (this.replay !== null && this.replay.isPressed)
   }
 
   /**
@@ -365,6 +420,14 @@ export class ResultPanel extends BaseScriptComponent {
   // Read-only getters for LEAF assertions (TDD §8).
   get isShown(): boolean {
     return this.sceneObject.isEnabledInHierarchy
+  }
+  /** Slice 13C: easing toward the head (outside the dead zone, not yet settled). */
+  get isFollowing(): boolean {
+    return this.follow.isMoving
+  }
+  /** Slice 13C: the fitted cm below eye level the follow anchor uses. */
+  get followBelow(): number {
+    return this.fitBelow
   }
   /** What the panel shows, or null when hidden. */
   get mode(): ResultMode | null {

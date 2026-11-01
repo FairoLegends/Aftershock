@@ -98,6 +98,9 @@
     layoutSeed: false
     markerBlinkHz: false
     normalAftershockChance: false
+    panelFollowCm: false
+    panelFollowDeg: false
+    panelFollowSpeed: false
     pathFaintOpacity: false
     pathLift: false
     pathMarchSpeed: false
@@ -107,6 +110,7 @@
     quakeDurationMin: false
     quakeWaitMax: false
     quakeWaitMin: false
+    replayCaptionBelowEye: false
     replayDotSpacingCm: false
     replayHoldSeconds: false
     replayLiftCm: false
@@ -276,6 +280,10 @@
       replayLiftCm: 0.500000
       replayDotSpacingCm: !<float> 30.000000
       replayMarkerCm: !<float> 18.000000
+      panelFollowDeg: !<float> 25.000000
+      panelFollowCm: !<float> 50.000000
+      panelFollowSpeed: !<float> 3.000000
+      replayCaptionBelowEye: !<float> 35.000000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -445,6 +453,12 @@
     - '// @input float replayLiftCm = 0.5 {"hint":"Trail and markers sit this far above the floor (cm), clear of z-fighting"}'
     - '// @input float replayDotSpacingCm = 30 {"hint":"A small dot on the trail every this many cm"}'
     - '// @input float replayMarkerCm = 18 {"hint":"Landed, hit and cover marker size (cm)"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Panel follow (Slice 13C, ENGINEERING_PLAN 5m item 13)"}'
+    - '// @input float panelFollowDeg = 25 {"hint":"Result, game-over and replay-caption panels stay put while the look is within this many degrees (yaw) of them"}'
+    - '// @input float panelFollowCm = 50 {"hint":"...and while the head stays within this many cm (horizontal) of where it was when the panel last settled"}'
+    - '// @input float panelFollowSpeed = 3 {"hint":"Past either limit the panel eases to its spot in front of the head at this rate (1/s, as hudFollowSpeed)"}'
+    - '// @input float replayCaptionBelowEye = 35 {"hint":"Replay caption: cm below eye level, at hudDistance (lower than the result panel, toward the trail on the floor)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'

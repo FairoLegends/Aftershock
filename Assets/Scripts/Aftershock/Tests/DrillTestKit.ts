@@ -14,6 +14,7 @@ export const CLASSIC: LayoutForce = {tables: 1, hazards: ["cabinet", "shelf", "g
 
 const PINCH_GUARD_WAIT_MS = 800 // every panel ignores presses for 0.5 s after it shows (5h item 1)
 const POLL_MS = 100
+const EXIT_HOVER_WAIT_MS = 500 // HoldInteractor.release: the most it waits for the hover exit
 
 /** Head height (cm above floorY) for a ducked head: under the duck line at floorY + 70. */
 export const DUCKED_HEAD_CM = 60
@@ -58,11 +59,15 @@ export class HoldInteractor extends DefaultLeafInteractor {
     await sleep(POLL_MS * 2)
   }
 
-  /** Lets go of the pinch (SIK onTriggerEnd), then stops hovering. */
+  /**
+   * Lets go of the pinch (SIK onTriggerEnd), then stops hovering. A release that
+   * hides its own button (Change language opens LANGUAGE) leaves LEAF's exitHover
+   * waiting for a hover exit that never comes, so it gets EXIT_HOVER_WAIT_MS.
+   */
   async release(): Promise<void> {
     this.stopSelecting()
     await sleep(POLL_MS)
-    await this.exitHover()
+    await Promise.race([this.exitHover(), sleep(EXIT_HOVER_WAIT_MS)])
   }
 }
 

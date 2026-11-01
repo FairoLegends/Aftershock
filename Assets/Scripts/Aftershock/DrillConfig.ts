@@ -516,6 +516,24 @@ export class DrillConfig extends BaseScriptComponent {
   replayMarkerCm: number = 18
   @ui.group_end
 
+  @ui.group_start("Panel follow (Slice 13C, ENGINEERING_PLAN 5m item 13)")
+  @input
+  @hint("Result, game-over and replay-caption panels stay put while the look is within this many degrees (yaw) of them")
+  panelFollowDeg: number = 25
+
+  @input
+  @hint("...and while the head stays within this many cm (horizontal) of where it was when the panel last settled")
+  panelFollowCm: number = 50
+
+  @input
+  @hint("Past either limit the panel eases to its spot in front of the head at this rate (1/s, as hudFollowSpeed)")
+  panelFollowSpeed: number = 3
+
+  @input
+  @hint("Replay caption: cm below eye level, at hudDistance (lower than the result panel, toward the trail on the floor)")
+  replayCaptionBelowEye: number = 35
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")
