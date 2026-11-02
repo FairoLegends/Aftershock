@@ -199,9 +199,10 @@ export function generateLayout(p: LayoutParams, force: LayoutForce | null = null
   const present = hazards.concat(FURNITURE)
   const order = tables.concat(PLACE_ORDER.filter((i) => present.indexOf(i) >= 0))
   const lampByBed = present.indexOf("lamp") >= 0 && random() < LAMP_BY_BED // Slice 11 (5l-7c): once per layout
+  const bedCorner = present.indexOf("bed") >= 0 && random() < BED_CORNER // Slice 16 (L5): once per layout too, so retries do not tilt the share
   for (let tries = 1; tries <= MAX_TRIES; tries++) {
     const room = drawRoom(random, p)
-    const placed = placeAll(random, order, room, lampByBed, p)
+    const placed = placeAll(random, order, room, lampByBed, bedCorner, p)
     const door = placed ? placeDoor(random, placed.items, order, room, placed.glassWall, p) : null
     if (placed && door) {
       return {seed: seed, tries: tries, fallback: false, items: placed.items, tables: tables, hazards: hazards, room: room, glassWall: placed.glassWall, walls: placed.walls, door: door}
@@ -482,6 +483,7 @@ function placeAll(
   order: LayoutItem[],
   room: RoomRect,
   lampByBed: boolean,
+  bedCorner: boolean,
   p: LayoutParams
 ): {items: Partial<Record<LayoutItem, Placement>>; glassWall: WallSide | null; walls: Partial<Record<LayoutItem, WallSide>>} | null {
   const items: Partial<Record<LayoutItem, Placement>> = {}
@@ -491,7 +493,7 @@ function placeAll(
   for (const item of order) {
     let ok = false
     for (let i = 0; i < ITEM_TRIES && !ok; i++) {
-      const spot = item === "lamp" && lampByBed && items.bed ? drawBedside(random, items.bed, room) : drawItem(random, item, i, items, walls, room, p)
+      const spot = item === "lamp" && lampByBed && items.bed ? drawBedside(random, items.bed, room) : drawItem(random, item, i, items, walls, room, p, bedCorner)
       if (!spot) continue
       items[item] = spot.at
       ok = fits(items, item, placed, room, lampByBed, p)
@@ -530,11 +532,12 @@ function drawItem(
   items: Partial<Record<LayoutItem, Placement>>,
   walls: Partial<Record<LayoutItem, WallSide>>,
   room: RoomRect,
-  p: LayoutParams
+  p: LayoutParams,
+  bedCorner: boolean
 ): Spot | null {
   if (WALL_BACKED.indexOf(item) >= 0) {
     const avoid = item === "tv" ? bedWalls(items.bed, room).concat(walls.bed ? [walls.bed] : []) : []
-    return drawOnWall(random, item, room, p, avoid) // 5l-7d, 5m-10 (M3): never on a wall the bed touches
+    return drawOnWall(random, item, room, p, avoid, bedCorner) // 5l-7d, 5m-10 (M3): never on a wall the bed touches
   }
   if (isTable(item)) {
     const at = draw(random, item, p.tableDistanceMin, p.tableDistanceMax)
@@ -556,7 +559,7 @@ function drawItem(
  * hazardDistanceMin..max from the start spot, where max is hazardDistanceMax or,
  * when that cannot reach this wall, the wall's center-line distance + RELAX.
  */
-function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams, avoid: WallSide[] = []): Spot | null {
+function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: LayoutParams, avoid: WallSide[] = [], bedCorner: boolean = false): Spot | null {
   const f = FOOTPRINTS[item]
   const sides = WALL_SIDES.filter((w) => avoid.indexOf(w) < 0)
   const side = sides[Math.floor(random() * sides.length)]
@@ -567,7 +570,7 @@ function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: L
   const n = wallInward(side)
   const wallX = side === "+x" || side === "-x" // the wall line is x = const
   const perp = wallLine(room, side) + (wallX ? n.x : n.z) * (WALL_GAP + depth)
-  const along = item === "bed" ? bedAlong(random, room, wallX, width, perp, p) : alongSpan(random, room, wallX, WALL_CORNER + width, perp, p)
+  const along = item === "bed" ? bedAlong(random, room, wallX, width, perp, p, bedCorner) : alongSpan(random, room, wallX, WALL_CORNER + width, perp, p)
   if (along === null) {
     return null
   }
@@ -576,9 +579,9 @@ function drawOnWall(random: () => number, item: LayoutItem, room: RoomRect, p: L
   return {at: at, side: side}
 }
 
-/** Slice 11 (5l-7b): the bed along its head wall: with odds BED_CORNER in a corner (a long side WALL_GAP from the other wall), else BED_WALKWAY free beside both long sides. */
-function bedAlong(random: () => number, room: RoomRect, wallX: boolean, width: number, perp: number, p: LayoutParams): number | null {
-  if (random() < BED_CORNER) {
+/** Slice 11 (5l-7b): the bed along its head wall: in a corner (a long side WALL_GAP from the other wall) when `corner` (drawn once per layout with odds BED_CORNER, Slice 16 L5), else BED_WALKWAY free beside both long sides. */
+function bedAlong(random: () => number, room: RoomRect, wallX: boolean, width: number, perp: number, p: LayoutParams, corner: boolean): number | null {
+  if (corner) {
     const u = random() < 0.5 ? (wallX ? room.minZ : room.minX) + WALL_GAP + width : (wallX ? room.maxZ : room.maxX) - WALL_GAP - width
     return Math.sqrt(u * u + perp * perp) >= p.hazardDistanceMin ? u : null
   }

@@ -1,0 +1,134 @@
+- !<AssetImportMetadata/7fdc0db0-33fd-4e66-add7-1026ee6e5e69>
+  ImportedAssetIds:
+    .hidden/geometry_0_baked: !<reference> 3134af60-cc09-4d74-8117-f0257d6d57c8
+    079eb220636d3474: !<reference> 3fcca33c-0163-43e1-8de5-0736c57738a2
+    26ba073d67b9d0dd: !<reference> c510a0d4-b7bb-468b-b3f4-86be341ae4eb
+    657c264db4d38ac9: !<reference> b47cae94-b89b-4cf4-a8cd-344a02d0082c
+    88ab437fd121cc69: !<reference> 59786a13-cf94-4a64-820a-d09eee5d765b
+    8a40e48b7474407b: !<reference> b1f158de-ab43-41ce-b7e8-e77664a4346a
+    Materials/geometry_0_baked: !<reference> 12c24ff9-658e-4524-914e-e9cc9ef3891e
+    Materials/geometry_0_baked|geometry_0_baked|GraphPassInfo: !<reference> f599e838-b770-468f-8592-8874c46057a4
+    Meshes/TvStand_Base: !<reference> ee69aff8-d556-41d5-81ef-146ef7461d5e
+    Scene: !<reference> bcc8b5e7-e1be-46b5-9a55-aabb1bc4aaa9
+    Textures/Image_0: !<reference> b7873a32-298e-437b-a3c6-9b79029c26c9
+    Textures/lightmap: !<reference> f410ca3a-e77e-4ae0-9605-05e7d0e49bf3
+  ImporterName: GltfImporter
+  PrimaryAsset: !<reference> bcc8b5e7-e1be-46b5-9a55-aabb1bc4aaa9
+  PackageType: LegacyPackage
+  LegacyPackagePolicy: CanBeUnpackedTransparent
+  ExtraData:
+    {}
+  AssetDataMap:
+    Scene: !<own> 0c13f641-76e2-4859-9587-d3af7b4cd6a9
+  DependentFiles:
+    []
+  ImporterSettings: !<GltfImporterSettings>
+    UseLegacyImporter: false
+    WithMaterials: true
+    NamingConvention: ByCategorySanitizeV2
+    PersistentIdGenerationAlgorithm: DescriptorBasedV2
+    AnimationCurveOptimization: true
+    CustomAnimationSamplingRate: 30.000000
+    ImportVertexColor: true
+    ImportTangents: true
+    ImportMorphTargetAnimation: true
+    ConvertMetersToCentimeters: true
+    RegenerateTangents: false
+    OptimizeMesh: true
+  CompressionSettings: !<ComplexCompressionSettings>
+    Presets:
+      None Compression: !<FileCompressionSettings>
+        {}
+      Performance Compression: !<PerformanceCompressionSettings>
+        Level: Medium
+        Mipmap: false
+    ExtensionMappings:
+      mesh: None Compression
+      png: Performance Compression
+    Overrides:
+      {}
+- !<ObjectPrefabAssetData/0c13f641-76e2-4859-9587-d3af7b4cd6a9>
+  Prototype: !<ObjectOwner/41a18d07-878b-4917-8fec-4ac86df9138a>
+    PackagePath: ""
+    objects:
+      - !<own> c510a0d4-b7bb-468b-4c0b-7941cbe51b14
+- !<RenderMeshVisual/3fcca33c-0163-43e1-721a-f8c93a88c75d>
+  PrefabRemaps:
+    []
+  Name: TvStand_Base
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> 12c24ff9-658e-4524-914e-e9cc9ef3891e
+  Mesh: !<reference> ee69aff8-d556-41d5-81ef-146ef7461d5e
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/59786a13-cf94-4a64-7df5-2f6111a289a4>
+  PrefabRemaps:
+    []
+  Name: Scenes
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> b47cae94-b89b-4cf4-5732-cbb5fd2ff7d3
+  Components:
+    []
+- !<SceneObject/b1f158de-ab43-41ce-4817-18899b5bcb95>
+  PrefabRemaps:
+    []
+  Name: TvStand_Base
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.550000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 3fcca33c-0163-43e1-721a-f8c93a88c75d
+- !<SceneObject/b47cae94-b89b-4cf4-5732-cbb5fd2ff7d3>
+  PrefabRemaps:
+    []
+  Name: Scene
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> b1f158de-ab43-41ce-4817-18899b5bcb95
+  Components:
+    []
+- !<SceneObject/c510a0d4-b7bb-468b-4c0b-7941cbe51b14>
+  PrefabRemaps:
+    []
+  Name: TvStand_Base
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    - !<own> 59786a13-cf94-4a64-7df5-2f6111a289a4
+  Components:
+    []

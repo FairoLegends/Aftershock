@@ -90,6 +90,24 @@ export class DC14_WallsAndDoor extends Scenario {
         expect(byBed / lamps).toBeLessThan(0.8 + 1e-9)
         expect(byBed / lamps).toBeGreaterThan(LAMP_BY_BED_MIN - 1e-9)
       }
+      // Slice 16 (L5): the bed is in a corner (touching two walls) in BED_CORNER of Normal layouts, 0.4 +- 0.08 over seeds 1..400, no fallback.
+      let beds = 0
+      let cornerBeds = 0
+      let fallbacks400 = 0
+      for (let seed = 1; seed <= 400; seed++) {
+        const layout = generateLayout({...params, layoutSeed: seed})
+        if (layout.fallback) fallbacks400++
+        if (layout.items.bed) {
+          beds++
+          if (bedWalls(layout.items.bed, layout.room).length >= 2) cornerBeds++
+        }
+      }
+      const cornerShare = beds > 0 ? cornerBeds / beds : 0
+      console.log(`[Aftershock] DC14: bed in a corner ${cornerBeds} of ${beds} (${(cornerShare * 100).toFixed(1)} %), ${fallbacks400} of 400 fell back`)
+      expect(fallbacks400).toBe(0)
+      expect(beds).toBeGreaterThan(0)
+      expect(cornerShare).toBeGreaterThan(0.32 - 1e-9)
+      expect(cornerShare).toBeLessThan(0.48 + 1e-9)
       c.forceAftershockForTest(false) // Slice 7C: no aftershock in this scenario
       c.disableFallsForTest(true) // Slice 7D: no falls in this scenario
       c.config.testMode = true

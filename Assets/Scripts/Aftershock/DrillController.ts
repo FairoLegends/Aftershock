@@ -396,10 +396,15 @@ export class DrillController extends BaseScriptComponent {
   private _fallHits = 0 // Slice 7D: items that hit the head this drill
   private _glassHits = 0 // 5l-7a: the breaking pane hit the head this drill (0 or 1)
   private fallsDisabled = false // LEAF disableFallsForTest
-  // Slice 9A (5l item 2): the TV topples once per drill.
+  // Slice 9A (5l item 2): the TV topples once per drill. Slice 16: only the Tv
+  // child does; the Base (the stand) stays upright. The whole model wobbles
+  // until the topple, then stands still at rest.
   private tvUpdate: UpdateEvent | null = null
-  private tvModel: SceneObject | null = null // this drill's TvStand instance
-  private tvRest: quat | null = null // its local rotation as addModel set it
+  private tvModel: SceneObject | null = null // the TvStand instance's Tv child: the panel that tips
+  private tvBase: SceneObject | null = null // its Base child: the stand, it never tips
+  private tvRest: quat | null = null // the Tv child's local rotation as the prefab authored it
+  private tvRestPos: vec3 | null = null // and its local position (on top of the stand)
+  private tvFrame: quat = quat.quatIdentity() // the model root's rest rotation: Tv-local -> anchor-local
   private tvScreen: SceneObject | null = null // the anchor's TvScreen quad (Slice 8A), not part of the model
   private tvScreenPos: vec3 | null = null // its authored local pose, captured once
   private tvScreenRot: quat | null = null
@@ -594,6 +599,10 @@ export class DrillController extends BaseScriptComponent {
   }
   get tripCount(): number {
     return this._tripCount
+  }
+  /** Slice 16 (L7): how many of the one-shot effect sounds (chime, crack, glass break, thud) are playing. */
+  get effectSoundsPlaying(): number {
+    return [this.chimeAudio, this.crackAudio, this.glassBreakAudio, this.thudAudio].filter((a) => a && a.isPlaying()).length
   }
   /** The floor point the arrow and path lead to in EVACUATE (null outside it or without a door). Shared object: do not modify it. */
   get evacTarget(): vec3 | null {
@@ -794,9 +803,45 @@ export class DrillController extends BaseScriptComponent {
   get tvToppled(): boolean {
     return this._tvToppled
   }
-  /** Slice 9A: the TV model's tip forward, degrees: 0 upright, about 85 down. */
+  /** Slice 9A: the TV model's tip forward, degrees: 0 upright, 90 down (Slice 16). */
   get tvTipDegrees(): number {
     return this.tvAngle * RAD_TO_DEG
+  }
+  /** Slice 16: the TvStand's Base child (the stand, it never topples), or null. */
+  get tvBaseObject(): SceneObject | null {
+    return this.tvBase
+  }
+  /** Slice 16: the Base's pose in the Room's frame (cm; the Room tilts in the quake, its contents with it), or null. */
+  tvBaseRoomPose(): {pos: vec3; rot: quat} | null {
+    if (!this.tvBase || !this.room) {
+      return null
+    }
+    const rt = this.room.getTransform()
+    const bt = this.tvBase.getTransform()
+    return {pos: rt.getInvertedWorldTransform().multiplyPoint(bt.getWorldPosition()), rot: rt.getWorldRotation().invert().multiply(bt.getWorldRotation())}
+  }
+  /** Slice 16: the Tv child's tip, degrees, read off its transform: the angle its up axis turned from the Room's up. */
+  get tvPanelTiltDegrees(): number {
+    if (!this.tvModel || !this.room) {
+      return 0
+    }
+    const up = this.room.getTransform().getWorldRotation().invert().multiply(this.tvModel.getTransform().getWorldRotation()).multiplyVec3(vec3.up())
+    return Math.acos(Math.max(-1, Math.min(1, up.y))) * RAD_TO_DEG
+  }
+  /** Slice 16: the TV panel's lowest point (its mesh box corners) as a world height in the untilted Room: floorY + Room-local y; null without one. */
+  get tvLowestY(): number | null {
+    const rmv = this.tvModel ? this.tvModel.getComponent("Component.RenderMeshVisual") : null
+    if (!rmv || !this.room) {
+      return null
+    }
+    const lo = rmv.localAabbMin()
+    const hi = rmv.localAabbMax()
+    const toRoom = this.room.getTransform().getInvertedWorldTransform().mult(this.tvModel.getTransform().getWorldTransform())
+    let y = Infinity
+    for (let i = 0; i < 8; i++) {
+      y = Math.min(y, toRoom.multiplyPoint(new vec3(i & 1 ? hi.x : lo.x, i & 2 ? hi.y : lo.y, i & 4 ? hi.z : lo.z)).y)
+    }
+    return this._floorY + y
   }
   /** Slice 9A: where the toppled TV's top lands (world XZ at rest, y 0), or null without a TV. */
   get tvLandingPoint(): vec3 | null {
@@ -1048,6 +1093,7 @@ export class DrillController extends BaseScriptComponent {
 
   private onCalibDoneEnded(): void {
     if (this._state === "CALIBRATE") {
+      this.stopVoice() // Slice 16 L6: calib.done does not play into BRIEFING
       this.transitionTo("BRIEFING")
     }
   }
@@ -1256,6 +1302,7 @@ export class DrillController extends BaseScriptComponent {
     this.stopQuakeEffects()
     this.stopEvacuate()
     this.stopVoice()
+    this.stopEffectSounds() // Slice 16 L7
     this.postQuakeUpdate.enabled = false
     this.quakeStartTimer.cancel()
     this.resetAftershock()
@@ -1293,6 +1340,12 @@ export class DrillController extends BaseScriptComponent {
   }
 
   /** LEAF test hook only (TDD §8): true stops scheduled falls (forceFallForTest still drops one); false lets them fall again. */
+  /** Test hook (Slice 16): set health directly (0..100), so one trip or one drain frame empties it. */
+  setHealthForTest(h: number): void {
+    this._health = h
+    this.hud.setHealth(h)
+  }
+
   disableFallsForTest(off: boolean): void {
     this.fallsDisabled = off
     if (off) {
@@ -1956,30 +2009,41 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
-  /** The TV model and its screen quad tipped forward by `angle` (rad) about the model's front-bottom edge, anchor-local. */
+  /**
+   * The TV (Slice 16: the TvStand's Tv child) and its screen quad tipped
+   * forward by `angle` (rad) over the stand's front-top edge, anchor-local.
+   * The edge slides TV_SLIDE forward as the TV turns and drops TV_DROP late in
+   * the fall (cubic), so the TV clears the stand and at TV_TOPPLE_RAD lies face
+   * down on the floor in front of it. The Base does not move.
+   */
   private poseTv(angle: number): void {
     this.tvAngle = angle
-    if (!this.tvModel || !this.tvRest) {
+    if (!this.tvModel || !this.tvRest || !this.tvRestPos) {
       return
     }
     const f = FOOTPRINTS.tv
     const dir = new vec3(Math.sin(f.front), 0, Math.cos(f.front))
-    const pivot = dir.uniformScale(Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ)
+    const edge = dir.uniformScale(Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ).add(new vec3(0, TV_PIVOT_Y, 0))
+    const u = angle / TV_TOPPLE_RAD // 0 upright .. 1 down
+    const pivot = edge.add(dir.uniformScale(TV_SLIDE * u)).add(new vec3(0, -TV_DROP * u * u * u, 0))
     const q = quat.angleAxis(angle, vec3.up().cross(dir)) // sends up toward the front
+    const frame = this.tvFrame // the Tv child's parent (the model's root) in the anchor's frame
+    const inv = frame.invert()
     const t = this.tvModel.getTransform()
-    t.setLocalRotation(q.multiply(this.tvRest))
-    t.setLocalPosition(pivot.add(q.multiplyVec3(pivot.uniformScale(-1)))) // the model's root rests at the anchor's origin
+    t.setLocalRotation(inv.multiply(q).multiply(frame).multiply(this.tvRest))
+    t.setLocalPosition(inv.multiplyVec3(pivot.add(q.multiplyVec3(frame.multiplyVec3(this.tvRestPos).sub(edge)))))
     if (this.tvScreen && this.tvScreenPos && this.tvScreenRot) {
       const st = this.tvScreen.getTransform()
       st.setLocalRotation(q.multiply(this.tvScreenRot))
-      st.setLocalPosition(pivot.add(q.multiplyVec3(this.tvScreenPos.sub(pivot))))
+      st.setLocalPosition(pivot.add(q.multiplyVec3(this.tvScreenPos.sub(edge))))
     }
   }
 
   /**
    * Room-local XZ (x, y = z) where the toppled TV's top lands (5l-4e): the
-   * front edge plus TV_HEIGHT · sin(TV_TOPPLE_RAD) ≈ 110 cm, kept 5 cm inside
-   * the tvDangerFront reach of its danger zone.
+   * front edge plus the pivot's slide and the TV's reach above the pivot,
+   * TV_SLIDE + (TV_HEIGHT - TV_PIVOT_Y) · sin(TV_TOPPLE_RAD) ≈ 91 cm (Slice 16),
+   * kept 5 cm inside the tvDangerFront reach of its danger zone.
    */
   private tvLanding(): vec2 | null {
     const at = this._layout ? this._layout.items.tv : undefined
@@ -1989,7 +2053,7 @@ export class DrillController extends BaseScriptComponent {
     const f = FOOTPRINTS.tv
     const theta = at.yaw + f.front
     const depth = Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ
-    const d = depth + Math.min(TV_HEIGHT * Math.sin(TV_TOPPLE_RAD), Math.max(5, this.config.tvDangerFront - 5))
+    const d = depth + Math.min(TV_SLIDE + (TV_HEIGHT - TV_PIVOT_Y) * Math.sin(TV_TOPPLE_RAD), Math.max(5, this.config.tvDangerFront - 5))
     return new vec2(at.x + Math.sin(theta) * d, at.z + Math.cos(theta) * d)
   }
 
@@ -2263,6 +2327,15 @@ export class DrillController extends BaseScriptComponent {
     }
   }
 
+  /** Slice 16 L7: the one-shot effect sounds (chime, crack, glass break, thud) stop with the drill (Restart, Change language, GAME_OVER). */
+  private stopEffectSounds(): void {
+    for (const a of [this.chimeAudio, this.crackAudio, this.glassBreakAudio, this.thudAudio]) {
+      if (a && a.isPlaying()) {
+        a.stop(false)
+      }
+    }
+  }
+
   /** Back to "not under cover" for a new drill (BRIEFING). */
   private resetCover(): void {
     this._inZone = false
@@ -2389,10 +2462,14 @@ export class DrillController extends BaseScriptComponent {
     const at = this.toRoomLocal(head)
     // 5l-7a: the shards on the floor are one more trip hazard (one id, tripDamage once).
     const shards = this.shakeFx ? this.shakeFx.shardPoints().map((p) => ({id: GLASS_TRIP_ID, x: p.x, z: p.z})) : []
+    let emptiedBy: number | null = null // Slice 16 L8: the trip that took the last health
     for (const p of this.fallingObjects.landedPoints().concat(shards)) {
       if (this.tripped.indexOf(p.id) < 0 && Math.hypot(p.x - at.x, p.z - at.y) < this.config.tripRadius) {
         this.tripped.push(p.id)
         this._tripCount++
+        if (this._health > 0 && this._health <= this.config.tripDamage) {
+          emptiedBy = p.id
+        }
         this._health = Math.max(0, this._health - this.config.tripDamage)
         this.hud.showNotice(this.config.tripNoticeSeconds, "warn.trip")
         this.speak("warn.trip")
@@ -2401,7 +2478,8 @@ export class DrillController extends BaseScriptComponent {
     }
     this.hud.setHealth(this._health)
     if (this._health <= 0) {
-      this._gameOverReason = drainedOut ? "over.why.danger" : "hit.fell" // 5l-4f: a trip that empties health is a hit
+      // 5l-4f: a trip that empties health is a hit; Slice 16 L8: over a glass shard, hit.glass.
+      this._gameOverReason = drainedOut ? "over.why.danger" : emptiedBy === GLASS_TRIP_ID ? "hit.glass" : "hit.fell"
       this.transitionTo("GAME_OVER")
       return
     }
@@ -2469,6 +2547,7 @@ export class DrillController extends BaseScriptComponent {
     this.stopQuakeEffects()
     this.stopEvacuate()
     this.stopVoice() // Slice 10
+    this.stopEffectSounds() // Slice 16 L7
     this.aftershockTimer.cancel()
     this.aftershockPending = false
     this._lastScore = null
@@ -2987,7 +3066,9 @@ export class DrillController extends BaseScriptComponent {
     if (this.shakeFx) this.shakeFx.clearModels()
     this.resetTvTopple() // a new layout: the TV stands again
     this.tvModel = null
+    this.tvBase = null
     this.tvRest = null
+    this.tvRestPos = null
     for (const so of this.instances) {
       so.destroy()
     }
@@ -3062,9 +3143,14 @@ export class DrillController extends BaseScriptComponent {
       this.shakeFx.setModel(item as WobbleItem, so) // Slice 8C: the model rocks, the anchor stays
     }
     if (item === "tv") {
-      // Slice 9A: the TvStand GLB is one mesh, so the whole model topples; the screen quad goes with it.
-      this.tvModel = so
-      this.tvRest = t.getLocalRotation()
+      // Slice 16: the TvStand prefab is a Base (the stand) and a Tv child; only the Tv topples, the screen quad goes with it.
+      const tv = childNamed(so, "Tv")
+      this.tvModel = tv || so
+      this.tvBase = childNamed(so, "Base")
+      this.tvFrame = tv ? t.getLocalRotation() : quat.quatIdentity()
+      const tt = this.tvModel.getTransform()
+      this.tvRest = tt.getLocalRotation()
+      this.tvRestPos = tv ? tt.getLocalPosition() : vec3.zero()
       if (!this.tvScreen) {
         for (let i = 0; i < anchor.getChildrenCount(); i++) {
           const child = anchor.getChild(i)
@@ -3100,16 +3186,29 @@ export class DrillController extends BaseScriptComponent {
 const RAD_TO_DEG = 180 / Math.PI // layout yaw is radians; logs show degrees
 // Slice 9A (5l item 2): the TV topple.
 const TV_TOPPLE_SECONDS = 0.5 // the tip from upright to down, ease in
-const TV_TOPPLE_RAD = (85 * Math.PI) / 180 // down: almost flat, its top on the floor
+const TV_TOPPLE_RAD = Math.PI / 2 // down: flat, face down on the floor in front of the stand (Slice 16)
+const TV_PIVOT_Y = 38.9 // cm, the stand's top (TvStand_Base.glb): the TV tips over its front-bottom edge there
+const TV_SLIDE = 20 // cm, that edge slides forward over the topple (linear), so the TV clears the stand
+const TV_DROP = 42 // cm, and drops to the floor (cubic, late): the face-down TV's lowest point ends 0.5 cm up
 const TV_TOPPLE_FROM = 0.25 // of the shake: the topple's time (Slice 14A: the plan's fraction between these)
 const TV_TOPPLE_TO = 0.75
-const TV_HEIGHT = 110 // cm, TvStand's top (FallingObjects TOP_CM): the landing's reach from the front edge
+const TV_HEIGHT = 110 // cm, TvStand's top (FallingObjects TOP_CM): the landing's reach is its height above the pivot
 
 /** Moves a Room child to a layout placement (Room-local cm, yaw radians), keeping its height. */
 function placeItem(so: SceneObject, at: Placement): void {
   const t = so.getTransform()
   t.setLocalPosition(new vec3(at.x, t.getLocalPosition().y, at.z))
   t.setLocalRotation(quat.angleAxis(at.yaw, vec3.up()))
+}
+
+/** A direct child by name (Slice 16: the TvStand's Base and Tv). */
+function childNamed(so: SceneObject, name: string): SceneObject | null {
+  for (let i = 0; i < so.getChildrenCount(); i++) {
+    if (so.getChild(i).name === name) {
+      return so.getChild(i)
+    }
+  }
+  return null
 }
 
 function fmt(n: number): string {

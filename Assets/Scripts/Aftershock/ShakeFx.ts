@@ -267,8 +267,12 @@ export class ShakeFx extends BaseScriptComponent {
     }
   }
 
-  /** Slice 9A: the toppled TV stops wobbling; its topple owns the model's rotation until the next layout. */
+  /** Slice 9A: the toppled TV stops wobbling; its topple owns the model's rotation until the next layout. Slice 16: back to rest, so the stand stands straight. */
   stopWobble(item: WobbleItem): void {
+    const w = this.wobblers[item]
+    if (w) {
+      w.so.getTransform().setLocalRotation(w.rest)
+    }
     delete this.wobblers[item]
   }
 

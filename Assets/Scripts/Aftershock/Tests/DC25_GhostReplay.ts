@@ -8,7 +8,7 @@ import {ReplayView, SKIP_BUTTON_ASPECT} from "../ReplayView"
 import {atHeight, CLASSIC, doorPoint, expectState, getController, itemWorld, levelLook, pinDucked, press, restore, startSpot, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 const SEED = 1155577471 // DC10's fixed layout
-const QUAKE_S = 10 // room for the walk, the cover and the forced fall
+const QUAKE_S = 14 // room for the walk, the cover and the forced fall: 6.8 s measured, 9.8 s with the dwell at its bound, + the 0.7 s fall + 3 s margin
 const QUAKE2_S = 4
 const STEP_CM = 10 // the driven head moves this far per step
 const STEP_MS = 50
@@ -49,7 +49,7 @@ export class DC25_GhostReplay extends Scenario {
     const prevSeed = cfg.layoutSeed
     const falls = c.fallingObjects
     const prevLanded = falls.onLanded
-    const seen: {at: vec2 | null} = {at: null}
+    const seen: {at: vec2 | null; state: string | null} = {at: null, state: null}
     try {
       c.setLevelForTest("normal")
       c.forceAftershockForTest(false)
@@ -60,6 +60,7 @@ export class DC25_GhostReplay extends Scenario {
       await toFreshBriefing(c, CLASSIC)
       falls.onLanded = (source, x, z) => {
         seen.at = new vec2(x, z)
+        seen.state = c.state // onItemLanded records the landed event only in QUAKE or AFTERSHOCK
         if (prevLanded) prevLanded(source, x, z)
       }
 
@@ -74,6 +75,7 @@ export class DC25_GhostReplay extends Scenario {
       const path = [start, cabinet, table, start, door]
       c.headPose.setOverride(start, levelLook(start, cabinet))
       await expectState(c, "QUAKE", (cfg.testWaitSeconds + cfg.testScanSeconds + 2) * 1000)
+      const quakeAt = getTime() // within one poll of the quake start
       expect(c.isRecordingReplay).toBe(true)
       await walk(c, start, cabinet)
       // A slow preview records fewer samples per second: dwell until enough lie near the
@@ -91,8 +93,14 @@ export class DC25_GhostReplay extends Scenario {
       await walk(c, cabinet, table)
       pinDucked(c)
       expect(await waitFor(() => c.hasBeenSafe, (cfg.safeHoldSeconds + 2) * 1000)).toBe(true)
+      // The forced fall must land inside the quake: an overrun fails here, not as a landed count.
+      const fallAt = Math.max(getTime() - quakeAt, c.tSafe as number) // quakeAt may be a poll late, tSafe a poll early
+      const left = c.quakeDuration - fallAt
+      console.log(`[Aftershock] DC25: forcing the fall ${fallAt.toFixed(2)} s into the quake (safe after ${(c.tSafe as number).toFixed(2)} s), ${left.toFixed(2)} s of ${QUAKE_S} left`)
+      expect(c.state, `DC25: the quake ended before the forced fall (${fallAt.toFixed(2)} s in); raise QUAKE_S`).toBe("QUAKE")
       expect(c.forceFallForTest("shelf", mid)).toBe(true)
       expect(await waitFor(() => seen.at !== null, 4000)).toBe(true)
+      expect(seen.state, `DC25: the forced fall landed in ${seen.state}, after the quake (${left.toFixed(2)} s were left when forced); raise QUAKE_S`).toBe("QUAKE")
       await expectState(c, "POST_QUAKE", (QUAKE_S + 2) * 1000)
       await walk(c, table, start)
       await expectState(c, "EVACUATE", 2000)
