@@ -19,6 +19,15 @@ const EXIT_HOVER_WAIT_MS = 500 // HoldInteractor.release: the most it waits for 
 /** Head height (cm above floorY) for a ducked head: under the duck line at floorY + 70. */
 export const DUCKED_HEAD_CM = 60
 
+/** Slice 15C: the least fill alpha of any light text on a panel or label, the dimmed secondary text included. */
+export const TEXT_ALPHA_MIN = 0.9
+const WHITE_MIN = 0.99 // every RGB channel of a white text
+
+/** Slice 15C: white text, at TEXT_ALPHA_MIN or more. */
+export function isWhiteText(c: vec4): boolean {
+  return c.x >= WHITE_MIN && c.y >= WHITE_MIN && c.z >= WHITE_MIN && c.w >= TEXT_ALPHA_MIN
+}
+
 export function getController(): DrillController {
   const c = findSceneObjectByName("DrillController").getComponent(DrillController.getTypeName()) as DrillController
   saveBests(c)

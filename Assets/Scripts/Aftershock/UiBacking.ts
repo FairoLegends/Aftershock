@@ -14,7 +14,10 @@ export const SOFT_INNER_RADIUS_CM = 1.4 // buttons, rows and labels inside or be
 export const SOFT_BORDER_CM = 0.12
 export const SOFT_LINE = new vec4(1, 1, 1, 0.28)
 export const SOFT_WHITE = new vec4(1, 1, 1, 1)
-export const SOFT_DIM = new vec4(1, 1, 1, 0.72) // secondary text: labels, step numbers
+export const SOFT_DIM = new vec4(1, 1, 1, 0.92) // secondary text: labels, reasons, the danger line (15C: 72% read too faint on the glass)
+// Slice 15C: the thin dark edge on white text (panels, HUD, labels); never a backing.
+export const TEXT_OUTLINE_SIZE = 0.28
+export const TEXT_OUTLINE_COLOR = new vec4(0.2, 0.2, 0.2, 1)
 export const SOFT_GREEN = new vec4(0.239, 0.863, 0.518, 1) // #3DDC84
 export const SOFT_GREEN_TEXT = new vec4(0.024, 0.129, 0.059, 1) // #06210F, text on the green button
 export const SOFT_RED = new vec4(1, 0.353, 0.31, 1) // #FF5A4F

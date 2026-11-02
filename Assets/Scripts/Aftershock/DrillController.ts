@@ -40,7 +40,7 @@ import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
 import {SHARDS_MAX, ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
 import {getLanguage, getString, joinList, Lang, lines, setHazardFont, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {buildCardFacts, CardFacts, FURNITURE_HAZARDS, pickCards} from "./EducationCards"
-import {SOFT_RED} from "./UiBacking"
+import {SOFT_RED, TEXT_OUTLINE_COLOR, TEXT_OUTLINE_SIZE} from "./UiBacking"
 import {VoiceGuide} from "./VoiceGuide"
 
 export type DrillState =
@@ -2668,8 +2668,8 @@ export class DrillController extends BaseScriptComponent {
       t.depthTest = true
       t.textFill.color = SOFT_RED
       t.outlineSettings.enabled = true
-      t.outlineSettings.size = 0.2
-      t.outlineSettings.fill.color = new vec4(0.2, 0.2, 0.2, 1)
+      t.outlineSettings.size = TEXT_OUTLINE_SIZE
+      t.outlineSettings.fill.color = TEXT_OUTLINE_COLOR
       t.horizontalAlignment = HorizontalAlignment.Center
       t.verticalAlignment = VerticalAlignment.Center
       t.horizontalOverflow = HorizontalOverflow.Overflow

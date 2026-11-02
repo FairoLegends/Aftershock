@@ -7,10 +7,13 @@ import {
   GLASS_PANEL,
   GLASS_RED,
   GlassTier,
+  SOFT_DIM,
   SOFT_GREEN,
   SOFT_RED,
   SOFT_WHITE,
-  SoftFrame
+  SoftFrame,
+  TEXT_OUTLINE_COLOR,
+  TEXT_OUTLINE_SIZE
 } from "./UiBacking"
 
 // size / 43.886 = em-square in cm. 5m-3: the label is built at 1 cm per em and
@@ -83,8 +86,8 @@ export function setLabelRoom(room: SceneObject, rect: () => RoomRect | null): vo
 /**
  * A world-space label on a hazard, the safe zone or the exit door (R3, R4), in
  * the selected language only (5j-13d). 5m-3: a hazard label is a red ⚠ icon,
- * a red extra-bold hazard line and a smaller label.danger line on a light
- * backing; it sits labelGapCm above its item (beside it on the wall when that
+ * an extra-bold hazard line and a smaller label.danger line on a light
+ * backing (15C: both white with the thin dark outline, on the red glass); it sits labelGapCm above its item (beside it on the wall when that
  * is too high), stays upright and faces the head. Every label's em follows the
  * head distance each frame. 5m-4: in risotto mode a hazard label shrinks to its
  * ⚠ unless the head looks at it or is near. DrillController shows and hides it.
@@ -110,7 +113,7 @@ export class HazardLabel extends BaseScriptComponent {
   key: string = "label.cabinet"
 
   @input
-  @hint("Safe zone text and dot color: green #3DDC84. Hazards use red #FF5A4F text and a red ⚠; the door is green (5m-3).")
+  @hint("Safe zone text and dot color: green #3DDC84. Hazards use white text (15C) on red glass and a red ⚠; the door is green (5m-3).")
   @widget(new ColorWidget())
   textColor: vec4 = new vec4(0.851, 0.282, 0.059, 1)
   @ui.group_end
@@ -154,12 +157,13 @@ export class HazardLabel extends BaseScriptComponent {
     this.icon = this.buildIcon(content)
 
     const key = this.key as StringKey
-    const color = this.isHazard ? SOFT_RED : this.isDoor ? SOFT_GREEN : this.textColor
+    // 15C: hazard text is white on the red glass (red text on the pink fill read worse); the red stays in the ⚠ and the rim.
+    const color = this.isHazard ? SOFT_WHITE : this.isDoor ? SOFT_GREEN : this.textColor
     this.primary = this.addLine(content, key + ".id", color)
     this.secondary = this.addLine(content, key + ".en", color)
     if (this.isHazard) {
-      this.danger = this.addLine(content, key + ".danger", SOFT_RED)
-      this.dangerEn = this.addLine(content, key + ".danger.en", SOFT_RED)
+      this.danger = this.addLine(content, key + ".danger", SOFT_DIM)
+      this.dangerEn = this.addLine(content, key + ".danger.en", SOFT_DIM)
     }
     this.refresh()
     onLanguageChanged.add(() => this.refresh())
@@ -321,6 +325,15 @@ export class HazardLabel extends BaseScriptComponent {
   get isBeside(): boolean {
     return this.beside && this.box !== null
   }
+  /** Slice 15C (DC23): a hazard's title and danger lines (both languages), their fill and whether outlined; [] otherwise. */
+  get hazardLineStyles(): {name: string; color: vec4; outline: boolean}[] {
+    if (!this.danger || !this.dangerEn) return []
+    return [this.primary, this.secondary, this.danger, this.dangerEn].map((t) => ({
+      name: t.getSceneObject().name,
+      color: t.textFill.color,
+      outline: t.outlineSettings.enabled && t.outlineSettings.size > 0
+    }))
+  }
 
   /**
    * Re-renders the key in the selected language and lays the label out in em:
@@ -466,7 +479,17 @@ export class HazardLabel extends BaseScriptComponent {
     }
     const at = anchor.getTransform()
     const p = at.getWorldPosition().add(at.getWorldRotation().multiplyVec3(new vec3(lx, 0, lz)))
-    this.sceneObject.getTransform().setWorldPosition(new vec3(p.x, ctxFloorY + cy, p.z))
+    const t = this.sceneObject.getTransform()
+    if (!ctxRoom) {
+      t.setWorldPosition(new vec3(p.x, ctxFloorY + cy, p.z))
+      return
+    }
+    // In the Room's frame (its origin is on the floor): the quake moves and
+    // tilts the Room, so a world height over the static floor would be off by
+    // the shake at the label's spot; this way the label rides it with its item.
+    const room = ctxRoom.getTransform()
+    const q = room.getInvertedWorldTransform().multiplyPoint(p)
+    t.setWorldPosition(room.getWorldTransform().multiplyPoint(new vec3(q.x, cy, q.z)))
   }
 
   /**
@@ -573,6 +596,11 @@ export class HazardLabel extends BaseScriptComponent {
     ;(t as Text & {weight?: number}).weight = this.isHazard ? 800 : 700
     t.depthTest = true
     t.textFill.color = color
+    if (this.isHazard) {
+      t.outlineSettings.enabled = true // 15C: the panels' thin dark edge, so white reads on the red glass
+      t.outlineSettings.size = TEXT_OUTLINE_SIZE
+      t.outlineSettings.fill.color = TEXT_OUTLINE_COLOR
+    }
     t.horizontalAlignment = HorizontalAlignment.Left
     t.verticalAlignment = VerticalAlignment.Center
     t.horizontalOverflow = HorizontalOverflow.Wrap

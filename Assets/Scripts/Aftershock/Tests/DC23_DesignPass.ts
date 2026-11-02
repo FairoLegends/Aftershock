@@ -4,7 +4,10 @@ import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {DrillController} from "../DrillController"
 import {HazardLabel} from "../HazardLabel"
 import {FOOTPRINTS} from "../LayoutGenerator"
-import {expectState, getController, levelLook, pinDucked, restore, startSpot, toFreshBriefing, waitFor} from "./DrillTestKit"
+import {SecondResult} from "../ResultPanel"
+import {computeScore} from "../ScoreCalculator"
+import {getString, lines} from "../Strings"
+import {expectState, getController, isWhiteText, levelLook, pinDucked, restore, startSpot, TEXT_ALPHA_MIN, toFreshBriefing, waitFor} from "./DrillTestKit"
 
 const SAMPLE_MS = 50
 const SAMPLE_SECONDS = 3
@@ -22,6 +25,7 @@ const LABEL_MAX_HALF_W_EM = (1.5 * 1.155 + 0.4 + 13.6 + 0.12 + 2 * 0.64) / 2
 const POS_TOL_CM = 1 // the label is placed with the previous frame's em
 const FAR_MIN_CM = 175 // the window look-away spot: still beyond labelNearCm
 const FAR_STEP_CM = 25
+const MIN_RESULT_TEXTS = 8 // 15C: fewer means the panel did not lay out
 
 // DC23 (Slice 12, ENGINEERING_PLAN 5m): the warning banner and the HUD panel
 // take turns at quake and aftershock start (5m-1); a notice shows inside the
@@ -165,6 +169,21 @@ export class DC23_DesignPass extends Scenario {
         expect(b.x >= LIGHT_MIN && b.y >= LIGHT_MIN && b.z >= LIGHT_MIN).toBe(true)
       }
 
+      // 15C: every hazard label's title and danger lines are white, alpha at
+      // least TEXT_ALPHA_MIN, with the thin dark outline (the red stays in the ⚠ and the glass).
+      expect(c.activeHazardLabels.length > 0).toBe(true)
+      for (const l of c.activeHazardLabels) {
+        const styles = l.hazardLineStyles
+        expect(styles.length).toBe(4)
+        for (const s of styles) {
+          if (!isWhiteText(s.color) || !s.outline) {
+            console.log(`[Aftershock] DC23: label line ${s.name} color ${s.color} outline ${s.outline}`)
+          }
+          expect(isWhiteText(s.color)).toBe(true)
+          expect(s.outline).toBe(true)
+        }
+      }
+
       // Hard: no hazard labels in the quake.
       c.setLevelForTest("hard")
       c.forceAftershockForTest(false)
@@ -177,6 +196,10 @@ export class DC23_DesignPass extends Scenario {
         expect(l.isShown).toBe(false)
       }
       expect(c.hazardLabelsShown).toBe(false)
+
+      // 15C: on the first and the second result every shown text's fill
+      // alpha is at least TEXT_ALPHA_MIN, the dark text on the green button aside.
+      resultTextsBright(c)
 
       // 5m-9: at a quake start with the head at the start spot looking DOWN_DEG
       // down at the table, the banner shows and its center lies within
@@ -226,6 +249,55 @@ async function bannerThenPanel(c: DrillController, t0: number): Promise<void> {
 
 function labelPosition(l: HazardLabel): vec3 {
   return l.getSceneObject().getTransform().getWorldPosition()
+}
+
+/**
+ * 15C: shows a first result (detail rows, best row, two cards) and a second
+ * one (headline, "karena" line, bar, compare table, checklist) on the panel,
+ * and expects every shown text's fill alpha >= TEXT_ALPHA_MIN except the
+ * dark text on the green button; hides the panel again.
+ */
+function resultTextsBright(c: DrillController): void {
+  const p = c.resultPanel
+  const b = computeScore(10, 80, 0, 0, 0.5, {reached: true, seconds: 20, events: 0})
+  const extra = [{text: lines("result.best", {"{score}": "500"}), split: true}]
+  const second: SecondResult = {
+    headline: lines("compare.prevented", {"{n}": "1", "{m}": "2"}),
+    because: lines("compare.because", {"{items}": getString("item.shelf")}),
+    prevented: 1,
+    of: 2,
+    compare: [
+      {text: lines("compare.fell", {"{a}": "2", "{b}": "1"}), before: "2", after: "1", better: true},
+      {text: lines("compare.hit", {"{a}": "0", "{b}": "0"}), before: "0", after: "0", better: false},
+      {text: lines("compare.score", {"{a}": "500", "{b}": "600"}), before: "500", after: "600", better: true}
+    ],
+    title: lines("repair.title"),
+    rows: [
+      {text: lines("repair.shelf"), reason: lines("repair.tried"), checked: true},
+      {text: lines("repair.tv"), reason: lines("repair.problem"), checked: false},
+      {text: lines("repair.heavyLow"), reason: null, checked: false}
+    ],
+    source: lines("repair.source")
+  }
+  try {
+    for (const s of [null, second]) {
+      p.setComparison(s)
+      p.showResult(b, extra, s ? [] : ["card.falling", "card.fasten"])
+      expect(p.isShown).toBe(true)
+      const fills = p.shownTextFills
+      const dim = fills.filter((f) => !f.onGreen && f.color.w < TEXT_ALPHA_MIN)
+      console.log(
+        `[Aftershock] DC23: ${s ? "second" : "first"} result, ${fills.length} texts shown, least alpha ` +
+          `${Math.min(...fills.filter((f) => !f.onGreen).map((f) => f.color.w)).toFixed(2)}, ${fills.filter((f) => f.onGreen).length} on green` +
+          (dim.length > 0 ? `, dim: ${dim.map((f) => f.name + " " + f.color.w.toFixed(2)).join(", ")}` : "")
+      )
+      expect(fills.length).toBeGreaterThan(MIN_RESULT_TEXTS)
+      expect(dim.length).toBe(0)
+    }
+  } finally {
+    p.setComparison(null)
+    p.hide()
+  }
 }
 
 /** Pins the head at `head`, looking at the label's CURRENT position turned `deg` about up. */

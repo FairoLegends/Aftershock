@@ -6,7 +6,7 @@
     - !<own> f5d74682-203a-4970-81ea-9fa7b88c96bb
     - !<own> abd20522-42ae-4f41-a3c2-bf7bade229ec
     - !<own> 566975b2-1733-4f45-b4be-81889ddc015c
-    - !<own> eb0bc20a-626b-49bf-96cc-8b8dd8c87643
+    - !<own> 6f6a9f99-ec3f-4fc5-b325-aada0f056690
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -328,6 +328,22 @@
     "":
       config: !<MappingBased.AssignableType_1> 3e9f2147-1876-4514-b04c-298e432ea45f
       headPose: !<MappingBased.AssignableType_2> fa96ddb3-29c7-4a6c-a42c-6ed441585277
+  ScriptTypes:
+    "":
+      {}
+- !<ScriptComponent/076071ec-fb75-4a9c-986e-d74edead6484>
+  PrefabRemaps:
+    []
+  Name: AgentInteractScript
+  Enabled: true
+  ScriptAsset: !<reference> 29091811-e792-46be-bfa4-28ddec5f11be
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
   ScriptTypes:
     "":
       {}
@@ -1465,7 +1481,6 @@
     followSpeed: true
     textColor: true
     textOutlineColor: true
-    textOutlineSize: true
     barColor: true
   ScriptTypesDefault:
     {}
@@ -1477,7 +1492,7 @@
       backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.600000}
       textColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
       textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
-      textOutlineSize: 0.200000
+      textOutlineSize: 0.280000
       barColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
   ScriptTypes:
     "":
@@ -1578,22 +1593,6 @@
     []
   Components:
     - !<own> ee29e4a0-2b17-446e-b061-0293c4c30acb
-- !<ScriptComponent/39652a6a-cd31-4074-b7a3-b99ccca20217>
-  PrefabRemaps:
-    []
-  Name: AgentInteractScript
-  Enabled: true
-  ScriptAsset: !<reference> 29091811-e792-46be-bfa4-28ddec5f11be
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<SceneObject/3a794764-c758-4d72-9d89-bf3ed978113f>
   PrefabRemaps:
     []
@@ -1992,6 +1991,22 @@
     []
   Components:
     - !<own> f07635bb-92d2-428e-b069-a0b3e8be1e2f
+- !<ScriptComponent/43586118-0c62-42cc-b77e-caea3c70c6ed>
+  PrefabRemaps:
+    []
+  Name: AgentInspectScript
+  Enabled: true
+  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<SceneObject/44097eaf-01da-45fb-8973-3bd8172618de>
   PrefabRemaps:
     []
@@ -2805,6 +2820,22 @@
     - !<own> 4c195c04-c397-454e-bd08-3485f37d84fe
   Components:
     []
+- !<SceneObject/6f6a9f99-ec3f-4fc5-b325-aada0f056690>
+  PrefabRemaps:
+    []
+  Name: AiPreviewAgent Handler
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 43586118-0c62-42cc-b77e-caea3c70c6ed
+    - !<own> 076071ec-fb75-4a9c-986e-d74edead6484
 - !<SceneObject/6f8b015a-a79a-4ad5-ac10-af84e5960782>
   PrefabRemaps:
     []
@@ -5505,22 +5536,6 @@
     - !<own> 6a7a67db-5675-49bb-8f31-ba0588e3cffc
   Components:
     []
-- !<ScriptComponent/e50ef5c3-9b0f-4446-8ac4-35f2d17a0a64>
-  PrefabRemaps:
-    []
-  Name: AgentInspectScript
-  Enabled: true
-  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<DeviceTracking/e5553c8a-0b7e-4ef4-92d9-3e1318fb82c1>
   PrefabRemaps:
     []
@@ -5660,22 +5675,6 @@
   BlendNormals: false
   BlendShapes:
     {}
-- !<SceneObject/eb0bc20a-626b-49bf-96cc-8b8dd8c87643>
-  PrefabRemaps:
-    []
-  Name: AiPreviewAgent Handler
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> e50ef5c3-9b0f-4446-8ac4-35f2d17a0a64
-    - !<own> 39652a6a-cd31-4074-b7a3-b99ccca20217
 - !<SceneObject/ec07e5c3-7b8a-44df-b2e8-220c449133d4>
   PrefabRemaps:
     []
@@ -5699,14 +5698,13 @@
   ScriptAsset: !<reference> 634121c6-c913-47fc-9203-1368fce577a5
   ScriptInputsDefault:
     textOutlineColor: true
-    textOutlineSize: true
   ScriptTypesDefault:
     {}
   ScriptInputs:
     "":
       backingColor: !<Vec4> {x: 1.000000, y: 1.000000, z: 1.000000, w: 0.750000}
       textOutlineColor: !<Vec4> {x: 0.200000, y: 0.200000, z: 0.200000, w: 1.000000}
-      textOutlineSize: 0.200000
+      textOutlineSize: 0.280000
   ScriptTypes:
     "":
       {}

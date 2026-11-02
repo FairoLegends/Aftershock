@@ -243,7 +243,7 @@ export class ResultPanel extends BaseScriptComponent {
   @input
   @hint("Outline strength, 0 (none) to 1 (very strong)")
   @widget(new SliderWidget(0, 1, 0.05))
-  textOutlineSize: number = 0.2
+  textOutlineSize: number = 0.28
   @ui.group_end
 
   private readonly restartEvent = new Event()
@@ -277,6 +277,7 @@ export class ResultPanel extends BaseScriptComponent {
   private replayObject: SceneObject | null = null
   private fixRoomObject: SceneObject | null = null
   private fixTexts: Text[] = [] // the Perbaiki kamar label lines, left out of texts while it is hidden
+  private greenTexts: Text[] = [] // Slice 15C: the Ulangi label lines, dark on the green button
   private second: SecondResult | null = null // Slice 15A: set after a repeat, null on a first drill
   private backing: SoftFrame
   private hero: SceneObject // Slice 15A: the headline, the line under it and the bar
@@ -702,6 +703,22 @@ export class ResultPanel extends BaseScriptComponent {
   /** Slice 9B: the education card keys shown, in order ([] when none). */
   get shownCards(): StringKey[] {
     return this.cards.filter((c) => c.key !== null).map((c) => c.key as StringKey)
+  }
+  /** Slice 15C (DC23): every non-empty text shown on the panel and its fill; `onGreen` marks the dark text on the green button. */
+  get shownTextFills(): {name: string; color: vec4; onGreen: boolean}[] {
+    const out: {name: string; color: vec4; onGreen: boolean}[] = []
+    const stack: SceneObject[] = [this.sceneObject]
+    while (stack.length > 0) {
+      const so = stack.pop()
+      if (!so.isEnabledInHierarchy) continue
+      for (const t of so.getComponents("Component.Text") as Text[]) {
+        if (t.enabled && t.text.length > 0) out.push({name: so.name, color: t.textFill.color, onGreen: this.greenTexts.indexOf(t) >= 0})
+      }
+      for (let i = 0; i < so.getChildrenCount(); i++) {
+        stack.push(so.getChild(i))
+      }
+    }
+    return out
   }
 
   /**
@@ -1182,6 +1199,7 @@ export class ResultPanel extends BaseScriptComponent {
     if (primary) {
       t.textFill.color = SOFT_GREEN_TEXT
       t.outlineSettings.enabled = false // dark text on solid green
+      this.greenTexts.push(t)
     }
     t.horizontalOverflow = HorizontalOverflow.Shrink
     const w = BUTTON_W - 1

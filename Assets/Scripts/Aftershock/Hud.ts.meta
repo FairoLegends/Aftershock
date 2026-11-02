@@ -66,6 +66,6 @@
     - '// @input vec4 backingColor = {1,1,1,0.6} {"hint":"Backing color: light, opaque enough that room labels behind it do not show through (ENGINEERING_PLAN 5d item 3). Never dark: the display is additive.", "widget":"color"}'
     - '// @input vec4 textColor = {1,1,1,1} {"hint":"Instruction, label and timer text color (white)", "widget":"color"}'
     - '// @input vec4 textOutlineColor = {0.2,0.2,0.2,1} {"hint":"Thin outline around every HUD text, so white text reads on the light backing", "widget":"color"}'
-    - '// @input float textOutlineSize = 0.2 {"hint":"Outline strength, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
+    - '// @input float textOutlineSize = 0.28 {"hint":"Outline strength, 0 (none) to 1 (very strong)", "widget":"slider", "min":0, "max":1, "step":0.05}'
     - '// @input vec4 barColor = {1,1,1,1} {"hint":"Health bar fill color at or above healthAlarmBelow", "widget":"color"}'
     - '// @ui {"widget":"group_end"}'

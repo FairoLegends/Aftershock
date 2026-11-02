@@ -123,7 +123,7 @@ export class Hud extends BaseScriptComponent {
   @input
   @hint("Outline strength, 0 (none) to 1 (very strong)")
   @widget(new SliderWidget(0, 1, 0.05))
-  textOutlineSize: number = 0.2
+  textOutlineSize: number = 0.28
 
   @input
   @hint("Health bar fill color at or above healthAlarmBelow")
