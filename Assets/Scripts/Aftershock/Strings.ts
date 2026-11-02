@@ -115,6 +115,13 @@ export type StringKey =
   | "repair.cabinet"
   | "repair.tv"
   | "repair.source"
+  // Slice 15A (5m item 15a, S1 R1): the second result's headline and checklist.
+  | "compare.prevented"
+  | "compare.because"
+  | "compare.notPrevented"
+  | "repair.tried"
+  | "repair.problem"
+  | "repair.heavyLow"
 export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "safety.drill": {
     id: "Ini latihan, bukan peringatan gempa sungguhan",
@@ -580,12 +587,44 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "item.tv": {id: "TV", en: "TV", de: "Fernseher", ja: "テレビ", zh: "电视"},
   "compare.fell": {id: "Benda jatuh: {a} → {b}", en: "Items fallen: {a} → {b}", de: "Gefallene Gegenstände: {a} → {b}", ja: "落ちた物：{a} → {b}", zh: "掉落物品：{a} → {b}"},
   "compare.hit": {id: "Kamu tertimpa: {a} → {b}", en: "Hits on you: {a} → {b}", de: "Treffer auf dich: {a} → {b}", ja: "当たった回数：{a} → {b}", zh: "被砸中：{a} → {b}"},
-  "compare.score": {id: "Skor: {a} → {b}", en: "Score: {a} → {b}", de: "Punkte: {a} → {b}", ja: "スコア：{a} → {b}", zh: "得分：{a} → {b}"},
-  "repair.title": {id: "Untuk kamarmu:", en: "For your room:", de: "Für dein Zimmer:", ja: "あなたの部屋に：", zh: "你的房间："},
+  // Slice 15A: compare.score and repair.title changed; id and en from the learner (2 Nov), de, ja, zh the builder's (default).
+  "compare.score": {id: "Skor latihan: {a} → {b}", en: "Drill score: {a} → {b}", de: "Übungspunkte: {a} → {b}", ja: "訓練スコア：{a} → {b}", zh: "演练得分：{a} → {b}"},
+  "repair.title": {id: "Untuk kamarmu malam ini", en: "For your room tonight", de: "Für dein Zimmer heute Abend", ja: "今夜、自分の部屋で", zh: "今晚为你的房间做"},
   "repair.shelf": {id: "Ikat rak ke dinding", en: "Fasten the shelf to the wall", de: "Regal an der Wand befestigen", ja: "棚を壁に固定する", zh: "把架子固定在墙上"},
   "repair.cabinet": {id: "Ikat lemari ke dinding", en: "Fasten the cabinet to the wall", de: "Schrank an der Wand befestigen", ja: "たんすを壁に固定する", zh: "把柜子固定在墙上"},
   "repair.tv": {id: "Ikat TV ke dinding", en: "Fasten the TV to the wall", de: "Fernseher an der Wand befestigen", ja: "テレビを壁に固定する", zh: "把电视固定在墙上"},
-  "repair.source": {id: "Sumber: BMKG", en: "Source: BMKG", de: "Quelle: BMKG", ja: "出典：BMKG", zh: "来源：BMKG"}
+  "repair.source": {id: "Sumber: BMKG", en: "Source: BMKG", de: "Quelle: BMKG", ja: "出典：BMKG", zh: "来源：BMKG"},
+  // Slice 15A (S1 R1): id and en from the learner (2 Nov); de, ja, zh are the builder's own (default) translations.
+  "compare.prevented": {
+    id: "{n} dari {m} benda jatuh tercegah",
+    en: "{n} of {m} falling items prevented",
+    de: "{n} von {m} fallenden Gegenständen verhindert",
+    ja: "{m}個中{n}個の落下を防いだ",
+    zh: "{m}件掉落物中防住了{n}件"
+  },
+  "compare.because": {
+    id: "karena {items} sudah kamu ikat",
+    en: "because you fastened the {items}",
+    de: "weil du befestigt hast: {items}", // item.* in de has no article: "das Regal" would need one
+    ja: "{items}を固定したから",
+    zh: "因为你固定了{items}"
+  },
+  "compare.notPrevented": {id: "Benda jatuh: tidak berkurang", en: "Falling items: no fewer", de: "Fallende Gegenstände: nicht weniger", ja: "落ちた物：減っていない", zh: "掉落物品：没有减少"},
+  "repair.tried": {id: "dicoba di latihan", en: "tried in the drill", de: "in der Übung ausprobiert", ja: "訓練で試した", zh: "在演练中试过"},
+  "repair.problem": {id: "bermasalah tadi", en: "was a problem", de: "war ein Problem", ja: "さっき問題になった", zh: "刚才出了问题"},
+  "repair.heavyLow": {id: "Simpan benda berat di bawah", en: "Keep heavy things low", de: "Schweres unten lagern", ja: "重い物は低い所に置く", zh: "重物放在低处"}
+}
+
+// Slice 15A: list joins, "rak, lemari dan TV" (id), "、" in ja and zh.
+const LIST_SEP: Record<Lang, string> = {id: ", ", en: ", ", de: ", ", ja: "、", zh: "、"}
+const LIST_LAST: Record<Lang, string> = {id: " dan ", en: " and ", de: " und ", ja: "、", zh: "、"}
+
+/** Joins names as a list in `lang`: "a, b dan c" (id), "a, b and c" (en), "a, b und c" (de), "a、b、c" (ja, zh). */
+export function joinList(names: string[], lang: Lang = current): string {
+  if (names.length <= 1) {
+    return names.length === 1 ? names[0] : ""
+  }
+  return names.slice(0, -1).join(LIST_SEP[lang]) + LIST_LAST[lang] + names[names.length - 1]
 }
 
 // Selected language: "id" until the picker sets it; Restart keeps it.

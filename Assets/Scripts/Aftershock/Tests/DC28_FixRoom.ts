@@ -3,7 +3,7 @@ import {expect} from "Leaf.lspkg/Utils/common/Expect"
 import {DrillController} from "../DrillController"
 import {FixRoomView, markerText} from "../FixRoomView"
 import {FOOTPRINTS, LayoutForce} from "../LayoutGenerator"
-import {getString, lines} from "../Strings"
+import {getString, joinList, lines, StringKey} from "../Strings"
 import {expectState, getController, itemWorld, levelLook, press, restore, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 /** Slice 14B: the three fixable items and one table. */
@@ -15,6 +15,9 @@ const HEAD_OUT_CM = 30 // the head stands this far in front of the shelf's front
 const MARKER_MIN_CM = 12 // habit 3
 const TAG_WAIT_MS = 2000 // labels are all shown once the scan has ended (QUAKE)
 const REPLAY_WAIT_MS = 60000
+const LAYOUT_WAIT_MS = 500 // Slice 15A: the panel's flex layout and fit settle in a few frames
+const FIT_TOL_CM = 0.2 // Slice 15A: how far a box may poke past the panel backing
+const FILL_TOL = 0.01 // Slice 15A: the bar's fill against n/m
 
 /** One finished drill, as DC28 compares them. */
 interface DrillRun {
@@ -35,7 +38,11 @@ interface DrillRun {
 // Kembali keeps it. (c) Ulangi gempa: the same layout and plan, the shelf drops
 // nothing, the TV as in drill 1, the tag shown in the quake. (d) The second
 // result: compare rows from the baseline and this drill, the repair list, no
-// cards; Lihat ulang still plays. (e) Restart: new seeds, no fixes, no tag.
+// cards; Lihat ulang still plays. Slice 15A (S1 R1): the headline "n of m
+// prevented" (or "no fewer") with its bar and the line naming the fastened
+// items, the table's green "after" values, the checklist rows and boxes, no
+// detail rows, every box inside the backing and the checklist rows apart.
+// (e) Restart: new seeds, no fixes, no tag.
 @component
 export class DC28_FixRoom extends Scenario {
   async run(): Promise<void> {
@@ -92,6 +99,10 @@ export class DC28_FixRoom extends Scenario {
       expect(c.resultPanel.texts.indexOf(fixLabel) >= 0).toBe(true)
       expect(c.resultPanel.compareLines.length).toBe(0) // a first drill: no compare rows
       expect(c.resultPanel.shownCards.length).toBeGreaterThan(0) // the cards as before
+      expect(c.resultPanel.shownDetailRows).toBeGreaterThan(0) // Slice 15A: the detail rows as before
+      expect(c.resultPanel.headline).toBe("")
+      expect(c.resultPanel.repairChecked.length).toBe(0)
+      const firstDetailRows = c.resultPanel.shownDetailRows
 
       // (b) Perbaiki kamar.
       await press("FixRoomButton")
@@ -173,10 +184,72 @@ export class DC28_FixRoom extends Scenario {
         lines("compare.score", {"{a}": str(score1), "{b}": str(score2)}).primary
       ]
       expect(c.resultPanel.compareLines.join(" | ")).toBe(want.join(" | "))
-      const repair = [lines("repair.title").primary, lines("repair.shelf").primary, lines("repair.source").primary]
+      // Slice 15A (b): the checklist: the fastened shelf checked, then each other
+      // problem item not fastened (either drill, FIXABLE order) open, then "heavy low".
+      const open = ["cabinet", "tv"].filter((h) => problems.indexOf(h) >= 0 || c.problemItems.indexOf(h) >= 0)
+      const repair = [lines("repair.title").primary, lines("repair.shelf").primary]
+        .concat(open.map((h) => lines(("repair." + h) as StringKey).primary))
+        .concat([lines("repair.heavyLow").primary, lines("repair.source").primary])
       expect(c.resultPanel.repairLines.join(" | ")).toBe(repair.join(" | "))
+      expect(c.resultPanel.repairChecked.join(",")).toBe([true].concat(open.map(() => false), [false]).join(","))
+      const reasons = [getString("repair.tried")].concat(
+        open.map(() => getString("repair.problem")),
+        [""]
+      )
+      expect(c.resultPanel.repairReasons.join(" | ")).toBe(reasons.join(" | "))
       expect(c.resultPanel.shownCards.length).toBe(0) // the cards make room
       expect(c.resultPanel.fixRoomShown).toBe(c.problemItems.length > 0)
+      // Slice 15A (a): the headline, the line under it and the bar.
+      const n = Math.max(0, d1.landed - d2.landed)
+      const m = d1.landed
+      if (n > 0 && m > 0) {
+        expect(c.resultPanel.headline).toBe(lines("compare.prevented", {"{n}": str(n), "{m}": str(m)}).primary)
+        expect(c.resultPanel.becauseLine).toBe(lines("compare.because", {"{items}": joinList([getString("item.shelf")])}).primary)
+        expect(c.resultPanel.barShown).toBe(true)
+        expect(Math.abs(c.resultPanel.preventedFill - n / m)).toBeLessThan(FILL_TOL)
+        expect(c.resultPanel.barText).toBe(n + "/" + m)
+      } else {
+        expect(c.resultPanel.headline).toBe(getString("compare.notPrevented"))
+        expect(c.resultPanel.becauseLine).toBe("")
+        expect(c.resultPanel.barShown).toBe(false)
+      }
+      // The table: the after values, green when better.
+      expect(c.resultPanel.compareAfter.join(",")).toBe([str(d2.landed), str(d2.hit), str(score2)].join(","))
+      const green = [d2.landed < d1.landed, d2.hit < d1.hit, score1 !== null && score2 !== null && score2 > score1]
+      expect(c.resultPanel.compareGreen.join(",")).toBe(green.join(","))
+      const shownGreen = c.resultPanel.compareGreen.join(",")
+      // (e) The table's score is the ScoreBreakdown's total.
+      const sb = c.lastScore
+      expect(sb !== null).toBe(true)
+      if (sb) {
+        const total = Math.max(0, Math.min(1000, sb.speedPoints + sb.healthPoints + sb.holdPoints + sb.evacPoints - sb.penalty))
+        expect(sb.score).toBe(total)
+        expect(c.resultPanel.compareAfter[2]).toBe(str(total))
+      }
+      // (c) No detail rows, no cards.
+      expect(c.resultPanel.shownDetailRows).toBe(0)
+      // (d) Everything inside the panel backing; no two checklist rows overlap.
+      await waitFor(() => false, LAYOUT_WAIT_MS)
+      const panel = c.resultPanel.backingBox
+      const outside = c.resultPanel.secondBoxes.filter(
+        (b) => b.minX < panel.minX - FIT_TOL_CM || b.maxX > panel.maxX + FIT_TOL_CM || b.minY < panel.minY - FIT_TOL_CM || b.maxY > panel.maxY + FIT_TOL_CM
+      )
+      expect(outside.map((b) => b.name).join(",")).toBe("")
+      expect(c.resultPanel.secondBoxes.length).toBeGreaterThan(5)
+      const rowBoxes = c.resultPanel.listRowBoxes
+      expect(rowBoxes.length).toBe(repair.length - 2)
+      const overlaps: string[] = []
+      for (let i = 0; i < rowBoxes.length; i++) {
+        for (let j = i + 1; j < rowBoxes.length; j++) {
+          const a = rowBoxes[i]
+          const b = rowBoxes[j]
+          if (a.minX < b.maxX && b.minX < a.maxX && a.minY < b.maxY && b.minY < a.maxY) overlaps.push(a.name + "/" + b.name)
+        }
+      }
+      expect(overlaps.join(",")).toBe("")
+      const gaps = rowBoxes.slice(1).map((b, i) => (rowBoxes[i].minY - b.maxY).toFixed(2))
+      const fit = `backing ${(panel.maxX - panel.minX).toFixed(1)} x ${(panel.maxY - panel.minY).toFixed(1)} cm, ${c.resultPanel.secondBoxes.length} boxes inside, row gaps [${gaps.join(", ")}] cm`
+      const shownHead = `"${c.resultPanel.headline}" / "${c.resultPanel.becauseLine}", bar ${c.resultPanel.barShown ? c.resultPanel.preventedFill.toFixed(3) + " (" + c.resultPanel.barText + ")" : "hidden"}`
       const shownCompare = c.resultPanel.compareLines.join(" | ")
       const shownRepair = c.resultPanel.repairLines.join(" | ")
       await press("ReplayButton")
@@ -207,7 +280,7 @@ export class DC28_FixRoom extends Scenario {
         `DC28: calm drill ${calmState}, no Perbaiki kamar | drill 1 (plan ${PLAN_SEED}, layout ${layoutSeed}): problems [${problems.join(", ")}], landed ${d1.landed} hit ${d1.hit} shelf drops ${d1.shelfDrops}, TV ${d1.tvToppled ? "toppled" : "upright"}, score ${str(score1)}` +
           ` | markers: ${markerLog.join("; ")}` +
           ` | repeat [shelf]: shelf drops ${d2.shelfDrops}, TV ${d2.tvToppled ? "toppled" : "upright"}, tag "${d2.tag}", landed ${d2.landed} hit ${d2.hit}, score ${str(score2)}` +
-          ` | compare: ${shownCompare} | repair: ${shownRepair} | Restart: plan ${c.planSeed}, layout ${c.layout.seed}`
+          ` | headline ${shownHead} | compare: ${shownCompare} (green ${shownGreen}) | repair: ${shownRepair} | first result ${firstDetailRows} detail rows | fit: ${fit} | Restart: plan ${c.planSeed}, layout ${c.layout.seed}`
       )
     } finally {
       c.config.planSeed = prevPlanSeed

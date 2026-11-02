@@ -74,6 +74,50 @@ const CARD_BAR_Z = 0.02 // bar above the card face
 // Slice 9B: the whole panel stays within ±FIT_HALF_ANGLE_DEG of eye level at
 // its distance: it moves up from `below` first and shrinks only if still too tall.
 const FIT_HALF_ANGLE_DEG = 18
+// Slice 15A (5m item 15a, S1 R1; Glass UI screen 08, option S1): the second
+// result after a repeat. Under the title, in place of the score row, the
+// detail rows and the cards: a headline with a bar (n of m falls prevented),
+// a small compare table and one checklist card. The first result is unchanged.
+const HERO_GAP = 1.2 // above the headline (as SCORE_ROW_GAP)
+const HERO_EM_CM = 2.8 // "2 dari 3 benda jatuh tercegah": between the title (3.5) and the rows (2)
+const BECAUSE_EM_CM = 1.8 // "karena rak sudah kamu ikat", dimmed, under it
+const BECAUSE_GAP = 0.4 // between the two
+const BAR_COL_W = 8 // the bar and its "n/m", right of the headline (the mockup's ring is 7.6 cm)
+const BAR_COL_GAP = 1.5 // headline text to the bar column
+const BAR_H = 1.2
+const BAR_TRACK = new vec4(1, 1, 1, 0.22) // the unfilled part: light, never dark
+const BAR_COUNT_EM_CM = 2.4 // "2/3", above the bar
+const BAR_COUNT_GAP = 0.5 // between "n/m" and the bar
+const LAYER_Z = 0.02 // a bar fill or a check above the shape under it
+const CMP_ROWS = 3 // fell, hit, score
+const CMP_GAP = 1.2 // above the compare table
+const CMP_PAD = 0.35 // above and below a row's text (as DETAIL_PAD)
+const CMP_BEFORE_W = 6 // "before", right-aligned against the arrow ("1000" at 2 cm em is about 5.2 cm)
+const CMP_ARROW_W = 3 // "→"
+const CMP_AFTER_W = 6 // "after", left-aligned, green when better
+const LIST_ROWS = 4 // up to the three FIXABLE items, then "Simpan benda berat di bawah"
+const LIST_GAP = 1.2 // above the checklist card
+const LIST_PAD_X = 1.5 // inside the card (mockup .repair padding 1.2 / 1.5)
+const LIST_PAD_Y = 1.2
+const LIST_TITLE_EM_CM = 2 // "Untuk kamarmu malam ini", left
+const LIST_SOURCE_EM_CM = 1.5 // "Sumber: BMKG", right, dimmed
+const LIST_HEAD_COL_GAP = 1 // between the title and the source
+const LIST_HEAD_GAP = 0.8 // header to the first row
+const LIST_ROW_GAP = 0.55 // between rows
+const LIST_EM_CM = 1.8 // a row's text
+const LIST_REASON_EM_CM = 1.5 // its reason, dimmed, under it
+const BOX_CM = 2 // the check box (mockup 2.1 cm, radius 0.6)
+const BOX_RADIUS = 0.5
+const BOX_BORDER_CM = 0.22 // an open box: a green outline only
+const BOX_TEXT_GAP = 1.2 // box to text
+const BOX_OPEN = new vec4(SOFT_GREEN.x, SOFT_GREEN.y, SOFT_GREEN.z, 0) // no fill
+// The check is drawn, not a glyph (Manrope has no ✓): an L, a long stroke on
+// the right and a short one along the bottom, turned 45° clockwise, dark on
+// the green box (as the dark label on the green button).
+const CHECK_LONG = 1.1
+const CHECK_SHORT = 0.55
+const CHECK_STROKE = 0.28
+const CHECK_UP = 0.1 // the turned L spans -0.53..0.33 cm (rounded ends): this centers it in the box
 
 const WHITE = new vec4(1, 1, 1, 1)
 
@@ -109,6 +153,65 @@ interface Placement {
   flat: vec3
   distance: number
   below: number
+}
+
+/** Slice 15A: one compare table row; `text` is the full line (label: before → after), `better` greens `after`. */
+export interface CompareRow {
+  text: Lines
+  before: string
+  after: string
+  better: boolean
+}
+
+/** Slice 15A: one checklist row, `checked` when the item was fastened and tried in the drill. */
+export interface RepairRow {
+  text: Lines
+  reason: Lines | null
+  checked: boolean
+}
+
+/** Slice 15A (S1 R1): what the second result shows in place of the score row, the detail rows and the cards. */
+export interface SecondResult {
+  headline: Lines // compare.prevented, or compare.notPrevented with no bar
+  because: Lines | null // compare.because
+  prevented: number // n: the bar fills n / of; 0 hides it
+  of: number // m: landed in the drill before the repeat
+  compare: CompareRow[]
+  title: Lines // repair.title
+  rows: RepairRow[]
+  source: Lines // repair.source
+}
+
+/** Slice 15A (DC28): a box in the panel's plane, in world cm from the panel's center (x right, y up). */
+export interface PlaneBox {
+  name: string
+  minX: number
+  maxX: number
+  minY: number
+  maxY: number
+}
+
+type Shape = ReturnType<typeof createRoundRect>
+
+/** Slice 15A: one compare table row: label (dimmed), before, arrow, after. */
+interface CompareView {
+  so: SceneObject
+  item: FlexItem
+  label: Text
+  before: Text
+  arrow: Text
+  after: Text
+  rule: SceneObject | null
+}
+
+/** Slice 15A: one checklist row: a box (checked or open), its text and reason. */
+interface ListRowView {
+  so: SceneObject
+  box: SoftFrame
+  check: SceneObject
+  strokes: {so: SceneObject; w: number; h: number}[]
+  text: Text
+  reason: Text
 }
 
 /**
@@ -170,8 +273,24 @@ export class ResultPanel extends BaseScriptComponent {
   private replayObject: SceneObject | null = null
   private fixRoomObject: SceneObject | null = null
   private fixTexts: Text[] = [] // the Perbaiki kamar label lines, left out of texts while it is hidden
-  private compare: ResultLine[] = [] // Slice 14B: above the rows on the result after a repeat
-  private repair: ResultLine[] = [] // and the repair list below them
+  private second: SecondResult | null = null // Slice 15A: set after a repeat, null on a first drill
+  private backing: SoftFrame
+  private hero: SceneObject // Slice 15A: the headline, the line under it and the bar
+  private heroItem: FlexItem
+  private headlineText: Text
+  private becauseText: Text
+  private barCount: Text
+  private bar: SceneObject
+  private barTrack: Shape
+  private barFillObject: SceneObject
+  private barFill: Shape
+  private compareViews: CompareView[] = []
+  private list: SceneObject // Slice 15A: the checklist card
+  private listItem: FlexItem
+  private listFrame: SoftFrame
+  private listTitle: Text
+  private listSource: Text
+  private listRows: ListRowView[] = []
   private cards: Card[] = []
   private placement: Placement | null = null
   private panelH = 0 // the last layout's height (local units)
@@ -188,6 +307,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.baseScale = this.sceneObject.getTransform().getLocalScale()
 
     const backing = new SoftFrame(this.sceneObject, this.backingColor)
+    this.backing = backing
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)
@@ -212,12 +332,17 @@ export class ResultPanel extends BaseScriptComponent {
 
     this.title = this.addRow(content, "Title", false)
     this.addScoreRow(content)
+    this.addHero(content) // Slice 15A: collapsed on a first result, as the items below
+    for (let i = 0; i < CMP_ROWS; i++) {
+      this.compareViews.push(this.addCompareRow(content, "Compare" + (i + 1), i > 0))
+    }
     for (let i = 0; i < DETAIL_LINES; i++) {
       this.details.push(this.addRow(content, "Line" + (i + 1), i > 0))
     }
     for (let i = 0; i < CARD_SLOTS; i++) {
       this.cards.push(this.addCard(content, "Card" + (i + 1))) // before the buttons: the Restart label stays last in texts
     }
+    this.addList(content) // Slice 15A: before the buttons too
     this.addReplayRow(content) // 13B: above the Restart row, so the Restart label stays last in texts
     this.addButtonRow(content)
     this.setRow(this.title, null, BIG_EM_CM)
@@ -226,6 +351,7 @@ export class ResultPanel extends BaseScriptComponent {
     }
     this.setScore(null)
     this.setCards([])
+    this.layoutSecond()
   }
 
   /**
@@ -315,12 +441,15 @@ export class ResultPanel extends BaseScriptComponent {
     this._mode = "result"
     this.sceneObject.enabled = true // measure the rows in the real font
     this.setRow(this.title, lines("result.title"), BIG_EM_CM)
-    this.setScore(b.score)
+    const second = this.second !== null
+    this.setScore(second ? null : b.score) // Slice 15A: the second result's score is in the compare table
     // Slice 8B (5k item 10): the grip share and the evacuation, after speed and health.
     const evac: ResultLine = b.evacReached
       ? {text: fill("result.evac", "{s}", (b.evacTime as number).toFixed(1)), split: true}
       : {text: lines("result.evacFail"), split: true}
-    if (b.tSafe === null) {
+    if (second) {
+      this.setDetails([], []) // Slice 15A: the headline, table and checklist take the rows' place
+    } else if (b.tSafe === null) {
       this.setDetails([{text: lines("result.never"), split: true}, evac], extra)
     } else {
       this.setDetails(
@@ -333,7 +462,8 @@ export class ResultPanel extends BaseScriptComponent {
         extra
       )
     }
-    this.setCards(cards)
+    this.setCards(second ? [] : cards)
+    this.layoutSecond()
     this.showPanel()
   }
 
@@ -343,8 +473,10 @@ export class ResultPanel extends BaseScriptComponent {
     this.sceneObject.enabled = true
     this.setRow(this.title, lines("over.title"), BIG_EM_CM)
     this.setScore(null)
-    this.setDetails([{text: lines(reason), split: true}], extra)
-    this.setCards(cards)
+    const second = this.second !== null // Slice 15A: as showResult
+    this.setDetails(second ? [] : [{text: lines(reason), split: true}], second ? [] : extra)
+    this.setCards(second ? [] : cards)
+    this.layoutSecond()
     this.showPanel()
   }
 
@@ -394,7 +526,7 @@ export class ResultPanel extends BaseScriptComponent {
 
   /** Fills the detail rows with `base` then `extra` and collapses the rest. */
   private setDetails(base: ResultLine[], extra: ResultLine[]): void {
-    const all = this.compare.concat(base, extra, this.repair) // Slice 14B: [] and [] on a first drill
+    const all = base.concat(extra) // Slice 15A: the compare rows and repair lines have their own items now
     for (let i = 0; i < this.details.length; i++) {
       const l = i < all.length ? all[i] : null
       this.setRow(this.details[i], l ? l.text : null, SMALL_EM_CM, l ? l.split : true)
@@ -424,19 +556,19 @@ export class ResultPanel extends BaseScriptComponent {
   hide(): void {
     this._mode = null
     this.setCards([])
-    this.compare = []
-    this.repair = []
+    this.second = null
+    this.layoutSecond()
     this.sceneObject.enabled = false
   }
 
   /**
-   * Slice 14B (5m item 15): the next showResult/showGameOver puts `compare`
-   * above the rows (label: value, as the rows) and `repair` below them, one
-   * line each. Both [] on a first drill.
+   * Slice 14B (5m item 15), Slice 15A (S1 R1): the next showResult or
+   * showGameOver after a repeat shows `second` (headline, compare table,
+   * checklist) in place of the score row, the detail rows and the cards.
+   * Null on a first drill: the panel as before.
    */
-  setComparison(compare: ResultLine["text"][], repair: ResultLine["text"][]): void {
-    this.compare = compare.map((text) => ({text, split: true}))
-    this.repair = repair.map((text) => ({text, split: false}))
+  setComparison(second: SecondResult | null): void {
+    this.second = second
   }
 
   /** Slice 14B: Perbaiki kamar right of Lihat ulang (same size, as the row below), or Lihat ulang alone, centered. */
@@ -473,12 +605,93 @@ export class ResultPanel extends BaseScriptComponent {
   get fixRoomShown(): boolean {
     return this.fixRoomObject !== null && this.fixRoomObject.enabled
   }
-  /** Slice 14B: the compare rows and repair lines shown, selected language ([] on a first drill). */
+  /**
+   * Slice 14B: the compare rows (label: a → b, full lines) and, Slice 15A,
+   * the checklist (title, each row's text, source) shown, selected language
+   * ([] on a first drill).
+   */
   get compareLines(): string[] {
-    return this.compare.map((l) => l.text.primary)
+    return this.second ? this.second.compare.map((r) => r.text.primary) : []
   }
   get repairLines(): string[] {
-    return this.repair.map((l) => l.text.primary)
+    const s = this.second
+    return s ? [s.title.primary].concat(s.rows.map((r) => r.text.primary), [s.source.primary]) : []
+  }
+  /** Slice 15A: the headline and the line under it as shown ("" when none). */
+  get headline(): string {
+    return this.headlineText.text
+  }
+  get becauseLine(): string {
+    return this.becauseText.text
+  }
+  /** Slice 15A: the bar is shown; its fill share (fill width over the track's, 0 when hidden) and its "n/m". */
+  get barShown(): boolean {
+    return this.second !== null && this.bar.enabled
+  }
+  get preventedFill(): number {
+    return this.barShown ? this.barFill.size.x / this.barTrack.size.x : 0
+  }
+  get barText(): string {
+    return this.barCount.text
+  }
+  /** Slice 15A: the compare table's "after" values as shown, and which are green. */
+  get compareAfter(): string[] {
+    return this.compareViews.filter((v) => v.after.text.length > 0).map((v) => v.after.text)
+  }
+  get compareGreen(): boolean[] {
+    return this.compareViews.filter((v) => v.after.text.length > 0).map((v) => v.after.textFill.color.equal(SOFT_GREEN))
+  }
+  /** Slice 15A: per checklist row shown, true when its box is checked. */
+  get repairChecked(): boolean[] {
+    return this.listRows.filter((r) => r.so.enabled).map((r) => r.check.enabled)
+  }
+  /** Slice 15A: the checklist rows' reasons as shown ("" for none). */
+  get repairReasons(): string[] {
+    return this.listRows.filter((r) => r.so.enabled).map((r) => r.reason.text)
+  }
+  /** Slice 15A: the detail rows shown (0 on the second result). */
+  get shownDetailRows(): number {
+    return this.details.filter((r) => r.id.text.length > 0).length
+  }
+  /** Slice 15A (DC28 d): the panel backing, in its own plane. */
+  get backingBox(): PlaneBox {
+    const w = this.backing.width
+    const h = this.backing.height
+    return this.planeBox("backing", this.backing.face, -w / 2, w / 2, -h / 2, h / 2)
+  }
+  /** Slice 15A (DC28 d): every shape and non-empty text of the headline, the table and the checklist shown. */
+  get secondBoxes(): PlaneBox[] {
+    const out: PlaneBox[] = []
+    if (!this.second || !this.isShown) return out
+    const texts = [this.headlineText, this.becauseText, this.barCount, this.listTitle, this.listSource]
+    for (const v of this.compareViews) {
+      if (v.after.text.length > 0) texts.push(v.label, v.before, v.arrow, v.after)
+    }
+    for (const r of this.listRows) {
+      if (r.so.enabled) texts.push(r.text, r.reason)
+    }
+    for (const t of texts) {
+      const b = this.textBox(t)
+      if (b) out.push(b)
+    }
+    if (this.barShown) {
+      out.push(this.shapeBox("bar.track", this.bar, this.barTrack))
+      out.push(this.shapeBox("bar.fill", this.barFillObject, this.barFill))
+    }
+    out.push(this.shapeBox("list.card", this.listFrame.face, this.listFrame.backing))
+    for (const r of this.listRows) {
+      if (r.so.enabled) out.push(this.rowShapes(r))
+    }
+    return out
+  }
+  /** Slice 15A (DC28 d): each checklist row shown, its box, text and reason together. */
+  get listRowBoxes(): PlaneBox[] {
+    return this.listRows
+      .filter((r) => r.so.enabled)
+      .map((r) => {
+        const parts = [this.rowShapes(r), this.textBox(r.text), this.textBox(r.reason)].filter((b) => b !== null) as PlaneBox[]
+        return union(r.so.name, parts)
+      })
   }
   /** Slice 9B: the education card keys shown, in order ([] when none). */
   get shownCards(): StringKey[] {
@@ -579,6 +792,309 @@ export class ResultPanel extends BaseScriptComponent {
     const text = this.addText(so, name + ".text", CARD_EM_CM, true)
     text.horizontalAlignment = HorizontalAlignment.Left
     return {item, frame, bar, text, key: null}
+  }
+
+  /** Slice 15A: the headline (wraps), the dimmed line under it and, right of both, "n/m" over a bar. */
+  private addHero(parent: SceneObject): void {
+    const so = global.scene.createSceneObject("Hero")
+    so.setParent(parent)
+    this.hero = so
+    this.heroItem = this.addItem(so)
+    this.headlineText = this.addText(so, "Hero.headline", HERO_EM_CM, true)
+    this.becauseText = this.addText(so, "Hero.because", BECAUSE_EM_CM, true)
+    this.becauseText.textFill.color = SOFT_DIM
+    this.barCount = this.addText(so, "Hero.count", BAR_COUNT_EM_CM, false)
+    this.bar = global.scene.createSceneObject("Hero.bar")
+    this.bar.setParent(so)
+    this.barTrack = createRoundRect(this.bar, BAR_TRACK, BAR_COL_W, BAR_H, BAR_H / 2)
+    this.barFillObject = global.scene.createSceneObject("Hero.bar.fill")
+    this.barFillObject.setParent(this.bar)
+    this.barFill = createRoundRect(this.barFillObject, SOFT_GREEN, BAR_COL_W, BAR_H, BAR_H / 2)
+  }
+
+  /** Slice 15A: one compare table row: label (dimmed, left, wraps), before (right-aligned), "→", after. */
+  private addCompareRow(parent: SceneObject, name: string, ruleAbove: boolean): CompareView {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    const item = this.addItem(so)
+    const label = this.addText(so, name + ".label", SMALL_EM_CM, true)
+    label.textFill.color = SOFT_DIM
+    label.horizontalAlignment = HorizontalAlignment.Left
+    const before = this.addText(so, name + ".before", SMALL_EM_CM, false)
+    before.horizontalAlignment = HorizontalAlignment.Right
+    const arrow = this.addText(so, name + ".arrow", SMALL_EM_CM, false)
+    arrow.textFill.color = SOFT_DIM
+    const after = this.addText(so, name + ".after", SMALL_EM_CM, false)
+    after.horizontalAlignment = HorizontalAlignment.Left
+    let rule: SceneObject | null = null
+    if (ruleAbove) {
+      rule = global.scene.createSceneObject(name + ".rule")
+      rule.setParent(so)
+      createRoundRect(rule, RULE_COLOR, INNER_W, RULE_H, 0)
+    }
+    return {so, item, label, before, arrow, after, rule}
+  }
+
+  /** Slice 15A: the checklist, one card in the 9B card look (no bar): a header row, then LIST_ROWS row slots. */
+  private addList(parent: SceneObject): void {
+    const so = global.scene.createSceneObject("Checklist")
+    so.setParent(parent)
+    this.list = so
+    this.listItem = this.addItem(so)
+    this.listFrame = new SoftFrame(so, CARD_FILL, SOFT_INNER_RADIUS_CM, null, "Checklist.backing")
+    this.listFrame.setSize(INNER_W, 1)
+    this.listTitle = this.addText(so, "Checklist.title", LIST_TITLE_EM_CM, true)
+    this.listTitle.horizontalAlignment = HorizontalAlignment.Left
+    this.listSource = this.addText(so, "Checklist.source", LIST_SOURCE_EM_CM, false)
+    this.listSource.horizontalAlignment = HorizontalAlignment.Right
+    this.listSource.textFill.color = SOFT_DIM
+    for (let i = 0; i < LIST_ROWS; i++) {
+      this.listRows.push(this.addListRow(so, "Checklist.Row" + (i + 1)))
+    }
+  }
+
+  /** Slice 15A: a checklist row: the box (with its drawn check) left, the text and the dimmed reason right of it. */
+  private addListRow(parent: SceneObject, name: string): ListRowView {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    const box = new SoftFrame(so, SOFT_GREEN, BOX_RADIUS, null, name + ".box")
+    box.setSize(BOX_CM, BOX_CM)
+    const check = global.scene.createSceneObject(name + ".check")
+    check.setParent(box.face)
+    check.getTransform().setLocalPosition(new vec3(0, CHECK_UP, LAYER_Z))
+    check.getTransform().setLocalRotation(quat.angleAxis(-Math.PI / 4, vec3.forward()))
+    const strokes = [
+      this.addStroke(check, name + ".check.long", (CHECK_SHORT - CHECK_STROKE) / 2, 0, CHECK_STROKE, CHECK_LONG),
+      this.addStroke(check, name + ".check.short", 0, (CHECK_STROKE - CHECK_LONG) / 2, CHECK_SHORT, CHECK_STROKE)
+    ]
+    const text = this.addText(so, name + ".text", LIST_EM_CM, true)
+    text.horizontalAlignment = HorizontalAlignment.Left
+    const reason = this.addText(so, name + ".reason", LIST_REASON_EM_CM, true)
+    reason.horizontalAlignment = HorizontalAlignment.Left
+    reason.textFill.color = SOFT_DIM
+    return {so, box, check, strokes, text, reason}
+  }
+
+  private addStroke(parent: SceneObject, name: string, x: number, y: number, w: number, h: number): {so: SceneObject; w: number; h: number} {
+    const so = global.scene.createSceneObject(name)
+    so.setParent(parent)
+    so.getTransform().setLocalPosition(new vec3(x, y, 0))
+    createRoundRect(so, SOFT_GREEN_TEXT, w, h, Math.min(w, h) / 2)
+    return {so, w, h}
+  }
+
+  /** A collapsed full-width flex item on `so`. Never disable `so`: FlexLayout discovers only enabled children, once at OnStart. */
+  private addItem(so: SceneObject): FlexItem {
+    const item = so.createComponent(FlexItem.getTypeName()) as FlexItem
+    item.overrideWidth = INNER_W
+    item.overrideHeight = HIDDEN_H
+    item.alignSelf = FlexAlignSelf.Center
+    return item
+  }
+
+  /** Slice 15A: lays out the headline, the compare table and the checklist from `second`, or collapses them. */
+  private layoutSecond(): void {
+    const s = this.second
+    this.layoutHero(s)
+    for (let i = 0; i < this.compareViews.length; i++) {
+      this.layoutCompareRow(this.compareViews[i], s && i < s.compare.length ? s.compare[i] : null, i === 0)
+    }
+    this.layoutList(s)
+  }
+
+  /** Slice 15A: the bar column right of the headline when n > 0; otherwise the headline alone, centered. */
+  private layoutHero(s: SecondResult | null): void {
+    const lang = getLanguage()
+    const bar = s !== null && s.prevented > 0 && s.of > 0
+    this.bar.enabled = bar
+    setLineText(this.headlineText, s ? s.headline.primary : "", lang)
+    setLineText(this.becauseText, s && bar && s.because ? s.because.primary : "", lang)
+    setLineText(this.barCount, s && bar ? s.prevented + "/" + s.of : "", "en") // digits in Manrope, as the score
+    if (!s) {
+      this.heroItem.overrideHeight = HIDDEN_H
+      this.heroItem.marginTop = 0
+      return
+    }
+    const left = -INNER_W / 2
+    const right = bar ? INNER_W / 2 - BAR_COL_W - BAR_COL_GAP : INNER_W / 2
+    const align = bar ? HorizontalAlignment.Left : HorizontalAlignment.Center
+    this.headlineText.horizontalAlignment = align
+    this.becauseText.horizontalAlignment = align
+    const headH = this.wrapLines(this.headlineText, left, right, HERO_EM_CM) * HERO_EM_CM * LINE_H_PER_EM
+    const becauseH = this.wrapLines(this.becauseText, left, right, BECAUSE_EM_CM) * BECAUSE_EM_CM * LINE_H_PER_EM
+    const textH = headH + (becauseH > 0 ? BECAUSE_GAP + becauseH : 0)
+    const top = textH / 2
+    this.headlineText.layoutRect = Rect.create(left, right, top - headH, top)
+    const becauseTop = top - headH - BECAUSE_GAP
+    this.becauseText.layoutRect = becauseH > 0 ? Rect.create(left, right, becauseTop - becauseH, becauseTop) : Rect.create(left, right, -HIDDEN_H / 2, HIDDEN_H / 2)
+    const countH = BAR_COUNT_EM_CM * LINE_H_PER_EM
+    const colH = countH + BAR_COUNT_GAP + BAR_H
+    if (bar) {
+      const x = INNER_W / 2 - BAR_COL_W / 2
+      this.barCount.layoutRect = Rect.create(x - BAR_COL_W / 2, x + BAR_COL_W / 2, colH / 2 - countH, colH / 2)
+      this.bar.getTransform().setLocalPosition(new vec3(x, BAR_H / 2 - colH / 2, 0))
+      const w = BAR_COL_W * Math.min(1, s.prevented / s.of)
+      this.barFill.size = new vec2(w, BAR_H)
+      this.barFill.cornerRadius = Math.min(BAR_H / 2, w / 2)
+      this.barFillObject.getTransform().setLocalPosition(new vec3(w / 2 - BAR_COL_W / 2, 0, LAYER_Z))
+    }
+    this.heroItem.overrideHeight = Math.max(textH, bar ? colH : 0)
+    this.heroItem.marginTop = HERO_GAP
+  }
+
+  /** Slice 15A: label | before → after; after green when better (fewer falls or hits, a higher score). */
+  private layoutCompareRow(v: CompareView, r: CompareRow | null, first: boolean): void {
+    const lang = getLanguage()
+    if (v.rule) v.rule.enabled = r !== null
+    const m = r ? /^(.*?)\s*[:：]/.exec(r.text.primary) : null
+    setLineText(v.label, r ? (m ? m[1] : r.text.primary) : "", lang)
+    setLineText(v.before, r ? r.before : "", "en")
+    setLineText(v.arrow, r ? "→" : "", lang) // in the line's font, as the 14B rows
+    setLineText(v.after, r ? r.after : "", "en")
+    if (!r) {
+      v.item.overrideHeight = HIDDEN_H
+      v.item.marginTop = 0
+      return
+    }
+    v.after.textFill.color = r.better ? SOFT_GREEN : WHITE
+    const xAfter = INNER_W / 2 - CMP_AFTER_W
+    const xArrow = xAfter - CMP_ARROW_W
+    const xBefore = xArrow - CMP_BEFORE_W
+    const lineH = SMALL_EM_CM * LINE_H_PER_EM
+    const h = Math.max(1, this.wrapLines(v.label, -INNER_W / 2, xBefore, SMALL_EM_CM)) * lineH
+    v.label.layoutRect = Rect.create(-INNER_W / 2, xBefore, -h / 2, h / 2)
+    v.before.layoutRect = Rect.create(xBefore, xArrow, -lineH / 2, lineH / 2)
+    v.arrow.layoutRect = Rect.create(xArrow, xAfter, -lineH / 2, lineH / 2)
+    v.after.layoutRect = Rect.create(xAfter, INNER_W / 2, -lineH / 2, lineH / 2)
+    v.item.overrideHeight = h + CMP_PAD * 2
+    v.item.marginTop = first ? CMP_GAP : 0
+    if (v.rule) {
+      v.rule.getTransform().setLocalPosition(new vec3(0, h / 2 + CMP_PAD, 0))
+    }
+  }
+
+  /**
+   * Slice 15A: the checklist card. Header: the title (wraps) left, the source
+   * on one line right. Each row: the box on the text's first line, the
+   * reason under the text; rows LIST_ROW_GAP apart.
+   */
+  private layoutList(s: SecondResult | null): void {
+    const lang = getLanguage()
+    this.listFrame.face.enabled = s !== null
+    setLineText(this.listTitle, s ? s.title.primary : "", lang)
+    setLineText(this.listSource, s ? s.source.primary : "", lang)
+    const rows = s ? s.rows.slice(0, this.listRows.length) : []
+    for (let i = 0; i < this.listRows.length; i++) {
+      const v = this.listRows[i]
+      const r = i < rows.length ? rows[i] : null
+      v.so.enabled = r !== null
+      setLineText(v.text, r ? r.text.primary : "", lang)
+      setLineText(v.reason, r && r.reason ? r.reason.primary : "", lang)
+    }
+    if (!s) {
+      this.listItem.overrideHeight = HIDDEN_H
+      this.listItem.marginTop = 0
+      return
+    }
+    const left = -INNER_W / 2 + LIST_PAD_X
+    const right = INNER_W / 2 - LIST_PAD_X
+    const sourceLineH = LIST_SOURCE_EM_CM * LINE_H_PER_EM
+    this.listSource.layoutRect = Rect.create(left, right, -sourceLineH / 2, sourceLineH / 2)
+    let sourceW = 0
+    if (this.listSource.getSceneObject().isEnabledInHierarchy) {
+      const b = this.listSource.getBoundingBox()
+      sourceW = b.right - b.left
+    }
+    const titleRight = right - sourceW - LIST_HEAD_COL_GAP
+    const titleLineH = LIST_TITLE_EM_CM * LINE_H_PER_EM
+    const titleH = this.wrapLines(this.listTitle, left, titleRight, LIST_TITLE_EM_CM) * titleLineH
+    const headH = Math.max(titleH, sourceLineH)
+    const textLeft = left + BOX_CM + BOX_TEXT_GAP
+    const lineH = LIST_EM_CM * LINE_H_PER_EM
+    const reasonLineH = LIST_REASON_EM_CM * LINE_H_PER_EM
+    const sizes = rows.map((r, i) => {
+      const main = this.wrapLines(this.listRows[i].text, textLeft, right, LIST_EM_CM) * lineH
+      const reason = this.wrapLines(this.listRows[i].reason, textLeft, right, LIST_REASON_EM_CM) * reasonLineH
+      return {main, reason, h: Math.max(main + reason, lineH / 2 + BOX_CM / 2)}
+    })
+    const rowsH = sizes.reduce((a, z) => a + z.h, 0) + LIST_ROW_GAP * Math.max(0, rows.length - 1)
+    const cardH = LIST_PAD_Y * 2 + headH + LIST_HEAD_GAP + rowsH
+    const top = cardH / 2 - LIST_PAD_Y
+    this.listTitle.layoutRect = Rect.create(left, titleRight, top - titleH, top)
+    const sourceY = top - titleLineH / 2 // on the title's first line
+    this.listSource.layoutRect = Rect.create(left, right, sourceY - sourceLineH / 2, sourceY + sourceLineH / 2)
+    let y = top - headH - LIST_HEAD_GAP
+    for (let i = 0; i < rows.length; i++) {
+      const v = this.listRows[i]
+      const z = sizes[i]
+      v.so.getTransform().setLocalPosition(new vec3(0, y - z.h / 2, 0))
+      const rowTop = z.h / 2
+      v.text.layoutRect = Rect.create(textLeft, right, rowTop - z.main, rowTop)
+      v.reason.layoutRect = z.reason > 0 ? Rect.create(textLeft, right, rowTop - z.main - z.reason, rowTop - z.main) : Rect.create(textLeft, right, -HIDDEN_H / 2, HIDDEN_H / 2)
+      v.box.face.getTransform().setLocalPosition(new vec3(left + BOX_CM / 2, rowTop - lineH / 2, LAYER_Z))
+      v.box.setFill(rows[i].checked ? SOFT_GREEN : BOX_OPEN)
+      v.box.setBorder(rows[i].checked ? null : SOFT_GREEN, BOX_BORDER_CM)
+      v.check.enabled = rows[i].checked
+      y -= z.h + LIST_ROW_GAP
+    }
+    this.listFrame.setSize(INNER_W, cardH)
+    this.listItem.overrideHeight = cardH
+    this.listItem.marginTop = LIST_GAP
+  }
+
+  /** Lines `t` wraps to between `left` and `right` at `emCm`, 0 when empty (one getBoundingBox call, as setRow). */
+  private wrapLines(t: Text, left: number, right: number, emCm: number): number {
+    if (t.text.length === 0) return 0
+    const lineH = emCm * LINE_H_PER_EM
+    t.layoutRect = Rect.create(left, right, -lineH / 2, lineH / 2)
+    if (!t.getSceneObject().isEnabledInHierarchy) return 1
+    const box = t.getBoundingBox()
+    return Math.max(1, Math.round((box.top - box.bottom) / lineH))
+  }
+
+  /** Slice 15A (DC28 d): a local rect of `so` in the panel's plane, world cm from the panel's center. */
+  private planeBox(name: string, so: SceneObject, l: number, r: number, b: number, t: number): PlaneBox {
+    const m = so.getTransform().getWorldTransform()
+    const panel = this.sceneObject.getTransform()
+    const o = panel.getWorldPosition()
+    const ax = panel.right
+    const ay = panel.up
+    const box: PlaneBox = {name, minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity}
+    for (const [x, y] of [
+      [l, b],
+      [r, b],
+      [l, t],
+      [r, t]
+    ]) {
+      const p = m.multiplyPoint(new vec3(x, y, 0)).sub(o)
+      box.minX = Math.min(box.minX, p.dot(ax))
+      box.maxX = Math.max(box.maxX, p.dot(ax))
+      box.minY = Math.min(box.minY, p.dot(ay))
+      box.maxY = Math.max(box.maxY, p.dot(ay))
+    }
+    return box
+  }
+
+  private shapeBox(name: string, so: SceneObject, shape: Shape): PlaneBox {
+    const s = shape.size
+    return this.planeBox(name, so, -s.x / 2, s.x / 2, -s.y / 2, s.y / 2)
+  }
+
+  /** The glyphs' box of a shown, non-empty Text, or null. */
+  private textBox(t: Text): PlaneBox | null {
+    const so = t.getSceneObject()
+    if (t.text.length === 0 || !so.isEnabledInHierarchy) return null
+    const b = t.getBoundingBox()
+    return this.planeBox(so.name, so, b.left, b.right, b.bottom, b.top)
+  }
+
+  /** A checklist row's box and, when checked, its two check strokes. */
+  private rowShapes(r: ListRowView): PlaneBox {
+    const parts = [this.shapeBox(r.so.name + ".box", r.box.face, r.box.backing)]
+    if (r.check.enabled) {
+      for (const s of r.strokes) parts.push(this.planeBox(s.so.name, s.so, -s.w / 2, s.w / 2, -s.h / 2, s.h / 2))
+    }
+    return union(r.so.name + ".shapes", parts)
   }
 
   /** Slice 13B (5m item 12): Lihat ulang on its own row above the two buttons, secondary style, centered. */
@@ -735,4 +1251,15 @@ export class ResultPanel extends BaseScriptComponent {
 /** A Strings.ts entry with its placeholder filled in. */
 function fill(key: StringKey, placeholder: string, value: string): Lines {
   return lines(key, {[placeholder]: value})
+}
+
+/** Slice 15A: the box around `parts`. */
+function union(name: string, parts: PlaneBox[]): PlaneBox {
+  return {
+    name,
+    minX: Math.min(...parts.map((b) => b.minX)),
+    maxX: Math.max(...parts.map((b) => b.maxX)),
+    minY: Math.min(...parts.map((b) => b.minY)),
+    maxY: Math.max(...parts.map((b) => b.maxY))
+  }
 }

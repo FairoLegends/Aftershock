@@ -27,7 +27,7 @@ import {
 import {OffscreenArrow} from "./OffscreenArrow"
 import {panelYawOffset} from "./PanelAim"
 import {QuakeShaker, SHAKE_PHASES} from "./QuakeShaker"
-import {ResultLine, ResultPanel} from "./ResultPanel"
+import {CompareRow, RepairRow, ResultLine, ResultPanel} from "./ResultPanel"
 import {ReplayKind, ReplayTrack} from "./ReplayTrack"
 import {ReplayView} from "./ReplayView"
 import {FixRoomView} from "./FixRoomView"
@@ -38,7 +38,7 @@ import {SafeZone} from "./SafeZone"
 import {ScanIntro, ScanItem} from "./ScanIntro"
 import {computeScore, EvacInput, ScoreBreakdown} from "./ScoreCalculator"
 import {SHARDS_MAX, ShakeFx, WOBBLE_ITEMS, WobbleItem} from "./ShakeFx"
-import {getLanguage, getString, Lang, lines, setHazardFont, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
+import {getLanguage, getString, joinList, Lang, lines, setHazardFont, setLanguage, setLanguageFonts, setLineText, StringKey} from "./Strings"
 import {buildCardFacts, CardFacts, FURNITURE_HAZARDS, pickCards} from "./EducationCards"
 import {SOFT_RED} from "./UiBacking"
 import {VoiceGuide} from "./VoiceGuide"
@@ -81,6 +81,7 @@ export interface DrillSummary {
   health: number
   score: number | null // null after GAME_OVER
   landedBySource: Record<string, number>
+  problems: string[] // Slice 15A: its problemItems, for the second result's checklist
 }
 
 /** Slice 14A: one scheduled fall of this drill. */
@@ -1202,7 +1203,8 @@ export class DrillController extends BaseScriptComponent {
       hit: t.count("hit"),
       health: this._health,
       score: this._lastScore ? this._lastScore.score : null,
-      landedBySource
+      landedBySource,
+      problems: this.problemItems
     }
   }
 
@@ -2481,34 +2483,59 @@ export class DrillController extends BaseScriptComponent {
   /**
    * Slice 14B (5m item 15): before the result panel shows. Perbaiki kamar
    * when an item made a problem; the fix picks start from what is fastened.
-   * After a repeat: "Benda jatuh: a → b", "Kamu tertimpa: a → b" and
-   * "Skor: a → b" above the rows (ReplayTrack counts and the breakdown
-   * score, the baseline first), and below them "Untuk kamarmu:", one line
-   * per fastened item and "Sumber: BMKG". True after a repeat.
+   * Slice 15A (S1 R1): after a repeat, a headline "n dari m benda jatuh
+   * tercegah" (n = the baseline's landed minus this drill's, m = the
+   * baseline's) with its bar and "karena ... sudah kamu ikat", the compare
+   * table (ReplayTrack counts and the breakdown score, the baseline first)
+   * and the checklist: each fastened item checked ("dicoba di latihan"),
+   * each item that made a problem in either drill and is not fastened open
+   * ("bermasalah tadi"), then "Simpan benda berat di bawah". True after a repeat.
    */
   private prepareResultPanel(): boolean {
     this._fixSelection = this._fastened.slice()
     this.resultPanel.setFixShown(this.problemItems.length > 0)
     const base = this._baseline
     if (!this._isRepeat || !base) {
-      this.resultPanel.setComparison([], [])
+      this.resultPanel.setComparison(null)
       return false
     }
     const cur = this.summarize()
     const n = (v: number | null): string => (v === null ? "-" : "" + v)
+    const row = (key: StringKey, a: number | null, b: number | null, better: boolean): CompareRow => ({
+      text: lines(key, {"{a}": n(a), "{b}": n(b)}),
+      before: n(a),
+      after: n(b),
+      better
+    })
     const compare = [
-      lines("compare.fell", {"{a}": n(base.landed), "{b}": n(cur.landed)}),
-      lines("compare.hit", {"{a}": n(base.hit), "{b}": n(cur.hit)}),
-      lines("compare.score", {"{a}": n(base.score), "{b}": n(cur.score)})
+      row("compare.fell", base.landed, cur.landed, cur.landed < base.landed),
+      row("compare.hit", base.hit, cur.hit, cur.hit < base.hit),
+      row("compare.score", base.score, cur.score, base.score !== null && cur.score !== null && cur.score > base.score)
     ]
-    const repair = [lines("repair.title")]
+    const prevented = Math.max(0, base.landed - cur.landed)
+    const fastened = FIXABLE.filter((h) => this._fastened.indexOf(h) >= 0)
+    const names = fastened.map((h) => getString(("item." + h) as StringKey))
+    const bar = prevented > 0 && base.landed > 0
+    const rows: RepairRow[] = fastened.map((h) => ({text: lines(("repair." + h) as StringKey), reason: lines("repair.tried"), checked: true}))
     for (const h of FIXABLE) {
-      if (this._fastened.indexOf(h) >= 0) repair.push(lines(("repair." + h) as StringKey))
+      const problem = base.problems.indexOf(h) >= 0 || this.problemItems.indexOf(h) >= 0
+      if (problem && fastened.indexOf(h) < 0) {
+        rows.push({text: lines(("repair." + h) as StringKey), reason: lines("repair.problem"), checked: false})
+      }
     }
-    repair.push(lines("repair.source"))
-    this.resultPanel.setComparison(compare, repair)
+    rows.push({text: lines("repair.heavyLow"), reason: null, checked: false})
+    this.resultPanel.setComparison({
+      headline: bar ? lines("compare.prevented", {"{n}": "" + prevented, "{m}": "" + base.landed}) : lines("compare.notPrevented"),
+      because: bar && names.length > 0 ? lines("compare.because", {"{items}": joinList(names)}) : null,
+      prevented,
+      of: base.landed,
+      compare,
+      title: lines("repair.title"),
+      rows,
+      source: lines("repair.source")
+    })
     console.log(
-      `${LOG} ${this._state}: second result: landed ${base.landed} -> ${cur.landed}, hit ${base.hit} -> ${cur.hit}, score ${n(base.score)} -> ${n(cur.score)}; repairs [${this._fastened.join(", ")}]; problems [${this.problemItems.join(", ")}]`
+      `${LOG} ${this._state}: second result: landed ${base.landed} -> ${cur.landed} (${prevented} of ${base.landed} prevented), hit ${base.hit} -> ${cur.hit}, score ${n(base.score)} -> ${n(cur.score)}; fastened [${fastened.join(", ")}]; problems [${base.problems.join(", ")}] then [${this.problemItems.join(", ")}]`
     )
     return true
   }

@@ -12,7 +12,9 @@ const QUAKE_S = 10 // room for the walk, the cover and the forced fall
 const QUAKE2_S = 4
 const STEP_CM = 10 // the driven head moves this far per step
 const STEP_MS = 50
-const DWELL_MS = 1000 // in the cabinet's danger zone
+const DWELL_MS = 1000 // at least, in the cabinet's danger zone
+const DWELL_SAMPLES = 6 // and until this many recorded samples lie near the cabinet point
+const DWELL_TIMEOUT_MS = 4000
 const NEAR_CM = 2
 const PATH_TOL_CM = 5
 const LANDED_TOL_CM = 1
@@ -65,6 +67,7 @@ export class DC25_GhostReplay extends Scenario {
       const start = startSpot(c)
       const cabinet = atHeight(c, c.cabinetDanger.sceneObject.getTransform().getWorldPosition(), cfg.eyeHeight)
       expect(c.cabinetDanger.contains(cabinet)).toBe(true)
+      const cabinetLocal = c.room.getTransform().getInvertedWorldTransform().multiplyPoint(cabinet) // at rest, before the shake
       const table = atHeight(c, c.safeZone.center, cfg.eyeHeight)
       const door = doorPoint(c)
       const mid = new vec3((start.x + door.x) / 2, start.y, (start.z + door.z) / 2)
@@ -73,7 +76,17 @@ export class DC25_GhostReplay extends Scenario {
       await expectState(c, "QUAKE", (cfg.testWaitSeconds + cfg.testScanSeconds + 2) * 1000)
       expect(c.isRecordingReplay).toBe(true)
       await walk(c, start, cabinet)
-      await sleep(DWELL_MS)
+      // A slow preview records fewer samples per second: dwell until enough lie near the
+      // cabinet point. Both ends go through itemWorld, so the quake's room shake cancels.
+      const nearCabinet = (): number => {
+        const at = itemWorld(c, cabinetLocal.x, cabinetLocal.z, 0)
+        return c.replayTrack.samples.filter((s) => flat(itemWorld(c, s.x, s.z, 0), at) <= NEAR_CM).length
+      }
+      const dwellStart = getTime()
+      const [, dwelt] = await Promise.all([sleep(DWELL_MS), waitFor(() => nearCabinet() >= DWELL_SAMPLES, DWELL_TIMEOUT_MS)])
+      const dwellS = getTime() - dwellStart
+      const dwellNear = nearCabinet()
+      expect(dwelt).toBe(true)
       expect(c.inDanger).toBe(true)
       await walk(c, cabinet, table)
       pinDucked(c)
@@ -104,7 +117,7 @@ export class DC25_GhostReplay extends Scenario {
       expect(t.count("cover")).toBeGreaterThan(0)
       expect(t.events.filter((e) => e.kind === "hit" && e.source !== "glass").length).toBe(0)
       console.log(
-        `[Aftershock] DC25: ${samples.length} samples, worst ${off.toFixed(2)} cm off the driven path, ${near.length} in the cabinet zone, ${runs.length} runs, events ${t.events.map((e) => e.kind).join(", ")}`
+        `[Aftershock] DC25: ${samples.length} samples, worst ${off.toFixed(2)} cm off the driven path, ${near.length} in the cabinet zone (dwelt ${dwellS.toFixed(2)} s, ${dwellNear} near then), ${runs.length} runs, events ${t.events.map((e) => e.kind).join(", ")}`
       )
       expect(off <= PATH_TOL_CM).toBe(true)
 
