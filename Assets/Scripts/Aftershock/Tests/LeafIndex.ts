@@ -27,6 +27,7 @@ import {DC24_HudContrast} from "./DC24_HudContrast"
 import {DC25_GhostReplay} from "./DC25_GhostReplay"
 import {DC26_PanelFollow} from "./DC26_PanelFollow"
 import {DC27_RepeatQuake} from "./DC27_RepeatQuake"
+import {DC28_FixRoom} from "./DC28_FixRoom"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -58,6 +59,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc24-hud-contrast", typename: DC24_HudContrast.getTypeName()},
     {id: "dc25-ghost-replay", typename: DC25_GhostReplay.getTypeName()},
     {id: "dc26-panel-follow", typename: DC26_PanelFollow.getTypeName()},
-    {id: "dc27-repeat-quake", typename: DC27_RepeatQuake.getTypeName()}
+    {id: "dc27-repeat-quake", typename: DC27_RepeatQuake.getTypeName()},
+    {id: "dc28-fix-room", typename: DC28_FixRoom.getTypeName()}
   ]
 }

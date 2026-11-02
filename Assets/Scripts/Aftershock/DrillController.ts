@@ -30,6 +30,7 @@ import {QuakeShaker, SHAKE_PHASES} from "./QuakeShaker"
 import {ResultLine, ResultPanel} from "./ResultPanel"
 import {ReplayKind, ReplayTrack} from "./ReplayTrack"
 import {ReplayView} from "./ReplayView"
+import {FixRoomView} from "./FixRoomView"
 import {RoomWalls} from "./RoomWalls"
 import {SafetyPanel} from "./SafetyPanel"
 import {CalibratePanel} from "./CalibratePanel"
@@ -69,6 +70,9 @@ const ALLOWED: Record<DrillState, DrillState[]> = {
   RESULT: ["LEVEL", "LANGUAGE", "BRIEFING"], // 5j-19a: Restart opens the level picker; Slice 10B: Change language; Slice 14A: repeatSameQuake
   GAME_OVER: ["LEVEL", "LANGUAGE", "BRIEFING"]
 }
+
+/** Slice 14B: the items fix mode can fasten to the wall, in display order. */
+export const FIXABLE = ["shelf", "cabinet", "tv"]
 
 /** Slice 14A: a finished drill, kept as the repeat's baseline (counts from its ReplayTrack). */
 export interface DrillSummary {
@@ -429,6 +433,11 @@ export class DrillController extends BaseScriptComponent {
   private _fallPlan: PlannedFallRecord[] = [] // this drill's scheduled falls, every shake
   private _tvPlan: {shake: number; t: number}[] = [] // this drill's TV topple schedules (s after the shake began)
   private _aftershockDelay: number | null = null // s, this drill's quiet wait before the aftershock
+  // Slice 14B (ENGINEERING_PLAN 5m item 15): fix the room.
+  private _problems: string[] = [] // fixable items that made a problem this drill: one fell from it, it hit the head, or the head stood in its zone
+  private _fixSelection: string[] = [] // items picked in fix mode; kept across Kembali, cleared with the plan
+  private _fixMode = false
+  private fixView: FixRoomView | null = null
   // Read-only getters for LEAF assertions (TDD §8).
   get state(): DrillState | null {
     return this._state
@@ -468,6 +477,22 @@ export class DrillController extends BaseScriptComponent {
   /** Slice 14A: this drill's aftershock length (s), null when none came. */
   get aftershockLength(): number | null {
     return this._aftershockHappened ? this.aftershockDuration : null
+  }
+  /** Slice 14B: the fixable items (shelf, cabinet, tv, in that order) that made a problem this drill. */
+  get problemItems(): string[] {
+    return FIXABLE.filter((h) => this._problems.indexOf(h) >= 0)
+  }
+  /** Slice 14B: true while the fix-the-room view is open (a sub-mode of RESULT and GAME_OVER). */
+  get fixMode(): boolean {
+    return this._fixMode
+  }
+  /** Slice 14B: the items picked to fasten, in FIXABLE order. */
+  get fixSelection(): string[] {
+    return FIXABLE.filter((h) => this._fixSelection.indexOf(h) >= 0)
+  }
+  /** Slice 14B: the fix-the-room markers and instruction panel. */
+  get fixRoomView(): FixRoomView | null {
+    return this.fixView
   }
   /** The selected language (Slice 5L); Restart keeps it. */
   get language(): Lang {
@@ -681,6 +706,15 @@ export class DrillController extends BaseScriptComponent {
     return this._revealShown
   }
   /** The hazard labels of this drill (5m-3, 5m-4 LEAF checks). */
+  /** Slice 14B: the fixable items whose label has "Sudah diikat" set on (shown or not), in FIXABLE order. */
+  get fixTagged(): string[] {
+    return FIXABLE.filter((h) => this.labels[h] !== undefined && this.labels[h].tagOn)
+  }
+  /** Slice 14B: the "Sudah diikat" text shown under the item's label ("" when not shown). */
+  fixTagText(item: string): string {
+    const label = this.labels[item]
+    return label ? label.tagText : ""
+  }
   get activeHazardLabels(): HazardLabel[] {
     return this.activeHazards.map((h) => this.labels[h])
   }
@@ -928,6 +962,12 @@ export class DrillController extends BaseScriptComponent {
     this.resultPanel.onChangeLanguage.add(() => this.onChangeLanguagePressed())
     this.resultPanel.onReplay.add(() => this.onReplayPressed())
     this.replayView = new ReplayView(this, this.config, this.headPose)
+    // Slice 14B: fix the room, from the result panel.
+    this.fixView = new FixRoomView(this, this.config, this.headPose, (item, h) => this.fixMarkerSpot(item, h))
+    this.fixView.onToggle = (item) => this.onFixToggle(item)
+    this.fixView.onBack = () => this.onFixBack()
+    this.fixView.onRepeat = () => this.onFixRepeat()
+    this.resultPanel.onFixRoom.add(() => this.onFixRoomPressed())
     this.resultPanel.setFollow(this.config, this.headPose) // Slice 13C: follows the head past a dead zone
     // 5h item 1: each panel ignores presses for its first pinchGuardSeconds.
     this.languagePanel.pinchGuard.seconds = this.config.pinchGuardSeconds
@@ -1173,6 +1213,8 @@ export class DrillController extends BaseScriptComponent {
     this._baseline = null
     this._isRepeat = false
     this.repeatLayoutSeed = 0
+    this._fixSelection = [] // Slice 14B: the fixes go with the plan
+    this.refreshFixTags()
   }
 
   /**
@@ -1221,6 +1263,7 @@ export class DrillController extends BaseScriptComponent {
     this._lastCardFacts = null
     this._quakeDuration = 0
     this.clearReplay()
+    this.closeFixView() // Slice 14B
     this.resultPanel.hide()
     return true
   }
@@ -1356,6 +1399,7 @@ export class DrillController extends BaseScriptComponent {
     this._quakeDuration = 0
     this._health = this.config.healthStart
     this.clearReplay()
+    this.closeFixView() // Slice 14B
     this.resultPanel.hide()
     this.dropPlan() // Slice 14A
     this._state = null // a reset, not a drill transition
@@ -1529,6 +1573,8 @@ export class DrillController extends BaseScriptComponent {
     this.fallingObjects.clear()
     this._fallPlan = [] // Slice 14A
     this._tvPlan = []
+    this._problems = [] // Slice 14B
+    this.closeFixView()
     this.resetTvTopple()
     if (this.shakeFx) {
       this.shakeFx.resetCracks()
@@ -1567,6 +1613,7 @@ export class DrillController extends BaseScriptComponent {
     this.applyLevelGuides()
     this.setRoomLabelsShown(false)
     this.setDangerZonesShown(true)
+    this.refreshFixTags() // Slice 14B: a repeat's fastened items keep "Sudah diikat" under their labels
     const scanSeconds = this.startScan()
     this.floorPath.setFloorY(this._floorY)
     this.floorPath.setTarget(this.targetSafeZone)
@@ -1755,6 +1802,23 @@ export class DrillController extends BaseScriptComponent {
       this._inDanger = inDanger
       console.log(`${LOG} QUAKE: ${inDanger ? "entered" : "left"} a danger zone`)
     }
+    // Slice 14B: standing in a fixable item's zone during the drill is that item's problem.
+    if (this._state === "QUAKE" || this._state === "POST_QUAKE" || this._state === "AFTERSHOCK" || this._state === "EVACUATE") {
+      for (const h of this.activeHazards) {
+        if (FIXABLE.indexOf(h) >= 0 && this.zones[h].contains(head)) {
+          this.markProblem(h, "stood in its danger zone")
+        }
+      }
+    }
+  }
+
+  /** Slice 14B: record a fixable item as this drill's problem, once. */
+  private markProblem(item: string, why: string): void {
+    if (FIXABLE.indexOf(item) < 0 || this._problems.indexOf(item) >= 0) {
+      return
+    }
+    this._problems.push(item)
+    console.log(`${LOG} ${this._state}: problem with the ${item} (${why})`)
   }
 
   /**
@@ -1818,6 +1882,7 @@ export class DrillController extends BaseScriptComponent {
       return
     }
     this.addReplayEvent("landed", x, z, source)
+    this.markProblem(source, "an item fell from it") // Slice 14B
     this.updateDanger() // this frame's head, not the last quake update's
     const head = this.toRoomLocal(this.headPose.position)
     const dist = Math.sqrt((head.x - x) * (head.x - x) + (head.y - z) * (head.y - z))
@@ -1828,6 +1893,7 @@ export class DrillController extends BaseScriptComponent {
     }
     this._fallHits++
     this.addReplayEvent("hit", head.x, head.y, source)
+    this.markProblem(source, "it hit you") // Slice 14B
     this._health = Math.max(0, this._health - this.config.fallHitDamage)
     this.hud.setHealth(this._health)
     this.hud.showNotice(this.config.fallNoticeSeconds, "hit.fell")
@@ -1863,6 +1929,7 @@ export class DrillController extends BaseScriptComponent {
 
   private startTvTopple(why: string): void {
     this._tvToppled = true
+    this.markProblem("tv", "it toppled") // Slice 14B
     this.tvToppleAt = -1
     this.tvToppleStart = getTime()
     if (this.shakeFx) this.shakeFx.stopWobble("tv")
@@ -2390,7 +2457,9 @@ export class DrillController extends BaseScriptComponent {
     )
     this.showResultPanel()
     this.showReveal(true)
-    this.resultPanel.showResult(b, this.resultExtras(this.bestRows(b.score)), this.pickResultCards(b.score))
+    const cards = this.pickResultCards(b.score)
+    const second = this.prepareResultPanel() // Slice 14B: after a repeat the compare rows and repair list take the cards' place
+    this.resultPanel.showResult(b, this.resultExtras(this.bestRows(b.score)), second ? [] : cards)
   }
 
   private enterGameOver(): void {
@@ -2404,7 +2473,44 @@ export class DrillController extends BaseScriptComponent {
     const reason = this._gameOverReason ? this._gameOverReason : "over.why.stood"
     this.showResultPanel()
     this.showReveal(true)
-    this.resultPanel.showGameOver(reason, this.resultExtras(), this.pickResultCards(null))
+    const cards = this.pickResultCards(null)
+    const second = this.prepareResultPanel() // Slice 14B
+    this.resultPanel.showGameOver(reason, this.resultExtras(), second ? [] : cards)
+  }
+
+  /**
+   * Slice 14B (5m item 15): before the result panel shows. Perbaiki kamar
+   * when an item made a problem; the fix picks start from what is fastened.
+   * After a repeat: "Benda jatuh: a → b", "Kamu tertimpa: a → b" and
+   * "Skor: a → b" above the rows (ReplayTrack counts and the breakdown
+   * score, the baseline first), and below them "Untuk kamarmu:", one line
+   * per fastened item and "Sumber: BMKG". True after a repeat.
+   */
+  private prepareResultPanel(): boolean {
+    this._fixSelection = this._fastened.slice()
+    this.resultPanel.setFixShown(this.problemItems.length > 0)
+    const base = this._baseline
+    if (!this._isRepeat || !base) {
+      this.resultPanel.setComparison([], [])
+      return false
+    }
+    const cur = this.summarize()
+    const n = (v: number | null): string => (v === null ? "-" : "" + v)
+    const compare = [
+      lines("compare.fell", {"{a}": n(base.landed), "{b}": n(cur.landed)}),
+      lines("compare.hit", {"{a}": n(base.hit), "{b}": n(cur.hit)}),
+      lines("compare.score", {"{a}": n(base.score), "{b}": n(cur.score)})
+    ]
+    const repair = [lines("repair.title")]
+    for (const h of FIXABLE) {
+      if (this._fastened.indexOf(h) >= 0) repair.push(lines(("repair." + h) as StringKey))
+    }
+    repair.push(lines("repair.source"))
+    this.resultPanel.setComparison(compare, repair)
+    console.log(
+      `${LOG} ${this._state}: second result: landed ${base.landed} -> ${cur.landed}, hit ${base.hit} -> ${cur.hit}, score ${n(base.score)} -> ${n(cur.score)}; repairs [${this._fastened.join(", ")}]; problems [${this.problemItems.join(", ")}]`
+    )
+    return true
   }
 
   /** Slice 9B: what happened in this drill, for the education cards (EducationCards.ts). */
@@ -2601,7 +2707,7 @@ export class DrillController extends BaseScriptComponent {
   }
 
   private onReplayPressed(): void {
-    if ((this._state !== "RESULT" && this._state !== "GAME_OVER") || !this.replayView || this.replayView.isPlaying) return
+    if ((this._state !== "RESULT" && this._state !== "GAME_OVER") || !this.replayView || this.replayView.isPlaying || this._fixMode) return
     const t = this._replayTrack
     if (t.samples.length === 0) {
       console.log(`${LOG} REPLAY: nothing recorded`)
@@ -2625,6 +2731,98 @@ export class DrillController extends BaseScriptComponent {
     if (this._state !== "RESULT" && this._state !== "GAME_OVER") return
     this.resultPanel.showAgain()
     console.log(`${LOG} REPLAY: ended; the result panel is back`)
+  }
+
+  /**
+   * Slice 14B: Perbaiki kamar. The result panel hides; the room, its zones
+   * and labels show, with a marker in front of each problem item (and of any
+   * item already picked).
+   */
+  private onFixRoomPressed(): void {
+    if ((this._state !== "RESULT" && this._state !== "GAME_OVER") || !this.fixView || this._fixMode) return
+    if (this.replayView && this.replayView.isPlaying) return
+    const problems = this.problemItems
+    if (problems.length === 0) return
+    const items = FIXABLE.filter((h) => problems.indexOf(h) >= 0 || this._fixSelection.indexOf(h) >= 0)
+    this._fixMode = true
+    this.resultPanel.hideForReplay()
+    this.setRoomLabelsShown(true)
+    this.setDangerZonesShown(true)
+    this.refreshFixTags()
+    this.fixView.open(items, this.fixSelection)
+    console.log(`${LOG} FIX: problems [${problems.join(", ")}], markers [${items.join(", ")}], fastened [${this.fixSelection.join(", ")}]`)
+  }
+
+  /** Slice 14B: a marker pinched: its item fastened, or undone. */
+  private onFixToggle(item: string): void {
+    if (!this._fixMode || !this.fixView) return
+    const i = this._fixSelection.indexOf(item)
+    if (i >= 0) this._fixSelection.splice(i, 1)
+    else this._fixSelection.push(item)
+    this.fixView.setSelection(this.fixSelection)
+    this.refreshFixTags()
+    console.log(`${LOG} FIX: ${item} ${i >= 0 ? "undone" : "fastened"}; fastened [${this.fixSelection.join(", ")}]`)
+  }
+
+  /** Slice 14B: Kembali: the result panel again, the picks kept. */
+  private onFixBack(): void {
+    if (!this._fixMode) return
+    this.closeFixView()
+    this.resultPanel.showAgain()
+    console.log(`${LOG} FIX: back to the result; fastened [${this.fixSelection.join(", ")}] kept`)
+  }
+
+  /** Slice 14B: Ulangi gempa: the same quake with the picked items fastened. */
+  private onFixRepeat(): void {
+    if (!this._fixMode || this._fixSelection.length === 0) return
+    const fastened = this.fixSelection
+    this.closeFixView()
+    if (!this.repeatSameQuake(fastened)) this.resultPanel.showAgain()
+  }
+
+  /** Slice 14B: out of fix mode: markers and panel hidden, labels and zones as on the result screen. */
+  private closeFixView(): void {
+    if (this.fixView) this.fixView.close()
+    if (this._fixMode) {
+      this._fixMode = false
+      this.setRoomLabelsShown(false)
+      this.setDangerZonesShown(false)
+    }
+    this.refreshFixTags()
+  }
+
+  /** Slice 14B: "Sudah diikat" under each picked item's label in fix mode, else under each fastened one. */
+  private refreshFixTags(): void {
+    const on = this._fixMode ? this._fixSelection : this._fastened
+    for (const h of FIXABLE) {
+      const label = this.labels[h]
+      if (label) label.setTag(on.indexOf(h) >= 0)
+    }
+  }
+
+  /**
+   * Slice 14B: a fix marker's world center: fixMarkerFrontCm out from the
+   * item's front face, fixMarkerHeightCm above the floor, lowered to stay
+   * fixMarkerGapCm below its label (and tag) when the label shows.
+   */
+  private fixMarkerSpot(item: string, markerH: number): vec3 | null {
+    const at = this._layout ? this._layout.items[item] : null
+    const f = FOOTPRINTS[item]
+    if (!at || !f) return null
+    const theta = at.yaw + f.front
+    const out = (Math.abs(Math.sin(f.front)) > 0.5 ? f.halfX : f.halfZ) + this.config.fixMarkerFrontCm
+    const x = at.x + Math.sin(theta) * out
+    const z = at.z + Math.cos(theta) * out
+    let y = this._floorY + this.config.fixMarkerHeightCm
+    const label = this.labels[item]
+    if (label && label.isShown) {
+      const bottom = label.getSceneObject().getTransform().getWorldPosition().y - label.bottomCm
+      y = Math.min(y, bottom - this.config.fixMarkerGapCm - markerH / 2)
+    }
+    y = Math.max(y, this._floorY + markerH / 2 + this.config.fixMarkerGapCm)
+    const c = Math.cos(this.roomYaw)
+    const s = Math.sin(this.roomYaw)
+    return new vec3(this.roomX + x * c + z * s, y, this.roomZ - x * s + z * c)
   }
 
   private showResultPanel(): void {

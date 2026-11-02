@@ -35,7 +35,7 @@ const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the pane
 const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (over.why.stood); longer lines wrap
 const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
-const DETAIL_LINES = 9 // Slice 8B: four base rows (speed, health, grip, evac) plus aftershock, level and reveal; Slice 8D: new best and best
+const DETAIL_LINES = 17 // Slice 8B: four base rows (speed, health, grip, evac) plus aftershock, level and reveal; Slice 8D: new best and best; Slice 14B: three compare rows and up to five repair lines
 const DETAIL_PAD = 0.35 // above and below a detail row's text (Slice 9B: 0.5 → 0.35, room for the cards)
 const DETAIL_GAP = 1.0 // above the first detail row
 const VALUE_W = 12 // detail value column, right
@@ -148,6 +148,9 @@ export class ResultPanel extends BaseScriptComponent {
   private readonly replayEvent = new Event()
   /** Slice 13B: raised when Lihat ulang (watch again) is pressed. */
   readonly onReplay: PublicApi<void> = this.replayEvent.publicApi()
+  private readonly fixRoomEvent = new Event()
+  /** Slice 14B: Perbaiki kamar pressed. */
+  readonly onFixRoom: PublicApi<void> = this.fixRoomEvent.publicApi()
   /** 5h item 1: presses are ignored for pinchGuard.seconds after the panel shows. */
   readonly pinchGuard = new PinchGuard()
 
@@ -163,6 +166,12 @@ export class ResultPanel extends BaseScriptComponent {
   private restart: SoftButton | null = null
   private changeLang: SoftButton | null = null
   private replay: SoftButton | null = null
+  private fixRoom: SoftButton | null = null // Slice 14B
+  private replayObject: SceneObject | null = null
+  private fixRoomObject: SceneObject | null = null
+  private fixTexts: Text[] = [] // the Perbaiki kamar label lines, left out of texts while it is hidden
+  private compare: ResultLine[] = [] // Slice 14B: above the rows on the result after a repeat
+  private repair: ResultLine[] = [] // and the repair list below them
   private cards: Card[] = []
   private placement: Placement | null = null
   private panelH = 0 // the last layout's height (local units)
@@ -295,7 +304,7 @@ export class ResultPanel extends BaseScriptComponent {
 
   /** Slice 13C: a pinch is down on Restart, Change language or Lihat ulang (the follow is frozen). */
   get isPinchHeld(): boolean {
-    return (this.restart !== null && this.restart.isPressed) || (this.changeLang !== null && this.changeLang.isPressed) || (this.replay !== null && this.replay.isPressed)
+    return (this.restart !== null && this.restart.isPressed) || (this.changeLang !== null && this.changeLang.isPressed) || (this.replay !== null && this.replay.isPressed) || (this.fixRoom !== null && this.fixRoom.isPressed)
   }
 
   /**
@@ -385,7 +394,7 @@ export class ResultPanel extends BaseScriptComponent {
 
   /** Fills the detail rows with `base` then `extra` and collapses the rest. */
   private setDetails(base: ResultLine[], extra: ResultLine[]): void {
-    const all = base.concat(extra)
+    const all = this.compare.concat(base, extra, this.repair) // Slice 14B: [] and [] on a first drill
     for (let i = 0; i < this.details.length; i++) {
       const l = i < all.length ? all[i] : null
       this.setRow(this.details[i], l ? l.text : null, SMALL_EM_CM, l ? l.split : true)
@@ -397,6 +406,7 @@ export class ResultPanel extends BaseScriptComponent {
     if (this.restart) this.restart.reset()
     if (this.changeLang) this.changeLang.reset()
     if (this.replay) this.replay.reset()
+    if (this.fixRoom) this.fixRoom.reset()
     drawOnTopWhenReady(this, this.sceneObject) // 5j-19f: again once the layout settles
     this.pinchGuard.arm()
   }
@@ -414,7 +424,26 @@ export class ResultPanel extends BaseScriptComponent {
   hide(): void {
     this._mode = null
     this.setCards([])
+    this.compare = []
+    this.repair = []
     this.sceneObject.enabled = false
+  }
+
+  /**
+   * Slice 14B (5m item 15): the next showResult/showGameOver puts `compare`
+   * above the rows (label: value, as the rows) and `repair` below them, one
+   * line each. Both [] on a first drill.
+   */
+  setComparison(compare: ResultLine["text"][], repair: ResultLine["text"][]): void {
+    this.compare = compare.map((text) => ({text, split: true}))
+    this.repair = repair.map((text) => ({text, split: false}))
+  }
+
+  /** Slice 14B: Perbaiki kamar right of Lihat ulang (same size, as the row below), or Lihat ulang alone, centered. */
+  setFixShown(on: boolean): void {
+    if (!this.replayObject || !this.fixRoomObject) return
+    this.replayObject.getTransform().setLocalPosition(new vec3(on ? -BUTTON_X : 0, 0, 0))
+    this.fixRoomObject.enabled = on
   }
 
   // Read-only getters for LEAF assertions (TDD §8).
@@ -435,7 +464,21 @@ export class ResultPanel extends BaseScriptComponent {
   }
   /** Every non-empty text line the panel shows, in order (button label last). */
   get texts(): string[] {
-    return this.shownTexts.map((t) => t.text).filter((s) => s.length > 0)
+    return this.shownTexts
+      .filter((t) => this.fixRoomShown || this.fixTexts.indexOf(t) < 0)
+      .map((t) => t.text)
+      .filter((s) => s.length > 0)
+  }
+  /** Slice 14B: Perbaiki kamar is on the panel. */
+  get fixRoomShown(): boolean {
+    return this.fixRoomObject !== null && this.fixRoomObject.enabled
+  }
+  /** Slice 14B: the compare rows and repair lines shown, selected language ([] on a first drill). */
+  get compareLines(): string[] {
+    return this.compare.map((l) => l.text.primary)
+  }
+  get repairLines(): string[] {
+    return this.repair.map((l) => l.text.primary)
   }
   /** Slice 9B: the education card keys shown, in order ([] when none). */
   get shownCards(): StringKey[] {
@@ -550,6 +593,15 @@ export class ResultPanel extends BaseScriptComponent {
     this.replay = this.addButton(row, "Replay", 0, false, "btn.replay", () => {
       if (this.pinchGuard.open) this.replayEvent.invoke()
     })
+    this.replayObject = row.getChild(0)
+    // Slice 14B: Perbaiki kamar, secondary like Lihat ulang; shown only when an item made a problem.
+    const n = this.shownTexts.length
+    this.fixRoom = this.addButton(row, "FixRoom", BUTTON_X, false, "btn.fixRoom", () => {
+      if (this.pinchGuard.open) this.fixRoomEvent.invoke()
+    })
+    this.fixRoomObject = row.getChild(1)
+    this.fixTexts = this.shownTexts.slice(n)
+    this.setFixShown(false)
   }
 
   /**

@@ -1,6 +1,6 @@
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, LayoutItem, RoomRect} from "./LayoutGenerator"
-import {getLanguage, hazardFontFor, lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
+import {getLanguage, getString, hazardFontFor, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
 import {createRoundRect, SOFT_GREEN, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
 
 // size / 43.886 = em-square in cm. 5m-3: the label is built at 1 cm per em and
@@ -23,6 +23,7 @@ const CONTENT_Z = 0.24 // keeps content off the backing (z-fighting)
 const DOT_PER_ICON = 0.5 // the safe and door dot, as a share of the ⚠ icon
 const EM_STEP_CM = 0.02 // the Body rescales only past this change
 const KEY_PREFIX = "label." // label.cabinet → the layout item "cabinet"
+const TAG_GAP = 0.3 // em, Slice 14B: label backing to the "Sudah diikat" tag
 
 // The ⚠ icon, in shares of its height: a red triangle of stacked pills (rounded apex and sides) and a white "!".
 const ICON_ROWS = 6
@@ -125,6 +126,11 @@ export class HazardLabel extends BaseScriptComponent {
   private model: SceneObject | null = null
   private box: ItemBox | null = null
   private beside = false // 5m-8a: decided once per measured layout, at labelEmMaxCm
+  // Slice 14B: the green "Sudah diikat" tag under a fastened item's label.
+  private tag: SceneObject | null = null
+  private tagFrame: SoftFrame | null = null
+  private tagLine: Text | null = null
+  private _tagShown = false
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -182,6 +188,85 @@ export class HazardLabel extends BaseScriptComponent {
     this.model = model
     this.box = null
     this.beside = false // 5m-8a: a new layout re-decides above vs beside
+  }
+
+  /**
+   * Slice 14B: the "Sudah diikat" tag (SOFT_GREEN text on a light backing with
+   * a green border) just under the label, fixTagEmRatio of its em. Fix mode
+   * shows it on a picked item; the repeat drill on a fastened one.
+   */
+  setTag(shown: boolean): void {
+    if (shown && !this.tag) {
+      this.buildTag()
+    }
+    this._tagShown = shown
+    if (this.tag) {
+      this.tag.enabled = shown
+      if (shown) this.layoutTag()
+    }
+  }
+
+  get tagShown(): boolean {
+    return this._tagShown && this.tag !== null && this.tag.isEnabledInHierarchy
+  }
+
+  /** Slice 14B: the tag's text ("" when hidden). */
+  /** Slice 14B: the tag is set on, shown or not (the label may be hidden). */
+  get tagOn(): boolean {
+    return this._tagShown
+  }
+  get tagText(): string {
+    return this.tagShown && this.tagLine ? this.tagLine.text : ""
+  }
+
+  /** Slice 14B: from the label's center down to the bottom of its backing, or of its tag when shown (cm). */
+  get bottomCm(): number {
+    const h = this._collapsed ? this.iconH + PAD_Y * 2 : this.fullH
+    let below = h / 2
+    if (this.tagShown && this.tagFrame) below += TAG_GAP + this.tagFrame.height
+    return below * this.em
+  }
+
+  private buildTag(): void {
+    this.tag = global.scene.createSceneObject("Tag")
+    this.tag.setParent(this.body)
+    this.tagFrame = new SoftFrame(this.tag, this.backingColor, RADIUS, SOFT_GREEN, "TagBacking")
+    this.tagFrame.setBorder(SOFT_GREEN, 0.08)
+    const so = global.scene.createSceneObject("TagLine")
+    so.setParent(this.tag)
+    so.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
+    const t = so.createComponent("Component.Text") as Text
+    ;(t as Text & {weight?: number}).weight = 800
+    t.depthTest = true
+    t.textFill.color = SOFT_GREEN
+    t.horizontalAlignment = HorizontalAlignment.Center
+    t.verticalAlignment = VerticalAlignment.Center
+    t.horizontalOverflow = HorizontalOverflow.Overflow
+    t.verticalOverflow = VerticalOverflow.Overflow
+    this.tagLine = t
+  }
+
+  /** The tag's text, size and place under the backing (em); after a language change or a collapse. */
+  private layoutTag(): void {
+    if (!this.tag || !this.tagLine || !this.tagFrame || !this._tagShown) {
+      return
+    }
+    const r = ctxConfig ? ctxConfig.fixTagEmRatio : 0.8
+    const lineH = r * LINE_H_PER_EM
+    setLineText(this.tagLine, getString("fix.done"), getLanguage())
+    this.tagLine.size = r * SIZE_PER_CM
+    this.tagLine.layoutRect = Rect.create(-INNER_W / 2, INNER_W / 2, -lineH / 2, lineH / 2)
+    let w = this.tagLine.text.length * CHAR_W * r
+    if (this.sceneObject.isEnabledInHierarchy) {
+      const box = this.tagLine.getBoundingBox()
+      if (box.right > box.left) w = box.right - box.left
+    }
+    const tw = w + SLACK + PAD_X * 2
+    const th = lineH + PAD_Y * 2
+    this.tagFrame.setFill(this.backingColor)
+    this.tagFrame.setSize(tw, th)
+    const h = this._collapsed ? this.iconH + PAD_Y * 2 : this.fullH
+    this.tag.getTransform().setLocalPosition(new vec3(0, -(h / 2 + TAG_GAP + th / 2), 0))
   }
 
   private get isHazard(): boolean {
@@ -304,6 +389,7 @@ export class HazardLabel extends BaseScriptComponent {
     } else {
       this.backing.setSize(this.iconW + PAD_Y * 2, this.iconH + PAD_Y * 2)
     }
+    this.layoutTag() // Slice 14B: the tag stays just under the backing
   }
 
   /** Every frame while shown: place (hazards), em from the head distance, risotto, upright facing the head. */

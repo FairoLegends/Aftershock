@@ -53,6 +53,16 @@
     fallHitRadius: false
     fallMarginSeconds: false
     fallNoticeSeconds: false
+    fixInstrEmCm: false
+    fixMarkerAspect: false
+    fixMarkerCm: false
+    fixMarkerEmCm: false
+    fixMarkerFrontCm: false
+    fixMarkerGapCm: false
+    fixMarkerHeightCm: false
+    fixMarkerRefCm: false
+    fixPanelButtonCm: false
+    fixTagEmRatio: false
     fontBody: false
     fontHazard: false
     fontJa: false
@@ -111,6 +121,7 @@
     quakeDurationMin: false
     quakeWaitMax: false
     quakeWaitMin: false
+    repairEmCm: false
     replayCaptionBelowEye: false
     replayCaptionEmCm: false
     replayDotSpacingCm: false
@@ -292,6 +303,17 @@
       panelFollowCm: !<float> 50.000000
       panelFollowSpeed: !<float> 3.000000
       replayCaptionBelowEye: !<float> 35.000000
+      fixMarkerCm: !<float> 12.000000
+      fixMarkerAspect: 3.400000
+      fixMarkerEmCm: 2.400000
+      fixMarkerFrontCm: !<float> 20.000000
+      fixMarkerHeightCm: !<float> 110.000000
+      fixMarkerGapCm: !<float> 4.000000
+      fixMarkerRefCm: !<float> 200.000000
+      fixTagEmRatio: 0.800000
+      fixInstrEmCm: 1.800000
+      fixPanelButtonCm: 5.500000
+      repairEmCm: 1.700000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -471,6 +493,19 @@
     - '// @input float panelFollowCm = 50 {"hint":"...and while the head stays within this many cm (horizontal) of where it was when the panel last settled"}'
     - '// @input float panelFollowSpeed = 3 {"hint":"Past either limit the panel eases to its spot in front of the head at this rate (1/s, as hudFollowSpeed)"}'
     - '// @input float replayCaptionBelowEye = 35 {"hint":"Replay caption: cm below eye level, at hudDistance (lower than the result panel, toward the trail on the floor)"}'
+    - '// @ui {"widget":"group_end"}'
+    - '// @ui {"widget":"group_start", "label":"Fix the room (Slice 14B, ENGINEERING_PLAN 5m item 15)"}'
+    - "// @input float fixMarkerCm = 12 {\"hint\":\"Fix marker (the '<item>: Ikat ke dinding' button) height (cm, at least 12: habit 3); width fixMarkerAspect x this\"}"
+    - '// @input float fixMarkerAspect = 3.4 {"hint":"Fix marker width as a multiple of its height"}'
+    - '// @input float fixMarkerEmCm = 2.4 {"hint":"Fix marker label em size (cm)"}'
+    - "// @input float fixMarkerFrontCm = 20 {\"hint\":\"Fix marker center sits this far out from its item's front face, toward the room (cm): in front of the item, clear of its model\"}"
+    - "// @input float fixMarkerHeightCm = 110 {\"hint\":\"Fix marker center height above the floor (cm); lower when the item's hazard label (and tag) would be closer than fixMarkerGapCm above it\"}"
+    - "// @input float fixMarkerGapCm = 4 {\"hint\":\"Fix marker top stays at least this far below the bottom of its item's hazard label, or of its 'Sudah diikat' tag (cm)\"}"
+    - '// @input float fixMarkerRefCm = 200 {"hint":"Past this head distance (cm) the marker grows with the distance, so it keeps its size in view"}'
+    - "// @input float fixTagEmRatio = 0.8 {\"hint\":\"'Sudah diikat' tag em, as a share of its hazard label's em\"}"
+    - '// @input float fixInstrEmCm = 1.8 {"hint":"Fix instruction line em size (cm), on the small light panel that follows the head like the replay caption"}'
+    - '// @input float fixPanelButtonCm = 5.5 {"hint":"Kembali and Ulangi gempa button height (cm, width 3.4x); label em 0.36x this"}'
+    - '// @input float repairEmCm = 1.7 {"hint":"Second result: the repair list (Untuk kamarmu:) line em size (cm)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'

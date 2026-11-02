@@ -97,7 +97,24 @@ export type StringKey =
   | "card.evac"
   | "card.check"
   | "card.coast"
-
+  // Slice 14B (ENGINEERING_PLAN 5m item 15): fix the room, then repeat.
+  | "btn.fixRoom"
+  | "btn.repeatQuake"
+  | "btn.back"
+  | "fix.instr"
+  | "fix.action"
+  | "fix.done"
+  | "item.shelf"
+  | "item.cabinet"
+  | "item.tv"
+  | "compare.fell"
+  | "compare.hit"
+  | "compare.score"
+  | "repair.title"
+  | "repair.shelf"
+  | "repair.cabinet"
+  | "repair.tv"
+  | "repair.source"
 export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "safety.drill": {
     id: "Ini latihan, bukan peringatan gempa sungguhan",
@@ -544,7 +561,31 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     de: "An der Küste: Bei sehr starkem Beben oder etwa einer Minute Dauer sofort auf eine Anhöhe gehen.",
     ja: "海岸の近くでは、強い揺れや約1分以上続く揺れを感じたらすぐ高台へ。",
     zh: "在海边：如果摇晃很强或持续约一分钟以上，立刻前往高处。"
-  }
+  },
+  // Slice 14B fix the room: id and en from the feature request; de, ja, zh are the builder's own (default) translations.
+  "btn.fixRoom": {id: "Perbaiki kamar", en: "Fix the room", de: "Zimmer sichern", ja: "部屋を直す", zh: "加固房间"},
+  "btn.repeatQuake": {id: "Ulangi gempa", en: "Repeat the quake", de: "Beben wiederholen", ja: "地震をもう一度", zh: "重复地震"},
+  "btn.back": {id: "Kembali", en: "Back", de: "Zurück", ja: "戻る", zh: "返回"},
+  "fix.instr": {
+    id: "Cubit benda yang mau kamu ikat ke dinding.",
+    en: "Pinch an item to fasten it to the wall.",
+    de: "Kneife einen Gegenstand, um ihn an der Wand zu befestigen.",
+    ja: "壁に固定したい物をつまんでください。",
+    zh: "捏住要固定到墙上的物品。"
+  },
+  "fix.action": {id: "{item}: Ikat ke dinding", en: "{item}: Fasten to the wall", de: "{item}: An der Wand befestigen", ja: "{item}：壁に固定", zh: "{item}：固定到墙上"},
+  "fix.done": {id: "Sudah diikat", en: "Fastened", de: "Befestigt", ja: "固定済み", zh: "已固定"},
+  "item.shelf": {id: "rak", en: "shelf", de: "Regal", ja: "棚", zh: "架子"},
+  "item.cabinet": {id: "lemari", en: "cabinet", de: "Schrank", ja: "たんす", zh: "柜子"},
+  "item.tv": {id: "TV", en: "TV", de: "Fernseher", ja: "テレビ", zh: "电视"},
+  "compare.fell": {id: "Benda jatuh: {a} → {b}", en: "Items fallen: {a} → {b}", de: "Gefallene Gegenstände: {a} → {b}", ja: "落ちた物：{a} → {b}", zh: "掉落物品：{a} → {b}"},
+  "compare.hit": {id: "Kamu tertimpa: {a} → {b}", en: "Hits on you: {a} → {b}", de: "Treffer auf dich: {a} → {b}", ja: "当たった回数：{a} → {b}", zh: "被砸中：{a} → {b}"},
+  "compare.score": {id: "Skor: {a} → {b}", en: "Score: {a} → {b}", de: "Punkte: {a} → {b}", ja: "スコア：{a} → {b}", zh: "得分：{a} → {b}"},
+  "repair.title": {id: "Untuk kamarmu:", en: "For your room:", de: "Für dein Zimmer:", ja: "あなたの部屋に：", zh: "你的房间："},
+  "repair.shelf": {id: "Ikat rak ke dinding", en: "Fasten the shelf to the wall", de: "Regal an der Wand befestigen", ja: "棚を壁に固定する", zh: "把架子固定在墙上"},
+  "repair.cabinet": {id: "Ikat lemari ke dinding", en: "Fasten the cabinet to the wall", de: "Schrank an der Wand befestigen", ja: "たんすを壁に固定する", zh: "把柜子固定在墙上"},
+  "repair.tv": {id: "Ikat TV ke dinding", en: "Fasten the TV to the wall", de: "Fernseher an der Wand befestigen", ja: "テレビを壁に固定する", zh: "把电视固定在墙上"},
+  "repair.source": {id: "Sumber: BMKG", en: "Source: BMKG", de: "Quelle: BMKG", ja: "出典：BMKG", zh: "来源：BMKG"}
 }
 
 // Selected language: "id" until the picker sets it; Restart keeps it.

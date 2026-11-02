@@ -550,6 +550,52 @@ export class DrillConfig extends BaseScriptComponent {
   replayCaptionBelowEye: number = 35
   @ui.group_end
 
+  @ui.group_start("Fix the room (Slice 14B, ENGINEERING_PLAN 5m item 15)")
+  @input
+  @hint("Fix marker (the '<item>: Ikat ke dinding' button) height (cm, at least 12: habit 3); width fixMarkerAspect x this")
+  fixMarkerCm: number = 12
+
+  @input
+  @hint("Fix marker width as a multiple of its height")
+  fixMarkerAspect: number = 3.4
+
+  @input
+  @hint("Fix marker label em size (cm)")
+  fixMarkerEmCm: number = 2.4
+
+  @input
+  @hint("Fix marker center sits this far out from its item's front face, toward the room (cm): in front of the item, clear of its model")
+  fixMarkerFrontCm: number = 20
+
+  @input
+  @hint("Fix marker center height above the floor (cm); lower when the item's hazard label (and tag) would be closer than fixMarkerGapCm above it")
+  fixMarkerHeightCm: number = 110
+
+  @input
+  @hint("Fix marker top stays at least this far below the bottom of its item's hazard label, or of its 'Sudah diikat' tag (cm)")
+  fixMarkerGapCm: number = 4
+
+  @input
+  @hint("Past this head distance (cm) the marker grows with the distance, so it keeps its size in view")
+  fixMarkerRefCm: number = 200
+
+  @input
+  @hint("'Sudah diikat' tag em, as a share of its hazard label's em")
+  fixTagEmRatio: number = 0.8
+
+  @input
+  @hint("Fix instruction line em size (cm), on the small light panel that follows the head like the replay caption")
+  fixInstrEmCm: number = 1.8
+
+  @input
+  @hint("Kembali and Ulangi gempa button height (cm, width 3.4x); label em 0.36x this")
+  fixPanelButtonCm: number = 5.5
+
+  @input
+  @hint("Second result: the repair list (Untuk kamarmu:) line em size (cm)")
+  repairEmCm: number = 1.7
+  @ui.group_end
+
   @ui.group_start("Test hooks")
   @input
   @hint("Short wait and short quake for LEAF scenarios. Off in the real drill.")
