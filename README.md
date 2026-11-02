@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/readme/01-quake-start.jpg" alt="The quake starts: a red GEMPA! banner and a hazard label on the wardrobe" width="440"></p>
+<p align="center"><img src="docs/readme/logo/aftershock-hero.jpg" alt="Aftershock logo: a clay bedroom diorama with a person ducking under the table and a red seismic line" width="720"></p>
 
 <h1 align="center">Aftershock</h1>
 
@@ -21,8 +21,8 @@ Reading a leaflet about earthquakes is easy to forget. Aftershock makes you *do*
 - **Mistakes cost health.** Standing up after you have taken cover, staying in a red danger zone, letting go of the table leg, an item from the shelf landing on your head (−15), the window shattering next to you (−15), tripping over debris on the way out (−10).
 - **A score out of 1000** in four parts: how fast you took cover (450, measured from when the quake starts, minus the walk to the nearest table), the health you kept (300), how long you held the table leg (100), and the evacuation (150). Never taking cover scores 0.
 - **Then it teaches.** Up to two education cards, picked from what actually happened in your drill, each sourced from [BMKG](https://bmkg.go.id) — Indonesia's meteorology, climatology and geophysics agency.
-- **Watch yourself again.** "Lihat ulang" replays your own path on the floor: red where you were in a danger zone, green where you took cover, with markers where things landed.
-- **Then fix the room.** "Perbaiki kamar" marks every object that caused a problem; pinch one to fasten it to the wall, then replay *the same quake* — same seed, same falls, same timing — and see the difference: "5 dari 6 benda jatuh tercegah" (5 of 6 falling items prevented).
+- **Watch yourself again.** "Watch again" replays your own path on the floor: red where you were in a danger zone, green where you took cover, with markers where things landed.
+- **Then fix the room.** "Fix the room" marks every object that caused a problem; pinch one to fasten it to the wall, then replay *the same quake* — same seed, same falls, same timing — and see the difference, for example "3 of 4 falling items prevented".
 
 **Who it's for:** anyone who lives where the ground moves. Indonesia recorded 7,358 earthquakes in 2024, 743 of them felt (BMKG). The idea is that the reflex is what saves you, and a reflex has to be practised, not read.
 
@@ -31,7 +31,7 @@ Reading a leaflet about earthquakes is easy to forget. Aftershock makes you *do*
 | | What you do | What the Lens does |
 |---|---|---|
 | 1 | Pick a language | Five buttons: Bahasa Indonesia, English, Deutsch, 日本語, 简体中文 |
-| 2 | Read the safety notice, pinch Lanjut | "This is a drill, not a real earthquake alert" |
+| 2 | Read the safety notice, pinch Continue | "This is a drill, not a real earthquake alert" |
 | 3 | Pick a level | Easy, Normal (recommended), Hard |
 | 4 | Duck once to calibrate (or Skip) | Learns your duck line from your own head height |
 | 5 | Look around the room | A scan sweep labels each hazard and marks the safe zone under each table |
@@ -40,17 +40,20 @@ Reading a leaflet about earthquakes is easy to forget. Aftershock makes you *do*
 | 8 | Stay down until it stops | Standing up drains health; an arrow points back to cover if you turn away |
 | 9 | Come out, walk to the door | Danger zones still drain; fallen items trip you |
 | 10 | Read your score | Four parts, personal best per level, up to two BMKG cards |
-| 11 | "Lihat ulang" / "Perbaiki kamar" | Replay your path, or fasten objects and repeat the same quake |
+| 11 | "Watch again" / "Fix the room" | Replay your path, or fasten objects and repeat the same quake |
 
 **Levels.** Easy: labels stay visible through the quake, a table within 150 cm, no aftershock. Normal: tables up to 250 cm, 50% aftershock, items fall. Hard: find it yourself — no labels, no red zones, no arrow, no floor path — health drains 1.5× faster and there is always an aftershock. Hard reveals what was dangerous on the result screen.
 
 ## Gallery
 
+Screenshots from the Lens Studio preview, with the Lens set to English.
+
 | | |
 |---|---|
-| <img src="docs/readme/02-hud.jpg" width="440"><br>The HUD during the quake: four steps, health, timer | <img src="docs/readme/03-levels.jpg" width="440"><br>Three levels, Normal recommended |
-| <img src="docs/readme/04-tv-topple.jpg" width="440"><br>The TV topples off its stand (the stand stays) | <img src="docs/readme/05-fix-room.jpg" width="440"><br>"Perbaiki kamar": pinch the shelf to fasten it |
-| <img src="docs/readme/06-second-result.jpg" width="440"><br>The same quake again: 5 of 6 falls prevented, and a checklist for your real room | <img src="docs/readme/01-quake-start.jpg" width="440"><br>Hazard labels and the GEMPA! banner |
+| <img src="docs/readme/01-quake-start.jpg" width="440"><br>The quake starts: the EARTHQUAKE! banner | <img src="docs/readme/02-hud.jpg" width="440"><br>Under the table: the HUD ticks off the four steps |
+| <img src="docs/readme/03-levels.jpg" width="440"><br>Three levels, Normal recommended | <img src="docs/readme/04-tv-topple.jpg" width="440"><br>The TV topples off its stand (the stand stays) |
+| <img src="docs/readme/08-result.jpg" width="440"><br>The result: score, the four parts, BMKG cards | <img src="docs/readme/05-fix-room.jpg" width="440"><br>Fix the room: pinch the shelf to fasten it |
+| <img src="docs/readme/07-hazard-label.jpg" width="440"><br>The same quake again, the shelf marked Fastened | <img src="docs/readme/06-second-result.jpg" width="440"><br>3 of 4 falling items prevented, and a checklist for your real room |
 
 ## How it was built
 
@@ -146,4 +149,5 @@ Not built, and not claimed to be built:
 - **Voice:** 60 clips from open text-to-speech models (Pocket TTS Indonesian, Piper, Kokoro-82M), every model, licence and voice dataset listed in [`docs/VOICE_CREDITS.md`](docs/VOICE_CREDITS.md). No person was recorded.
 - **3D models:** generated with CLAD `build-mesh` in Lens Studio.
 - **Safety content:** [BMKG](https://bmkg.go.id) — "Antisipasi Gempa Bumi" and the BMKG/JICA "Siaga Gempabumi dan Tsunami" booklet, cited per card in [`docs/EDUCATION_CARDS.md`](docs/EDUCATION_CARDS.md).
+- **Logo:** the diorama mark was generated with xai/grok-imagine-image; the wordmark is set in Manrope (OFL) by code.
 - **Packages:** Spectacles Interaction Kit, Spectacles UI Kit, LEAF — bundled by Lens Studio under their own licences.

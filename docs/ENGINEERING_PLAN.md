@@ -123,7 +123,7 @@ Each slice lists its scope, the requirements it closes (PRD), and its gate. Noth
 - A full drill runs with no errors in the Logger.
 - The repo is public with the Lens Studio project, `devpost/` and `docs/`, and no secrets.
 - The demo video is public on YouTube and under 3 minutes.
-- Every submission text is written by the learner.
+- Every submission text is written by the learner. **Revised 2 Nov (learner):** the orchestrator agent may draft the Devpost description, tagline and technology-requirement answer; the learner reviews them before submitting and answers the survey questions and legal attestations himself. The entry says so.
 
 ## 5b. Learner decisions after Slice 2 (27 Oct)
 
