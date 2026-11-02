@@ -1,4 +1,4 @@
-<p align="center"><img src="docs/readme/01-quake-start.jpg" alt="The quake starts: a red GEMPA! banner and a hazard label on the wardrobe" width="720"></p>
+<p align="center"><img src="docs/readme/01-quake-start.jpg" alt="The quake starts: a red GEMPA! banner and a hazard label on the wardrobe" width="440"></p>
 
 <h1 align="center">Aftershock</h1>
 
