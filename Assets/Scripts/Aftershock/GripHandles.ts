@@ -4,7 +4,7 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {SafeZone} from "./SafeZone"
-import {createRoundRect, SOFT_GREEN} from "./UiBacking"
+import {applyGlass, createRoundRect, GLASS_PRIMARY, SOFT_GREEN} from "./UiBacking"
 
 // HOLD ON (Slice 8B, ENGINEERING_PLAN 5k item 9). Each active table gets two
 // grip handles at its front legs (the long side nearer the start spot): small
@@ -199,7 +199,7 @@ export class GripHandles extends BaseScriptComponent {
       const rect: RoundedRectangle = createRoundRect(visual, SOFT_GREEN, size, size, size * RADIUS_SHARE)
       const h: Handle = {so, visual, collider, interactable, ready: false, zone: null, local: vec3.zero()}
       rect.onInitialized.add(() => {
-        rect.backgroundColor = SOFT_GREEN
+        applyGlass(rect, GLASS_PRIMARY) // green glass (15B), same size and radius
         h.ready = true
         visual.enabled = false
         this.onUpdate()

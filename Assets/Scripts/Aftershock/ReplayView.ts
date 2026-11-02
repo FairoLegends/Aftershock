@@ -5,7 +5,17 @@ import {HeadPose} from "./HeadPose"
 import {anchorInFront, faceHead, PanelFollow} from "./PanelFollow"
 import {ReplayKind, ReplaySample, ReplayTrack} from "./ReplayTrack"
 import {getLanguage, getString, onLanguageChanged, setLineText, StringKey} from "./Strings"
-import {createRoundRect, drawOnTopWhenReady, PinchGuard, SOFT_GREEN, SOFT_RED, SoftButton, SoftFrame} from "./UiBacking"
+import {
+  createRoundRect,
+  drawOnTopWhenReady,
+  GLASS_PANEL,
+  PinchGuard,
+  SOFT_GREEN,
+  SOFT_RED,
+  SoftButton,
+  SoftFrame,
+  tinted
+} from "./UiBacking"
 
 // Slice 13B (ENGINEERING_PLAN 5m item 12): the ghost replay on the room floor.
 // The trail draws over replaySeconds (arc length, not drill time) with a head
@@ -126,7 +136,7 @@ export class ReplayView {
     this.caption = global.scene.createSceneObject("ReplayCaption")
     this.caption.createComponent("Component.Canvas")
     this.caption.getTransform().setWorldPosition(PARKED)
-    this.captionFrame = new SoftFrame(this.caption, CAPTION_FILL)
+    this.captionFrame = new SoftFrame(this.caption, tinted(GLASS_PANEL, CAPTION_FILL)) // glass tier 1 (15B)
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.caption)
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))

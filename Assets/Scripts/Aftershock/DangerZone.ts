@@ -2,7 +2,7 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, insideRect, Layout, LayoutItem, zoneRect} from "./LayoutGenerator"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {createLightBacking, SOFT_BORDER_CM, SOFT_RED, SoftFrame} from "./UiBacking"
+import {createLightBacking, GLASS_RED, SOFT_BORDER_CM, SOFT_RED, SoftFrame, tinted} from "./UiBacking"
 
 // size / 43.886 = em-square in cm. Slice 7A-soft: the danger label is a small
 // red pill (mockup .tag), one language.
@@ -225,8 +225,8 @@ export class DangerZone extends BaseScriptComponent {
     so.setParent(this.sceneObject)
     so.createComponent("Component.Canvas")
     // Slice 7A-soft (mockup .tag): red text on a red 16% pill with a thin red border.
-    this.pill = new SoftFrame(so, PILL_FILL, DANGER_LABEL_HALF_H, PILL_BORDER)
-    this.pill.setBorder(PILL_BORDER, SOFT_BORDER_CM)
+    // Red glass (15B), same rim width as before.
+    this.pill = new SoftFrame(so, {...tinted(GLASS_RED, PILL_FILL), rimCm: SOFT_BORDER_CM}, DANGER_LABEL_HALF_H, null)
     this.labelPrimary = this.addLine(so, "label.danger.id")
     this.labelSecondary = this.addLine(so, "label.danger.en")
     so.enabled = false

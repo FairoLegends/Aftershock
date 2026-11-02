@@ -2,7 +2,17 @@ import {RoundedRectangle} from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRec
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {getLanguage, lines, onLanguageChanged, setLineText} from "./Strings"
-import {createLightBacking, createRoundRect, drawOnTopWhenReady, SOFT_LINE, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
+import {
+  createLightBacking,
+  createRoundRect,
+  drawOnTopWhenReady,
+  GLASS_RAISED,
+  SOFT_LINE,
+  SOFT_RED,
+  SOFT_WHITE,
+  SoftFrame,
+  tinted
+} from "./UiBacking"
 
 // ENGINEERING_PLAN 5j items 4 and 17d: at the start of BRIEFING a soft light
 // ring sweeps out over the floor from the start spot. Each item it reaches is
@@ -218,7 +228,8 @@ export class ScanIntro extends BaseScriptComponent {
     this.chip.setParent(this.headPose.cameraObject)
     this.chip.getTransform().setLocalPosition(CHIP_POS)
     this.chip.getTransform().setLocalRotation(quat.quatIdentity())
-    this.chipFrame = new SoftFrame(this.chip, CHIP_FILL, CHIP_H_CM / 2, SOFT_LINE, "ChipFace")
+    // Glass tier 2 (15B): the chip reads as a raised pill over the room.
+    this.chipFrame = new SoftFrame(this.chip, tinted(GLASS_RAISED, CHIP_FILL), CHIP_H_CM / 2, null, "ChipFace")
     const so = global.scene.createSceneObject("scan.title")
     so.setParent(this.chip)
     so.getTransform().setLocalPosition(new vec3(0, 0, 0.1))

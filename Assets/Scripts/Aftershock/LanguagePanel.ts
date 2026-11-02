@@ -4,7 +4,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {Lang, LANGS, setLineText, STRINGS} from "./Strings"
-import {drawOnTop, PinchGuard, SOFT_WHITE, SoftButton, SoftFrame} from "./UiBacking"
+import {drawOnTop, GLASS_PANEL, PinchGuard, SOFT_WHITE, SoftButton, SoftFrame} from "./UiBacking"
 
 // Same type scale as SafetyPanel (size / 43.886 = em-square in cm at 110 cm).
 const TITLE_SIZE = 38 // Caption: five title lines stay small
@@ -55,7 +55,7 @@ export class LanguagePanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const frame = new SoftFrame(this.sceneObject, this.backingColor)
+    const frame = new SoftFrame(this.sceneObject, GLASS_PANEL) // glass tier 1 (15B)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)

@@ -5,6 +5,9 @@ import {getLanguage, getString, setLineText, StringKey} from "./Strings"
 import {
   createRoundRect,
   drawOnTopWhenReady,
+  applyGlass,
+  GLASS_PANEL,
+  GLASS_PRIMARY,
   PinchGuard,
   SOFT_DIM,
   SOFT_GREEN,
@@ -77,7 +80,7 @@ export class LevelPanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const frame = new SoftFrame(this.sceneObject, this.backingColor)
+    const frame = new SoftFrame(this.sceneObject, GLASS_PANEL) // glass tier 1 (15B)
     frame.setSize(PANEL_W, PANEL_H)
 
     const content = global.scene.createSceneObject("Content")
@@ -162,7 +165,7 @@ export class LevelPanel extends BaseScriptComponent {
 
     if (level === DEFAULT_LEVEL) {
       const pill = this.child(card.face, "level.recommended", 0, PILL_Y, PILL_Z)
-      createRoundRect(pill, SOFT_GREEN, PILL_W, PILL_H, SOFT_INNER_RADIUS_CM)
+      applyGlass(createRoundRect(pill, SOFT_GREEN, PILL_W, PILL_H, SOFT_INNER_RADIUS_CM), GLASS_PRIMARY)
       const label = this.child(pill, "level.recommended.text", 0, 0, LABEL_Z - PILL_Z)
       this.addText(label, "level.recommended", PILL_SIZE, PILL_W - 0.8, PILL_H, SOFT_GREEN_TEXT).horizontalOverflow =
         HorizontalOverflow.Shrink

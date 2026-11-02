@@ -6,12 +6,17 @@ import {HeadPose} from "./HeadPose"
 import {getLanguage, latinFont, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
 import {
   drawOnTopWhenReady,
+  GLASS_BANNER,
+  GLASS_INSET,
+  GLASS_PANEL,
+  GLASS_RED,
   SOFT_GREEN,
   SOFT_PANEL_RADIUS_CM,
   SOFT_RED,
   SOFT_WHITE,
   SoftFrame,
-  TabularText
+  TabularText,
+  tinted
 } from "./UiBacking"
 
 // DESIGN_BRIEF §5–6 type sizes. size / 43.886 = em-square in cm. The banner's
@@ -513,7 +518,9 @@ export class Hud extends BaseScriptComponent {
   private buildPanel(): void {
     const panel = this.child(this.sceneObject, "Panel")
     this.panel = panel
-    const backing = new SoftFrame(panel, this.backingColor)
+    // Glass tier 1 (15B); the input alpha keeps the panel opaque enough over room labels (5d item 3).
+    const backing = new SoftFrame(panel, GLASS_PANEL)
+    backing.setTierAlpha(this.backingColor.w)
     const content = this.child(panel, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
     const flex = this.column(content, 0, PAD) // gaps are margins, so the collapsed English line leaves none
@@ -546,9 +553,10 @@ export class Hud extends BaseScriptComponent {
     const barItem = bar.createComponent(FlexItem.getTypeName()) as FlexItem
     barItem.overrideWidth = BAR_W
     barItem.overrideHeight = BAR_H
-    const track = new SoftFrame(bar, this.config.hudBarTrack, BAR_H / 2, null, "Track")
+    // Vitals (15B): an inset track and a soft top-lit fill; setFill keeps the config colors exact.
+    const track = new SoftFrame(bar, tinted(GLASS_INSET, this.config.hudBarTrack), BAR_H / 2, null, "Track")
     track.setSize(BAR_W, BAR_H)
-    this.barFill = new SoftFrame(bar, this.barColor, BAR_H / 2, null, "Fill")
+    this.barFill = new SoftFrame(bar, tinted(GLASS_INSET, this.barColor), BAR_H / 2, null, "Fill")
     this.barFill.setSize(BAR_W, BAR_H)
     this.barFill.face.getTransform().setLocalPosition(new vec3(0, 0, 0.02))
 
@@ -568,7 +576,8 @@ export class Hud extends BaseScriptComponent {
     for (let i = 0; i < STEP_KEYS.length; i++) {
       const cell = this.child(root, "Step" + (i + 1))
       cell.getTransform().setLocalPosition(new vec3(-INNER_W / 2 + STEP_W / 2 + i * (STEP_W + STEP_GAP), 0, 0))
-      const frame = new SoftFrame(cell, this.config.hudStepFill, STEP_RADIUS_CM, null)
+      // Glass tier 0 (15B): inset cells, fill exactly cfg.hudStepFill (setSteps swaps it).
+      const frame = new SoftFrame(cell, tinted(GLASS_INSET, this.config.hudStepFill), STEP_RADIUS_CM, null)
       frame.setSize(STEP_W, STEP_H)
       this.stepFrames.push(frame)
       const n = this.stepText(cell, "Step" + (i + 1) + ".number", STEP_NUMBER_EM, STEP_NUMBER_Y + STEP_NUMBER_H / 2, STEP_NUMBER_Y - STEP_NUMBER_H / 2)
@@ -610,7 +619,8 @@ export class Hud extends BaseScriptComponent {
     const cfg = this.config
     const banner = this.child(this.sceneObject, "WarningBanner")
     this.bannerTransform = banner.getTransform()
-    const backing = new SoftFrame(banner, cfg.warnFill, SOFT_PANEL_RADIUS_CM, null)
+    // GEMPA banner (15B): red glass, fill exactly cfg.warnFill under a bright red rim.
+    const backing = new SoftFrame(banner, tinted(GLASS_BANNER, cfg.warnFill), SOFT_PANEL_RADIUS_CM, null)
     const content = this.child(banner, "Content")
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
     const flex = this.column(content, 0, PAD)
@@ -639,9 +649,9 @@ export class Hud extends BaseScriptComponent {
     const notice = this.child(panel, "Notice")
     const areaTop = HUD_PANEL_HEIGHT / 2 - PAD
     notice.getTransform().setLocalPosition(new vec3(0, areaTop - STEP_H / 2, CONTENT_Z))
-    const frame = new SoftFrame(notice, NOTICE_FILL, STEP_RADIUS_CM, null)
+    // Red glass (15B), same red rim width as before.
+    const frame = new SoftFrame(notice, {...tinted(GLASS_RED, NOTICE_FILL), rimCm: STEP_ON_BORDER_CM}, STEP_RADIUS_CM, null)
     frame.setSize(INNER_W, STEP_H)
-    frame.setBorder(SOFT_RED, STEP_ON_BORDER_CM)
     const top = STEP_H / 2 - STEP_PAD
     const primary = this.noticeText(notice, "Notice.id", top)
     const secondary = this.noticeText(notice, "Notice.en", -top + HIDDEN_H)

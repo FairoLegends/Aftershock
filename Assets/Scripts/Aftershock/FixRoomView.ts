@@ -11,7 +11,7 @@ import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {anchorInFront, faceHead, PanelFollow} from "./PanelFollow"
 import {getLanguage, getString, lines, onLanguageChanged, setLineText, StringKey} from "./Strings"
-import {drawOnTopWhenReady, PinchGuard, SOFT_GREEN_TEXT, SoftButton, SoftFrame} from "./UiBacking"
+import {drawOnTopWhenReady, GLASS_PANEL, PinchGuard, SOFT_GREEN_TEXT, SoftButton, SoftFrame, tinted} from "./UiBacking"
 
 const SIZE_PER_CM = 43.886 // Text.size / 43.886 = em-square in cm, as in Hud.ts
 const LINE_H_PER_EM = 1.25 // as ResultPanel
@@ -92,7 +92,7 @@ export class FixRoomView {
     this.panel = global.scene.createSceneObject("FixPanel")
     this.panel.createComponent("Component.Canvas")
     this.panel.getTransform().setWorldPosition(PARKED)
-    this.panelFrame = new SoftFrame(this.panel, PANEL_FILL)
+    this.panelFrame = new SoftFrame(this.panel, tinted(GLASS_PANEL, PANEL_FILL)) // glass tier 1 (15B)
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.panel)
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))

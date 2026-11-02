@@ -11,6 +11,9 @@ import {getLanguage, latinFont, Lines, lines, onLanguageChanged, setLinePair, se
 import {
   createRoundRect,
   drawOnTopWhenReady,
+  GLASS_GREEN,
+  GLASS_INSET,
+  GLASS_PANEL,
   PinchGuard,
   SOFT_DIM,
   SOFT_GREEN,
@@ -18,7 +21,8 @@ import {
   SOFT_INNER_RADIUS_CM,
   SoftButton,
   SoftFrame,
-  TabularText
+  TabularText,
+  tinted
 } from "./UiBacking"
 
 // Panel text at the HUD scale (ENGINEERING_PLAN 5i item 4): em heights in cm,
@@ -306,7 +310,9 @@ export class ResultPanel extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
     this.baseScale = this.sceneObject.getTransform().getLocalScale()
 
-    const backing = new SoftFrame(this.sceneObject, this.backingColor)
+    // Glass tier 1 (15B); the input alpha keeps the 8A P1 readability over furniture.
+    const backing = new SoftFrame(this.sceneObject, GLASS_PANEL)
+    backing.setTierAlpha(this.backingColor.w)
     this.backing = backing
 
     const content = global.scene.createSceneObject("Content")
@@ -783,7 +789,7 @@ export class ResultPanel extends BaseScriptComponent {
     item.overrideWidth = INNER_W
     item.overrideHeight = HIDDEN_H
     item.alignSelf = FlexAlignSelf.Center
-    const frame = new SoftFrame(so, CARD_FILL, SOFT_INNER_RADIUS_CM, null, name + ".backing")
+    const frame = new SoftFrame(so, tinted(GLASS_GREEN, CARD_FILL), SOFT_INNER_RADIUS_CM, null, name + ".backing")
     frame.setSize(INNER_W, 1)
     const barSo = global.scene.createSceneObject(name + ".bar")
     barSo.setParent(frame.face)
@@ -841,7 +847,7 @@ export class ResultPanel extends BaseScriptComponent {
     so.setParent(parent)
     this.list = so
     this.listItem = this.addItem(so)
-    this.listFrame = new SoftFrame(so, CARD_FILL, SOFT_INNER_RADIUS_CM, null, "Checklist.backing")
+    this.listFrame = new SoftFrame(so, tinted(GLASS_GREEN, CARD_FILL), SOFT_INNER_RADIUS_CM, null, "Checklist.backing")
     this.listFrame.setSize(INNER_W, 1)
     this.listTitle = this.addText(so, "Checklist.title", LIST_TITLE_EM_CM, true)
     this.listTitle.horizontalAlignment = HorizontalAlignment.Left
@@ -1194,7 +1200,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.scoreItem.overrideWidth = INNER_W
     this.scoreItem.overrideHeight = SCORE_ROW_H
     this.scoreItem.alignSelf = FlexAlignSelf.Center
-    const row = new SoftFrame(so, SCORE_ROW_FILL, SOFT_INNER_RADIUS_CM, null, "Score.backing")
+    const row = new SoftFrame(so, GLASS_INSET, SOFT_INNER_RADIUS_CM, null, "Score.backing") // glass tier 0 (15B)
     row.setSize(INNER_W, SCORE_ROW_H)
     const x = INNER_W / 2 - SCORE_INSET
     this.scoreId = this.scoreText(so, "Score.id", SCORE_LABEL_EM_CM, -x, x, HorizontalAlignment.Left)

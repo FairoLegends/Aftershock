@@ -1,4 +1,5 @@
 import {
+  GradientStop,
   RoundedRectangle,
   RoundedRectBlendMode
 } from "SpectaclesUIKit.lspkg/Scripts/Visuals/RoundedRectangle/RoundedRectangle"
@@ -19,10 +20,241 @@ export const SOFT_GREEN_TEXT = new vec4(0.024, 0.129, 0.059, 1) // #06210F, text
 export const SOFT_RED = new vec4(1, 0.353, 0.31, 1) // #FF5A4F
 const SOFT_GREEN_FOCUS = new vec4(0.239, 0.863, 0.518, 0.24) // hover/focus fill and glow
 const SOFT_GREEN_PRESSED = new vec4(0.2, 0.769, 0.455, 1) // #33C474
-const SOFT_BUTTON_FILL = new vec4(1, 1, 1, 0.1) // secondary button at rest
 const PRESS_SCALE = 0.96
 const PRESS_SECONDS = 0.12 // back to full size after release
 const GLOW_CM = 0.6 // the primary button's focus glow reaches this far out
+
+// Slice 15B glass (ENGINEERING_PLAN 5m item 15b, mockup docs/design/Aftershock
+// Glass UI.html). The display adds light and has no blur, so glass is made of
+// light: a fill brighter at the top than at the bottom, and a rim bright at the
+// top, faint in the middle and half-bright at the bottom. Every stop stays light
+// (brightest channel >= 0.5, DC23/DC24). Materials only: a tier never changes a
+// size, a radius or a layout. All gradients run top (percent 0) to bottom (1).
+
+/** One gradient stop of a glass tier; percent 0 is the top edge, 1 the bottom. */
+export interface GlassStop {
+  readonly color: vec4
+  readonly percent: number
+}
+
+/** A glass surface: fill gradient, rim gradient (null = no border) and rim width. */
+export interface GlassTier {
+  /** Flat stand-in written to backgroundColor (what DC23/DC24 and getters read). */
+  readonly fill: vec4
+  /** 2 to 7 fill stops, top to bottom. */
+  readonly bg: readonly GlassStop[]
+  /** 2 to 7 rim stops, top to bottom, or null for no border. */
+  readonly rim: readonly GlassStop[] | null
+  readonly rimCm: number
+}
+
+const GLASS_TOP = new vec2(0, 1) // gradient start: the rect's top edge
+const GLASS_BOTTOM = new vec2(0, -1) // gradient end: the bottom edge
+const TINT_TOP_LIFT = 0.12 // tinted(): the top stop moves this far toward white
+const TINT_BOTTOM_RGB = 0.88 // tinted(): the bottom stop's color scale
+const TINT_BOTTOM_ALPHA = 0.6 // tinted(): the bottom stop's alpha scale (mockup 0.30 -> 0.18)
+
+/**
+ * Tier 0 "inset": number tiles, the compare table, the HUD vitals strip. A flat
+ * light fill, no border, and a thin brighter line along the bottom edge (the
+ * last 12% of the fill gradient). Use with SOFT_INNER_RADIUS_CM.
+ */
+export const GLASS_INSET: GlassTier = {
+  fill: new vec4(0.8, 0.84, 0.9, 0.26),
+  bg: [
+    {color: new vec4(0.8, 0.84, 0.9, 0.26), percent: 0},
+    {color: new vec4(0.8, 0.84, 0.9, 0.26), percent: 0.88},
+    {color: new vec4(0.95, 0.97, 1, 0.42), percent: 1}
+  ],
+  rim: null,
+  rimCm: 0
+}
+
+/**
+ * Tier 1 "panel": safety, language, level, briefing, calibrate, result, game
+ * over, fix instruction, replay caption, HUD. Cool white 30% at the top to 18%
+ * at the bottom; rim white 90% -> 22% (55% down) -> 45%. SOFT_PANEL_RADIUS_CM.
+ */
+export const GLASS_PANEL: GlassTier = {
+  fill: new vec4(0.88, 0.92, 0.96, 0.3),
+  bg: [
+    {color: new vec4(0.88, 0.92, 0.96, 0.3), percent: 0},
+    {color: new vec4(0.78, 0.83, 0.9, 0.18), percent: 1}
+  ],
+  rim: [
+    {color: new vec4(1, 1, 1, 0.9), percent: 0},
+    {color: new vec4(1, 1, 1, 0.22), percent: 0.55},
+    {color: new vec4(1, 1, 1, 0.45), percent: 1}
+  ],
+  rimCm: SOFT_BORDER_CM
+}
+
+/**
+ * Tier 2 "raised": secondary buttons, level cards, fix markers, pinch targets,
+ * the HUD's active step. One step brighter than the panel: 40% -> 24% fill,
+ * rim 100% -> 30% (60% down) -> 55%.
+ */
+export const GLASS_RAISED: GlassTier = {
+  fill: new vec4(0.94, 0.96, 0.99, 0.4),
+  bg: [
+    {color: new vec4(0.94, 0.96, 0.99, 0.4), percent: 0},
+    {color: new vec4(0.84, 0.88, 0.94, 0.24), percent: 1}
+  ],
+  rim: [
+    {color: new vec4(1, 1, 1, 1), percent: 0},
+    {color: new vec4(1, 1, 1, 0.3), percent: 0.6},
+    {color: new vec4(1, 1, 1, 0.55), percent: 1}
+  ],
+  rimCm: SOFT_BORDER_CM
+}
+
+/** Primary (green) button: SOFT_GREEN lit from the top (#5BE79B -> #33C474), a brighter green top edge. */
+export const GLASS_PRIMARY: GlassTier = {
+  fill: SOFT_GREEN,
+  bg: [
+    {color: new vec4(0.357, 0.906, 0.608, 1), percent: 0}, // #5BE79B
+    {color: SOFT_GREEN, percent: 0.5},
+    {color: new vec4(0.2, 0.769, 0.455, 1), percent: 1} // #33C474
+  ],
+  rim: [
+    {color: new vec4(0.714, 1, 0.839, 1), percent: 0}, // #B6FFD6
+    {color: new vec4(0.239, 0.863, 0.518, 0.55), percent: 1}
+  ],
+  rimCm: SOFT_BORDER_CM
+}
+
+/** Green glass (tier 2 brightness): focus/selected, done and fastened marks, safe zone, result cards. */
+export const GLASS_GREEN: GlassTier = {
+  fill: new vec4(0.239, 0.863, 0.518, 0.3),
+  bg: [
+    {color: new vec4(0.33, 0.9, 0.6, 0.32), percent: 0},
+    {color: new vec4(0.21, 0.76, 0.46, 0.16), percent: 1}
+  ],
+  rim: [
+    {color: new vec4(0.714, 1, 0.839, 1), percent: 0}, // #B6FFD6
+    {color: new vec4(0.239, 0.863, 0.518, 0.35), percent: 0.7},
+    {color: new vec4(0.239, 0.863, 0.518, 0.6), percent: 1}
+  ],
+  rimCm: SOFT_BORDER_CM
+}
+
+/**
+ * Danger glass: hazard labels, the HUD notice, danger pills. The mockup's dark
+ * red fill would vanish on the additive display, so the fill is a pale red
+ * tint (red text stays readable on it) and the red lives in the rim
+ * (#FF8A80 -> SOFT_RED 35% -> 60%).
+ */
+export const GLASS_RED: GlassTier = {
+  fill: new vec4(1, 0.8, 0.78, 0.6),
+  bg: [
+    {color: new vec4(1, 0.84, 0.82, 0.6), percent: 0},
+    {color: new vec4(0.94, 0.7, 0.68, 0.36), percent: 1}
+  ],
+  rim: [
+    {color: new vec4(1, 0.541, 0.502, 1), percent: 0}, // #FF8A80
+    {color: new vec4(1, 0.353, 0.31, 0.35), percent: 0.6},
+    {color: new vec4(1, 0.353, 0.31, 0.6), percent: 1}
+  ],
+  rimCm: SOFT_BORDER_CM
+}
+
+/** The GEMPA banner: a strong red fill (#FF6E62 86% -> #FF5246 70%), rim #FFD0CB -> SOFT_RED 60%. */
+export const GLASS_BANNER: GlassTier = {
+  fill: new vec4(1, 0.431, 0.384, 0.86),
+  bg: [
+    {color: new vec4(1, 0.431, 0.384, 0.86), percent: 0},
+    {color: new vec4(1, 0.322, 0.275, 0.7), percent: 1}
+  ],
+  rim: [
+    {color: new vec4(1, 0.816, 0.796, 1), percent: 0}, // #FFD0CB
+    {color: new vec4(1, 0.353, 0.31, 0.6), percent: 1}
+  ],
+  rimCm: SOFT_BORDER_CM
+}
+
+/**
+ * `tier` with its fill rebuilt from `color` (config-driven fills such as the
+ * HUD step colors): backgroundColor is exactly `color`, the gradient runs from
+ * `color` lifted toward white at the top to `color` dimmer and thinner at the
+ * bottom. The rim stays the tier's.
+ */
+export function tinted(tier: GlassTier, color: vec4): GlassTier {
+  const lift = (v: number) => v + (1 - v) * TINT_TOP_LIFT
+  return {
+    fill: color,
+    bg: [
+      {color: new vec4(lift(color.x), lift(color.y), lift(color.z), color.w), percent: 0},
+      {
+        color: new vec4(
+          color.x * TINT_BOTTOM_RGB,
+          color.y * TINT_BOTTOM_RGB,
+          color.z * TINT_BOTTOM_RGB,
+          color.w * TINT_BOTTOM_ALPHA
+        ),
+        percent: 1
+      }
+    ],
+    rim: tier.rim,
+    rimCm: tier.rimCm
+  }
+}
+
+function toStop(stops: readonly GlassStop[], i: number): GradientStop {
+  return i < stops.length ? {color: stops[i].color, percent: stops[i].percent, enabled: true} : {enabled: false}
+}
+
+/**
+ * Puts `tier` on `rect`. Safe before the shape has initialized (UI Kit shapes
+ * initialize on their OnStartEvent): the stop setters only store, configureMesh
+ * applies them; once initialized the position setters push the update.
+ */
+export function applyGlass(rect: RoundedRectangle, tier: GlassTier): void {
+  applyGlassFill(rect, tier)
+  applyGlassRim(rect, tier)
+}
+
+/** Only the fill half of applyGlass (backgroundColor and the fill gradient). */
+function applyGlassFill(rect: RoundedRectangle, tier: GlassTier): void {
+  rect.backgroundColor = tier.fill
+  for (let i = 0; i < 7; i++) {
+    rect.setBackgroundGradientStop(i, toStop(tier.bg, i), false)
+  }
+  rect.gradientType = "Linear"
+  rect.gradient = true
+  rect.setBackgroundGradientPositions(GLASS_TOP, GLASS_BOTTOM)
+}
+
+/** Only the rim half of applyGlass (border on with the rim gradient, or off). */
+function applyGlassRim(rect: RoundedRectangle, tier: GlassTier): void {
+  if (tier.rim === null) {
+    rect.border = false
+    return
+  }
+  for (let i = 0; i < 7; i++) {
+    rect.setBorderGradientStop(i, toStop(tier.rim, i), false)
+  }
+  rect.border = true
+  rect.borderSize = tier.rimCm
+  rect.borderColor = tier.rim[0].color
+  rect.borderGradientType = "Linear"
+  rect.borderType = "Gradient"
+  rect.setBorderGradientPositions(GLASS_TOP, GLASS_BOTTOM)
+}
+
+/** Tier 0 on `rect` (inset: tiles, tables, vitals). */
+export function insetGlass(rect: RoundedRectangle): void {
+  applyGlass(rect, GLASS_INSET)
+}
+
+/** Tier 1 on `rect` (panel). */
+export function panelGlass(rect: RoundedRectangle): void {
+  applyGlass(rect, GLASS_PANEL)
+}
+
+/** Tier 2 on `rect` (raised: buttons, cards, markers, pinch targets). */
+export function raisedGlass(rect: RoundedRectangle): void {
+  applyGlass(rect, GLASS_RAISED)
+}
 
 /** A flat rounded rect on `host` (no gradient). The radius never exceeds half the shorter side. */
 export function createRoundRect(host: SceneObject, color: vec4, w: number, h: number, radiusCm: number): RoundedRectangle {
@@ -38,19 +270,23 @@ export function createRoundRect(host: SceneObject, color: vec4, w: number, h: nu
 /**
  * Rounded backing with an optional thin border. The face (holding the
  * backing) can carry children such as a button label, so they scale with it
- * on press.
+ * on press. Pass a GlassTier as `fill` for a glass surface; its rim then
+ * replaces `border`. On a glass frame setFill keeps the glass (the fill
+ * gradient is rebuilt from the color, see tinted()) and setBorder sets a
+ * one-off flat border; setTier switches the whole look.
  */
 export class SoftFrame {
   readonly face: SceneObject
   readonly backing: RoundedRectangle
   private readonly faceT: Transform
   private readonly radius: number
+  private tier: GlassTier | null = null
   private w = 1
   private h = 1
 
   constructor(
     parent: SceneObject,
-    fill: vec4,
+    fill: vec4 | GlassTier,
     radiusCm: number = SOFT_PANEL_RADIUS_CM,
     border: vec4 | null = SOFT_LINE,
     name: string = "Face"
@@ -59,9 +295,14 @@ export class SoftFrame {
     this.face = global.scene.createSceneObject(name)
     this.face.setParent(parent)
     this.faceT = this.face.getTransform()
-    this.backing = createRoundRect(this.face, fill, 1, 1, radiusCm)
+    const tier = isGlassTier(fill) ? fill : null
+    this.backing = createRoundRect(this.face, tier ? tier.fill : (fill as vec4), 1, 1, radiusCm)
     this.backing.borderSoftness = 0
-    this.setBorder(border)
+    if (tier) {
+      this.setTier(tier)
+    } else {
+      this.setBorder(border)
+    }
   }
 
   /** Face size in cm. */
@@ -79,17 +320,47 @@ export class SoftFrame {
     return this.h
   }
 
+  /** Glass look (fill and rim gradients), or null for a flat frame with no border. */
+  setTier(tier: GlassTier | null): void {
+    this.tier = tier
+    if (tier) {
+      applyGlass(this.backing, tier)
+    } else {
+      this.backing.gradient = false
+      this.backing.border = false
+    }
+  }
+
+  /** A flat color; on a glass frame the glass is kept and its fill rebuilt from `color` (rim untouched). */
   setFill(color: vec4): void {
+    if (this.tier) {
+      applyGlassFill(this.backing, tinted(this.tier, color))
+      return
+    }
     this.backing.backgroundColor = color
   }
 
-  /** Border color, or null for none. */
+  /** The glass tier's own colors at `alpha` (config-driven alpha, e.g. labelBackingAlpha). */
+  setTierAlpha(alpha: number): void {
+    if (this.tier) {
+      const f = this.tier.fill
+      this.setFill(new vec4(f.x, f.y, f.z, alpha))
+    }
+  }
+
+  /** Border color, or null for none (a one-off flat border, also on a glass frame). */
   setBorder(color: vec4 | null, cm: number = SOFT_BORDER_CM): void {
     this.backing.border = color !== null
     if (color !== null) {
+      this.backing.borderType = "Color"
       this.backing.borderColor = color
       this.backing.borderSize = cm
     }
+  }
+
+  /** Back to the glass tier's own rim (after a one-off setBorder). */
+  resetBorder(): void {
+    if (this.tier) applyGlassRim(this.backing, this.tier)
   }
 
   /** Whole frame opacity (done steps use 0.45). */
@@ -101,6 +372,10 @@ export class SoftFrame {
   setScale(s: number): void {
     this.faceT.setLocalScale(new vec3(s, s, 1))
   }
+}
+
+function isGlassTier(v: vec4 | GlassTier): v is GlassTier {
+  return (v as GlassTier).bg !== undefined
 }
 
 /**
@@ -117,9 +392,9 @@ export function hideKitVisual(buttonObject: SceneObject): void {
 
 /**
  * Slice 7A-soft button on the UI Kit Button. Primary (Continue, Restart):
- * solid green, dark label, a green glow on hover/focus. Secondary (language
- * buttons): see-through with a thin border, green fill 24% and green border on
- * hover/focus. Pinch: the face scales to 0.96 and eases back in 0.12 s after
+ * green glass (GLASS_PRIMARY), dark label, a green glow on hover/focus.
+ * Secondary (language buttons): tier 2 glass (GLASS_RAISED), green glass on
+ * hover/focus (Slice 15B). Pinch: the face scales to 0.96 and eases back in 0.12 s after
  * release. `action` runs on release (callers keep their pinch guard inside
  * it). Labels go under `face` so they scale with the press.
  */
@@ -141,7 +416,7 @@ export class SoftButton {
       this.glow.setSize(w + GLOW_CM * 2, h + GLOW_CM * 2)
       this.glow.face.enabled = false
     }
-    this.frame = new SoftFrame(this.buttonObject, this.restFill, SOFT_INNER_RADIUS_CM, this.restBorder)
+    this.frame = new SoftFrame(this.buttonObject, this.restTier, SOFT_INNER_RADIUS_CM, null)
     this.frame.setSize(w, h)
     btn.onInitialized.add(() => {
       hideKitVisual(this.buttonObject)
@@ -188,12 +463,9 @@ export class SoftButton {
     this.setFocus(false)
   }
 
-  private get restFill(): vec4 {
-    return this.primary ? SOFT_GREEN : SOFT_BUTTON_FILL
-  }
-
-  private get restBorder(): vec4 | null {
-    return this.primary ? null : SOFT_LINE
+  /** Slice 15B: primary = green glass (GLASS_PRIMARY), secondary = tier 2 (GLASS_RAISED). */
+  private get restTier(): GlassTier {
+    return this.primary ? GLASS_PRIMARY : GLASS_RAISED
   }
 
   private setFocus(hover: boolean): void {
@@ -201,8 +473,7 @@ export class SoftButton {
     if (this.glow) {
       this.glow.face.enabled = on
     } else {
-      this.frame.setFill(on ? SOFT_GREEN_FOCUS : this.restFill)
-      this.frame.setBorder(on ? SOFT_GREEN : this.restBorder)
+      this.frame.setTier(on ? GLASS_GREEN : this.restTier)
     }
   }
 
@@ -214,7 +485,7 @@ export class SoftButton {
   }
 
   private release(): void {
-    if (this.primary) this.frame.setFill(SOFT_GREEN)
+    if (this.primary) this.frame.setTier(GLASS_PRIMARY)
     this.releasedAt = getTime()
     this.anim.enabled = true
   }

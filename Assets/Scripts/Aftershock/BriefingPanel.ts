@@ -2,7 +2,7 @@ import {FlexItem} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/F
 import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexLayout"
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import {lines, onLanguageChanged, setLinePair} from "./Strings"
-import {drawOnTop, SoftFrame} from "./UiBacking"
+import {drawOnTop, GLASS_PANEL, SoftFrame} from "./UiBacking"
 
 // DESIGN_BRIEF §5: instruction type is 3.5 cm at 110 cm. size / 43.886 = em-square in cm.
 const SIZE_PER_CM = 43.886
@@ -45,7 +45,9 @@ export class BriefingPanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = new SoftFrame(this.sceneObject, this.backingColor)
+    // Glass tier 1 (15B); the input alpha keeps the 8A P1 readability over furniture.
+    const backing = new SoftFrame(this.sceneObject, GLASS_PANEL)
+    backing.setTierAlpha(this.backingColor.w)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)

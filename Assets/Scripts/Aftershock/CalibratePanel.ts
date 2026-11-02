@@ -4,7 +4,7 @@ import {FlexLayout} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex
 import {FlexAlign, FlexAlignSelf, FlexDirection, FlexJustify} from "SpectaclesUIKit.lspkg/Scripts/Components/Layout2D/Flex/FlexTypes"
 import Event, {PublicApi} from "SpectaclesInteractionKit.lspkg/Utils/Event"
 import {lines, onLanguageChanged, setLinePair, StringKey} from "./Strings"
-import {drawOnTop, PinchGuard, SoftButton, SoftFrame} from "./UiBacking"
+import {drawOnTop, GLASS_PANEL, PinchGuard, SoftButton, SoftFrame} from "./UiBacking"
 
 /** One string's line and its collapsed English line (5j-13d: one language per screen). */
 interface LinePair {
@@ -73,7 +73,7 @@ export class CalibratePanel extends BaseScriptComponent {
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
 
-    const backing = new SoftFrame(this.sceneObject, this.backingColor)
+    const backing = new SoftFrame(this.sceneObject, GLASS_PANEL) // glass tier 1 (15B)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.sceneObject)

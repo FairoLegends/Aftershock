@@ -1,7 +1,17 @@
 import {DrillConfig} from "./DrillConfig"
 import {FOOTPRINTS, LayoutItem, RoomRect} from "./LayoutGenerator"
 import {getLanguage, getString, hazardFontFor, lines, onLanguageChanged, setLinePair, setLineText, StringKey} from "./Strings"
-import {createRoundRect, SOFT_GREEN, SOFT_RED, SOFT_WHITE, SoftFrame} from "./UiBacking"
+import {
+  createRoundRect,
+  GLASS_GREEN,
+  GLASS_PANEL,
+  GLASS_RED,
+  GlassTier,
+  SOFT_GREEN,
+  SOFT_RED,
+  SOFT_WHITE,
+  SoftFrame
+} from "./UiBacking"
 
 // size / 43.886 = em-square in cm. 5m-3: the label is built at 1 cm per em and
 // its Body scales to the distance em every frame (DrillConfig labelEm*).
@@ -136,7 +146,7 @@ export class HazardLabel extends BaseScriptComponent {
     this.sceneObject.createComponent("Component.Canvas")
     this.body = global.scene.createSceneObject("Body")
     this.body.setParent(this.sceneObject)
-    this.backing = new SoftFrame(this.body, this.backingColor, RADIUS, null)
+    this.backing = new SoftFrame(this.body, this.glassTier, RADIUS, null)
 
     const content = global.scene.createSceneObject("Content")
     content.setParent(this.body)
@@ -230,8 +240,8 @@ export class HazardLabel extends BaseScriptComponent {
   private buildTag(): void {
     this.tag = global.scene.createSceneObject("Tag")
     this.tag.setParent(this.body)
-    this.tagFrame = new SoftFrame(this.tag, this.backingColor, RADIUS, SOFT_GREEN, "TagBacking")
-    this.tagFrame.setBorder(SOFT_GREEN, 0.08)
+    // 15B: light panel glass under a green rim (green text stays readable on it).
+    this.tagFrame = new SoftFrame(this.tag, {...GLASS_PANEL, rim: GLASS_GREEN.rim, rimCm: 0.08}, RADIUS, null, "TagBacking")
     const so = global.scene.createSceneObject("TagLine")
     so.setParent(this.tag)
     so.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
@@ -263,7 +273,7 @@ export class HazardLabel extends BaseScriptComponent {
     }
     const tw = w + SLACK + PAD_X * 2
     const th = lineH + PAD_Y * 2
-    this.tagFrame.setFill(this.backingColor)
+    this.tagFrame.setTierAlpha(this.backingColor.w)
     this.tagFrame.setSize(tw, th)
     const h = this._collapsed ? this.iconH + PAD_Y * 2 : this.fullH
     this.tag.getTransform().setLocalPosition(new vec3(0, -(h / 2 + TAG_GAP + th / 2), 0))
@@ -276,6 +286,14 @@ export class HazardLabel extends BaseScriptComponent {
   /** Slice 8A exit door: a soft green dot and green text, never the hazard red. */
   private get isDoor(): boolean {
     return this.key === "label.door"
+  }
+
+  /**
+   * 15B glass: red glass for a hazard (red tint, red rim), panel glass for the
+   * door (green text), green glass for the safe zone.
+   */
+  private get glassTier(): GlassTier {
+    return this.isHazard ? GLASS_RED : this.isDoor ? GLASS_PANEL : GLASS_GREEN
   }
 
   get isShown(): boolean {
@@ -318,7 +336,8 @@ export class HazardLabel extends BaseScriptComponent {
     }
     const c = ctxConfig
     this.ready = c !== null
-    this.backing.setFill(this.backingColor)
+    // 15B: the tier's tint at labelBackingAlpha (the safe zone keeps its green glass alpha).
+    if (this.key !== "label.safe") this.backing.setTierAlpha(this.backingColor.w)
     const iconPerEm = c ? c.labelIconPerEm : 1
     this.iconH = this.isHazard ? iconPerEm : iconPerEm * DOT_PER_ICON
     this.iconW = this.isHazard ? this.iconH * TRI_W_PER_H : this.iconH
