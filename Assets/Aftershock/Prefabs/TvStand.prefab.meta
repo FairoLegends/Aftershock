@@ -1,68 +1,23 @@
-- !<AssetImportMetadata/1bc543e7-7344-43f2-b2c4-0b938c6b3b85>
+- !<AssetImportMetadata/83da8791-b9c1-42bf-a867-462251c89035>
   ImportedAssetIds:
-    ObjectPrefab: !<reference> 17dabe1e-78ce-4f47-9d33-ecb470078502
+    ObjectPrefab: !<reference> 53e39191-0af7-4acd-b1a8-c15bcbf8a0d4
   ImporterName: ObjectPrefabImporter
-  PrimaryAsset: !<reference> 17dabe1e-78ce-4f47-9d33-ecb470078502
+  PrimaryAsset: !<reference> 53e39191-0af7-4acd-b1a8-c15bcbf8a0d4
   PackageType: NotAPackage
   LegacyPackagePolicy: ~
   ExtraData:
     {}
   AssetDataMap:
-    ObjectPrefab: !<own> 91ba780a-a577-4919-9ca0-edd6bf2b51b7
+    ObjectPrefab: !<own> 58eeff7c-ec47-4969-8761-b2315a22e658
   DependentFiles:
     []
   ImporterSettings: !<AssetImporterSettings>
     {}
   CompressionSettings: !<own> 00000000-0000-0000-0000-000000000000
-- !<SceneObject/0345e59a-d31e-41a1-626c-6cde9b1e8af2>
+- !<RenderMeshVisual/1452757b-d697-4877-5b3e-428942c9863f>
   PrefabRemaps:
     []
-  Name: geometry_0
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.550000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 432e9839-7c99-4194-7bea-bbb679c4146e
-- !<SceneObject/28aef958-028b-4301-4567-9202aab0dab2>
-  PrefabRemaps:
-    []
-  Name: TvStand
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    - !<own> 5534b298-b225-44ac-43c9-e54a3e04f109
-  Components:
-    []
-- !<SceneObject/326536e5-0dfc-4f03-6fd3-cf1178419612>
-  PrefabRemaps:
-    []
-  Name: Scene
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    - !<own> 0345e59a-d31e-41a1-626c-6cde9b1e8af2
-  Components:
-    []
-- !<RenderMeshVisual/432e9839-7c99-4194-7bea-bbb679c4146e>
-  PrefabRemaps:
-    []
-  Name: geometry_0
+  Name: Render Mesh Visual
   Enabled: true
   RenderOrder: 0
   StretchMode: Stretch
@@ -73,40 +28,71 @@
   ShadowDensity: 1.000000
   Materials:
     - !<reference> b746f8cf-1e0f-4883-92aa-e9d300184dc8
-  Mesh: !<reference> c7e69e57-ced8-45a3-8b5f-92848ac0da9f
+  Mesh: !<reference> ee69aff8-d556-41d5-81ef-146ef7461d5e
   Skin: !<reference> 00000000-0000-0000-0000-000000000000
   BlendShapesEnabled: true
   BlendNormals: false
   BlendShapes:
     {}
-- !<SceneObject/5534b298-b225-44ac-43c9-e54a3e04f109>
+- !<SceneObject/4d225eb4-86e9-458e-7dfe-b655cf5cc746>
   PrefabRemaps:
-    - 0345e59a-d31e-41a1-626c-6cde9b1e8af2: 92c9aa79-4e7e-4835-7419-dc0e1ae7d66b
-    - 326536e5-0dfc-4f03-6fd3-cf1178419612: 3cbeefae-1064-461a-7984-ea6f360d8118
-    - 432e9839-7c99-4194-7bea-bbb679c4146e: 9aa24036-c5ff-4bb1-5061-7689497aa25f
-    - 5534b298-b225-44ac-43c9-e54a3e04f109: e313e3c9-bcbc-485b-47a7-b38b218fc6ef
-    - d2df57b2-4023-4972-7ecb-763ce53cf33d: 9aa3d7e8-7292-49ef-4766-f36b84c400c4
-  Name: TvStand
+    []
+  Name: Tv
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Position: {x: 0.000000, y: 55.000000, z: 0.000000}
     Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
     Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
     HasSegmentScaleCompensation: false
   Children:
-    - !<own> d2df57b2-4023-4972-7ecb-763ce53cf33d
-  Components:
     []
-- !<ObjectPrefabAssetData/91ba780a-a577-4919-9ca0-edd6bf2b51b7>
-  Prototype: !<ObjectOwner/ddc9e76f-da9f-4dcc-ab84-e8e71027678a>
+  Components:
+    - !<own> 62cdd08d-566b-492b-6199-1bdf5cf423f8
+- !<ObjectPrefabAssetData/58eeff7c-ec47-4969-8761-b2315a22e658>
+  Prototype: !<ObjectOwner/76059539-beba-4997-8470-558d73bff763>
     PackagePath: ""
     objects:
-      - !<own> 28aef958-028b-4301-4567-9202aab0dab2
-- !<SceneObject/d2df57b2-4023-4972-7ecb-763ce53cf33d>
+      - !<own> ae083bc9-e9d4-4951-4fb6-9dd443434e8f
+- !<RenderMeshVisual/62cdd08d-566b-492b-6199-1bdf5cf423f8>
   PrefabRemaps:
     []
-  Name: Scenes
+  Name: Render Mesh Visual
+  Enabled: true
+  RenderOrder: 0
+  StretchMode: Stretch
+  VerticalAlignment: Center
+  HorizontalAlignment: Center
+  MeshShadowMode: None
+  ShadowColor: {x: 1.000000, y: 1.000000, z: 1.000000, w: 1.000000}
+  ShadowDensity: 1.000000
+  Materials:
+    - !<reference> b746f8cf-1e0f-4883-92aa-e9d300184dc8
+  Mesh: !<reference> 09da6b30-992e-4fc1-ba56-dc67a4b0e100
+  Skin: !<reference> 00000000-0000-0000-0000-000000000000
+  BlendShapesEnabled: true
+  BlendNormals: false
+  BlendShapes:
+    {}
+- !<SceneObject/8ecca12b-1055-4492-49cc-97166f483121>
+  PrefabRemaps:
+    []
+  Name: Base
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 55.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 100.000000, y: 100.000000, z: 100.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 1452757b-d697-4877-5b3e-428942c9863f
+- !<SceneObject/ae083bc9-e9d4-4951-4fb6-9dd443434e8f>
+  PrefabRemaps:
+    []
+  Name: TvStand
   Enabled: true
   Layers: 1
   LocalTransform: !<TransformEntity>
@@ -115,6 +101,7 @@
     Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
     HasSegmentScaleCompensation: false
   Children:
-    - !<own> 326536e5-0dfc-4f03-6fd3-cf1178419612
+    - !<own> 8ecca12b-1055-4492-49cc-97166f483121
+    - !<own> 4d225eb4-86e9-458e-7dfe-b655cf5cc746
   Components:
     []

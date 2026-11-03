@@ -6,7 +6,7 @@
     - !<own> f5d74682-203a-4970-81ea-9fa7b88c96bb
     - !<own> abd20522-42ae-4f41-a3c2-bf7bade229ec
     - !<own> 566975b2-1733-4f45-b4be-81889ddc015c
-    - !<own> c9f92172-ca3a-48b9-9cc8-e39e61fcdc5c
+    - !<own> ede472fd-5004-4269-98e6-8dc929235b4c
   layers: !<Layers/267ee9a7-aff2-4f9d-9a49-f71214747d03>
     userLayers:
       - id: 1
@@ -2087,22 +2087,6 @@
   BlendNormals: false
   BlendShapes:
     {}
-- !<ScriptComponent/4dd11b06-e2d6-44a9-9a3c-d9442742e1e0>
-  PrefabRemaps:
-    []
-  Name: AgentInspectScript
-  Enabled: true
-  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
-  ScriptInputsDefault:
-    {}
-  ScriptTypesDefault:
-    {}
-  ScriptInputs:
-    "":
-      {}
-  ScriptTypes:
-    "":
-      {}
 - !<RenderMeshVisual/516ee219-280c-42b4-979c-02addd196e3e>
   PrefabRemaps:
     []
@@ -2921,6 +2905,22 @@
   MaxDistance: 100.000000
   EnableDirectivityEffect: false
   EnablePositionEffect: false
+- !<ScriptComponent/73a596c6-4376-48fb-88c4-de52f449d950>
+  PrefabRemaps:
+    []
+  Name: AgentInteractScript
+  Enabled: true
+  ScriptAsset: !<reference> 29091811-e792-46be-bfa4-28ddec5f11be
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<RenderMeshVisual/73edd303-213b-46aa-bea6-e35784c1cd6a>
   PrefabRemaps:
     []
@@ -3503,6 +3503,22 @@
   BlendNormals: false
   BlendShapes:
     {}
+- !<ScriptComponent/9019d8e0-5c5a-468d-9ff0-a54e5c0bb331>
+  PrefabRemaps:
+    []
+  Name: AgentInspectScript
+  Enabled: true
+  ScriptAsset: !<reference> 0b25079c-f5bf-4c6d-96c4-f43b89dfa213
+  ScriptInputsDefault:
+    {}
+  ScriptTypesDefault:
+    {}
+  ScriptInputs:
+    "":
+      {}
+  ScriptTypes:
+    "":
+      {}
 - !<RenderMeshVisual/9159903b-c6a8-4f12-8fbc-ce3bbd73ca3c>
   PrefabRemaps:
     []
@@ -4788,21 +4804,6 @@
     []
   Components:
     - !<own> 32b92a1d-4e38-411c-bd15-66de5e27c0bd
-- !<SceneObject/c9f92172-ca3a-48b9-9cc8-e39e61fcdc5c>
-  PrefabRemaps:
-    []
-  Name: AiPreviewAgent Handler
-  Enabled: true
-  Layers: 1
-  LocalTransform: !<TransformEntity>
-    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
-    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
-    HasSegmentScaleCompensation: false
-  Children:
-    []
-  Components:
-    - !<own> 4dd11b06-e2d6-44a9-9a3c-d9442742e1e0
 - !<SceneObject/ca07cfb8-2285-4c50-8b93-d6be1c1379e1>
   PrefabRemaps:
     []
@@ -5673,6 +5674,22 @@
     []
   Components:
     - !<own> a5bf5d7e-6aa9-4acd-8daa-21ce39c95089
+- !<SceneObject/ede472fd-5004-4269-98e6-8dc929235b4c>
+  PrefabRemaps:
+    []
+  Name: AiPreviewAgent Handler
+  Enabled: true
+  Layers: 1
+  LocalTransform: !<TransformEntity>
+    Position: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Rotation: {x: 0.000000, y: 0.000000, z: 0.000000}
+    Scale: {x: 1.000000, y: 1.000000, z: 1.000000}
+    HasSegmentScaleCompensation: false
+  Children:
+    []
+  Components:
+    - !<own> 9019d8e0-5c5a-468d-9ff0-a54e5c0bb331
+    - !<own> 73a596c6-4376-48fb-88c4-de52f449d950
 - !<ScriptComponent/ee29e4a0-2b17-446e-b061-0293c4c30acb>
   PrefabRemaps:
     []
@@ -6188,7 +6205,7 @@
       cabinetPrefab: !<reference.ObjectPrefab> 1c8bc680-a962-43dc-8449-ab4fe5c708b5
       shelfPrefab: !<reference.ObjectPrefab> ff246972-5993-4e77-bf50-fe5c3c0cf985
       lampPrefab: !<reference.ObjectPrefab> b5313633-df9f-4973-a8ba-2becdfbebf0e
-      tvPrefab: !<reference.ObjectPrefab> 17dabe1e-78ce-4f47-9d33-ecb470078502
+      tvPrefab: !<reference.ObjectPrefab> 53e39191-0af7-4acd-b1a8-c15bcbf8a0d4
       bedPrefab: !<reference.ObjectPrefab> 12b24cdf-171d-4717-ad0c-4586819a58ff
       chairPrefab: !<reference.ObjectPrefab> a38470f0-e8ab-4e7e-bc07-48995a700152
   ScriptTypes:
