@@ -59,7 +59,7 @@ Screenshots from the Lens Studio preview, with the Lens set to English.
 
 The Lens was built by an **AI coding agent** (Claude Code) running the **CLAD plugin** inside **Lens Studio 5.23.2**, through the **Lens Studio MCP**. The project was planned first with the Devpost Learn skill pack: the interview, the approved design brief (`devpost/design-brief.md`) and then six planning documents in `docs/`.
 
-One honest exception: in the first days (up to 30 Oct) the orchestrator agent also made a few small fixes directly — mostly in test files and one-line corrections — when a build session had run out of budget. From 30 Oct on, every change to Lens code, tests included, went through a CLAD session.
+One honest exception: in the first days (up to 31 Oct) the orchestrator agent also made a few small fixes directly — mostly in test files and one-line corrections — when a build session had run out of budget. After that, every change to Lens code, tests included, went through a CLAD session.
 
 The build ran as **16 slices**, one narrow task per capped headless agent session. An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
 
@@ -151,3 +151,4 @@ Not built, and not claimed to be built:
 - **Safety content:** [BMKG](https://bmkg.go.id) — "Antisipasi Gempa Bumi" and the BMKG/JICA "Siaga Gempabumi dan Tsunami" booklet, cited per card in [`docs/EDUCATION_CARDS.md`](docs/EDUCATION_CARDS.md).
 - **Logo:** the diorama mark was generated with xai/grok-imagine-image; the wordmark is set in Manrope (OFL) by code.
 - **Packages:** Spectacles Interaction Kit, Spectacles UI Kit, LEAF — bundled by Lens Studio under their own licences.
+- **Licence:** the project's code and documents are released under the [MIT License](LICENSE). The fonts, voice clips and bundled packages listed above keep their own licences.
