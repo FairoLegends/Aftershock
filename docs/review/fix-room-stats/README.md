@@ -71,3 +71,15 @@ For comparison, on **Hard** (aftershock every time) over the same seeds: 109 fal
 ## Status
 
 The numbers above are computed by the orchestrator from the Lens's own modules. The LEAF scenario that reproduces and checks them inside Lens Studio (`DC30_FixRoomStats`) is still to be written through a CLAD session.
+
+## Reproduce
+
+From the repo root, with Node 18 or newer (esbuild is fetched by `npx`):
+
+```
+node tools/fix-room-stats/fixroom_stats.mjs                              # Normal, seeds 1..30: this table and the totals
+node tools/fix-room-stats/fixroom_stats.mjs hard 1 30                    # another level or seed range
+node tools/fix-room-stats/fixroom_stats.mjs check 208930688 1066210688   # one drill (the demo take): 5 landed, 1 with the shelf fastened
+```
+
+The script bundles `LayoutGenerator.ts`, `DrillPlan.ts` and `Levels.ts` unchanged and reads every number from `DrillConfig.ts`, `FALL_SOURCES` from `FallingObjects.ts` and `FIXABLE` from `DrillController.ts`, so a change to any of them changes the counts.

@@ -24,7 +24,7 @@ Structure follows Microsoft's functional and technical design document pattern (
 |---|---|
 | Engine | Lens Studio 5.23.2 (do not upgrade: 5.24.1 breaks CLAD sign-in) |
 | Target | SPECS, from the SPECS Base Template (`targetPlatform` Specs, preview shows `SPECS 27`) |
-| Project root | `E:\Project\Aftershock\Aftershock.esproj\` (the `.esproj` file is `Aftershock.esproj.esproj`; leave the odd name) |
+| Project root | `E:\Project\Aftershock\Aftershock.esproj\` (the project file is `Aftershock.esproj`, renamed from `Aftershock.esproj.esproj` by the learner, 5 Nov) |
 | Packages | SpectaclesInteractionKit, SpectaclesUIKit (installed); LEAF (`Leaf.lspkg`, installed in Slice 1 by `specs-leaf-install-packages`) |
 | Language | TypeScript, components extend `BaseScriptComponent` |
 | Units | World units are centimeters. Right-handed, +Y up, −Z forward. Runtime rotations in radians. |

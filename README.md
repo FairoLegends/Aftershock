@@ -122,7 +122,7 @@ To run them: enable the `LeafAutoRun` object in the scene, save, refresh the pre
 
 ## Run it yourself
 
-1. Lens Studio **5.23.2**, then open `Aftershock.esproj.esproj`.
+1. Lens Studio **5.23.2**, then open `Aftershock.esproj`.
 2. Set the Preview panel to **Interactive**.
 3. Press play. Controls: **WASD** to walk, **Q/E** to duck and stand, **right-drag** to look, **click** to pinch.
 4. Pick a language, read the notice, pick **Normal**, and wait — the quake starts on its own.

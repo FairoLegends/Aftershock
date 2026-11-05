@@ -26,7 +26,7 @@ The Lens Studio–managed `AGENTS.md` and the `ls-clad` skills govern **how** to
 1. Use CLAD: start with `/lens-studio-router`, build with the `ls-clad` skills and the `specs-experience-builder` workflow. Load `ls-clad:editor-api` before any `ExecuteEditorCode`.
 2. Talk to Lens Studio only through the Lens Studio MCP tools. Never use `curl`, `fetch`, `wget` or raw HTTP to the MCP server. If MCP is unreachable, stop and report it.
 3. Lens Studio stays at **5.23.2**. Do not install, upgrade or switch versions, and do not open another project.
-4. Do not reopen, rename or move the project. Its odd name (`Aftershock.esproj/Aftershock.esproj.esproj`) stays.
+4. Do not reopen, rename or move the project. The project file is `Aftershock.esproj/Aftershock.esproj` (renamed from `Aftershock.esproj.esproj` by the learner, 5 Nov).
 5. Write only inside `Assets/` (scripts in `Assets/Scripts/Aftershock/`, tests in `Assets/Scripts/Aftershock/Tests/`) and `docs/review/`. Never modify `Cache/`, `Support/`, `Packages/` contents by hand, `.esproj`, or any MCP config.
 6. Packages: SIK, UI Kit and LEAF only. Ask before adding any other package.
 7. Before using an unfamiliar Lens API, check `Support/StudioLib.d.ts`; the d.ts wins over memory.
