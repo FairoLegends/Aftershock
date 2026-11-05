@@ -53,7 +53,7 @@ export class DC17_CalibrateAndBest extends Scenario {
       const first = await this.drill(c)
       expect(first).toBeGreaterThan(100)
       expect(c.bestFor("normal")).toBe(first)
-      expect(c.resultPanel.texts.indexOf(lines("result.newBest").primary) >= 0).toBe(true)
+      expect(c.resultPanel.texts.indexOf(lines("result.newBest").primary) >= 0).toBe(false) // Slice 17 (plan 17): stored and logged, not shown
       this.expectBestRow(c, first)
 
       // Best, second drill: a stored 1000 is not beaten and stays.
@@ -104,16 +104,14 @@ export class DC17_CalibrateAndBest extends Scenario {
     return c.lastScore.score
   }
 
-  /** result.best with {score} = `best`: its label and value rows are shown. */
+  /** result.best with {score} = `best`: Slice 17 (plan 17): its row is not shown (the compact first result has no best row). */
   private expectBestRow(c: DrillController, best: number): void {
     const text = lines("result.best", {"{score}": String(best)}).primary
     const m = SPLIT.exec(text)
     const shown = c.resultPanel.texts
     if (m) {
-      expect(shown.indexOf(m[1]) >= 0).toBe(true)
-      expect(shown.indexOf(m[2]) >= 0).toBe(true)
-    } else {
-      expect(shown.indexOf(text) >= 0).toBe(true)
+      expect(shown.indexOf(m[1]) >= 0).toBe(false) // Slice 17 (plan 17): the label is absent (the value equals the score, so it is not checked)
     }
+    expect(shown.indexOf(text) >= 0).toBe(false) // Slice 17 (plan 17): nor the whole line
   }
 }

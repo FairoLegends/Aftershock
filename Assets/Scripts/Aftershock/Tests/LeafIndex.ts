@@ -30,6 +30,7 @@ import {DC27_RepeatQuake} from "./DC27_RepeatQuake"
 import {DC28_FixRoom} from "./DC28_FixRoom"
 import {DC29_StopsAndGlassTrip} from "./DC29_StopsAndGlassTrip"
 import {DC30_FixRoomStats} from "./DC30_FixRoomStats"
+import {DC31_CompactResult} from "./DC31_CompactResult"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -64,6 +65,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc27-repeat-quake", typename: DC27_RepeatQuake.getTypeName()},
     {id: "dc28-fix-room", typename: DC28_FixRoom.getTypeName()},
     {id: "dc29-stops-and-glass-trip", typename: DC29_StopsAndGlassTrip.getTypeName()},
-    {id: "dc30-fix-room-stats", typename: DC30_FixRoomStats.getTypeName()}
+    {id: "dc30-fix-room-stats", typename: DC30_FixRoomStats.getTypeName()},
+    {id: "dc31-compact-result", typename: DC31_CompactResult.getTypeName()}
   ]
 }

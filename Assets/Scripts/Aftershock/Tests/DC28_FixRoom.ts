@@ -98,8 +98,8 @@ export class DC28_FixRoom extends Scenario {
       expect(c.resultPanel.fixRoomShown).toBe(true)
       expect(c.resultPanel.texts.indexOf(fixLabel) >= 0).toBe(true)
       expect(c.resultPanel.compareLines.length).toBe(0) // a first drill: no compare rows
-      expect(c.resultPanel.shownCards.length).toBeGreaterThan(0) // the cards as before
-      expect(c.resultPanel.shownDetailRows).toBeGreaterThan(0) // Slice 15A: the detail rows as before
+      expect(c.resultPanel.shownCards.length).toBe(1) // Slice 17 (plan 17): the compact first result shows one card
+      expect(c.resultPanel.shownDetailRows).toBe(3) // Slice 17 (plan 17): speed (or never), health, grip
       expect(c.resultPanel.headline).toBe("")
       expect(c.resultPanel.repairChecked.length).toBe(0)
       const firstDetailRows = c.resultPanel.shownDetailRows

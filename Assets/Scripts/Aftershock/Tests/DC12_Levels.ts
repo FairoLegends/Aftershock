@@ -67,7 +67,7 @@ export class DC12_Levels extends Scenario {
       expect(c.guidesVisible).toBe(true)
       expect(c.revealShown).toBe(true)
       expect(c.hazardLabelsShown).toBe(true)
-      expect(c.resultPanel.texts.indexOf(lines("result.reveal").primary) >= 0).toBe(true)
+      expect(c.resultPanel.texts.indexOf(lines("result.reveal").primary) >= 0).toBe(false) // Slice 17 (plan 17): no reveal row on the compact first result
 
       // Restart opens the level picker (5j-19a); Hard again hides the guides.
       await press("RestartButton")

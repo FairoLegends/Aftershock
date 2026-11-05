@@ -53,8 +53,8 @@ export class DC11_Aftershock extends Scenario {
       const s = (c.aftershockTimeToCover as number).toFixed(1)
       const shown = c.resultPanel.texts.join(" | ")
       const label = lines("result.aftershock", {"{s}": s}).primary.split(/[:：]/)[0].trim()
-      expect(shown.indexOf(label) >= 0).toBe(true)
-      expect(shown.indexOf(s) >= 0).toBe(true)
+      expect(shown.indexOf(label) >= 0).toBe(false) // Slice 17 (plan 17): the compact first result has no aftershock row
+      expect((c.aftershockTimeToCover as number) >= 0).toBe(true) // Slice 17 (plan 17): the time is still measured, not shown
     } finally {
       restore(c, prevTestMode, prevDuration)
     }

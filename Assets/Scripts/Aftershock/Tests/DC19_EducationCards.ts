@@ -80,11 +80,9 @@ export class DC19_EducationCards extends Scenario {
       expect(f.evacFailed).toBe(c.evacFailed)
       expect(f.aftershockHappened).toBe(false)
       expect(f.perfect).toBe(isPerfect(c.lastScore.score, f))
-      expect(JSON.stringify(c.resultPanel.shownCards)).toBe(JSON.stringify(c.lastCards))
+      expect(JSON.stringify(c.resultPanel.shownCards)).toBe(JSON.stringify(c.lastCards.slice(0, 1))) // Slice 17 (plan 17): the compact first result shows cards[0] only
       const texts = c.resultPanel.texts
-      for (const key of c.lastCards) {
-        expect(texts.indexOf(lines(key).primary) >= 0).toBe(true)
-      }
+      expect(texts.indexOf(lines(c.lastCards[0]).primary) >= 0).toBe(true) // Slice 17 (plan 17): the shown card is the first picked
     } finally {
       c.setLevelForTest("normal")
       restore(c, prevTestMode, prevDuration)

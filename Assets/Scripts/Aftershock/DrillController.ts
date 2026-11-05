@@ -2539,7 +2539,8 @@ export class DrillController extends BaseScriptComponent {
     this.showReveal(true)
     const cards = this.pickResultCards(b.score)
     const second = this.prepareResultPanel() // Slice 14B: after a repeat the compare rows and repair list take the cards' place
-    this.resultPanel.showResult(b, this.resultExtras(this.bestRows(b.score)), second ? [] : cards)
+    this.bestRows(b.score) // Slice 17 (plan 17): still stores the best and logs a new one; its rows are not shown
+    this.resultPanel.showResult(b, [], second ? [] : cards) // Slice 17 (plan 17): no extra rows; the panel shows cards[0]
   }
 
   private enterGameOver(): void {
@@ -2556,7 +2557,7 @@ export class DrillController extends BaseScriptComponent {
     this.showReveal(true)
     const cards = this.pickResultCards(null)
     const second = this.prepareResultPanel() // Slice 14B
-    this.resultPanel.showGameOver(reason, this.resultExtras(), second ? [] : cards)
+    this.resultPanel.showGameOver(reason, [], second ? [] : cards) // Slice 17 (plan 17): the reason row only
   }
 
   /**

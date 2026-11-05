@@ -40,21 +40,33 @@ const INNER_W = 40 // Slice 5L: widened from 32 for the longest German line (ove
 const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
 const DETAIL_LINES = 17 // Slice 8B: four base rows (speed, health, grip, evac) plus aftershock, level and reveal; Slice 8D: new best and best; Slice 14B: three compare rows and up to five repair lines
-const DETAIL_PAD = 0.35 // above and below a detail row's text (Slice 9B: 0.5 → 0.35, room for the cards)
-const DETAIL_GAP = 1.0 // above the first detail row
-const VALUE_W = 12 // detail value column, right
+// Slice 17 (plan 17): the first result and the first game over are compact:
+// COMPACT_W of content and COMPACT_PAD around it (backing 33 cm wide, was 45);
+// the second result keeps INNER_W and PAD. The detail rows, the score row and
+// the cards show only on a first result, so they are built at COMPACT_W.
+const COMPACT_W = 29 // Slice 17 (plan 17): content width of the first result (40 → 29)
+const COMPACT_PAD = 2 // Slice 17 (plan 17): its padding (2.5 → 2)
+const TITLE_EM_CM = 3 // Slice 17 (plan 17): the first result's title (3.5 → 3; the second keeps BIG_EM_CM)
+const ROW_EM_CM = 1.8 // Slice 17 (plan 17): the detail rows (SMALL_EM_CM 2 → 1.8; the compare rows keep SMALL_EM_CM)
+const COMPACT_BUTTON_GAP = 1 // Slice 17 (plan 17): above each button row on the first result (BUTTON_GAP 1.6 → 1; the second keeps BUTTON_GAP)
+const DETAIL_PAD = 0.25 // above and below a detail row's text (Slice 9B: 0.5 → 0.35, room for the cards); Slice 17 (plan 17): 0.35 → 0.25
+const DETAIL_GAP = 0.6 // above the first detail row; Slice 17 (plan 17): 1.0 → 0.6
+const VALUE_W = 7 // detail value column, right; Slice 17 (plan 17): 12 → 7 ("12.3 s" at 1.8 cm em is about 6.3 cm)
 const RULE_H = 0.1
 const RULE_COLOR = new vec4(1, 1, 1, 0.14)
-const SCORE_ROW_H = 6
+const SCORE_ROW_H = 5.5 // Slice 17 (plan 17): 6 → 5.5 (the number stays SCORE_EM_CM)
 const SCORE_ROW_FILL = new vec4(1, 1, 1, 0.08)
-const SCORE_ROW_GAP = 1.2 // above the score row
+const SCORE_ROW_GAP = 0.8 // above the score row; Slice 17 (plan 17): 1.2 → 0.8
 const SCORE_EM_CM = 4 // the number, right
 const SCORE_LABEL_EM_CM = 2.5 // "Skor", left
 const SCORE_INSET = 1.4 // text inset from the row's ends
 const BUTTON_GAP = 1.6 // above the button row
-const BUTTON_W = 17 // DESIGN_BRIEF §5: buttons at least 12 x 5 cm; Slice 10B: 14 → 17 so "Change language" fits at 2 cm em
+// DESIGN_BRIEF §5: buttons at least 12 x 5 cm; Slice 10B: 14 → 17 so "Change language" fits at 2 cm em.
+// Slice 17 (plan 17): 17 → 13, two and BUTTON_ROW_GAP fit COMPACT_W (28 cm); longer labels shrink.
+// One size on both results: SoftButton is built once at its size.
+const BUTTON_W = 13
 const BUTTON_H = 5
-const BUTTON_ROW_GAP = 3 // Slice 10B: between Change language (left) and Restart (right)
+const BUTTON_ROW_GAP = 2 // Slice 10B: between Change language (left) and Restart (right); Slice 17 (plan 17): 3 → 2
 const BUTTON_X = BUTTON_W / 2 + BUTTON_ROW_GAP / 2 // each button's center, either side of the panel's
 const BUTTON_EM_CM = 2
 const BUTTON_LABEL_Z = 0.08 // lifts the label off the button face
@@ -63,10 +75,11 @@ const ROW_Z = 0.05 // row text above the score row's backing
 // Slice 9B (F4, EDUCATION_CARDS.md): up to two soft education cards under the
 // rows, each a faint green rounded row with a thin green bar on the left.
 const CARD_SLOTS = 2
-const CARD_EM_CM = 2
+const CARD_SHOWN = 1 // Slice 17 (plan 17): one card on the first result (cards[0]); the second slot stays collapsed
+const CARD_EM_CM = 1.8 // Slice 17 (plan 17): 2 → 1.8
 const CARD_MAX_LINES = 3 // a longer text shrinks to fit three lines
-const CARD_PAD_Y = 0.7 // above and below the card text
-const CARD_GAP = 1.0 // above the first card
+const CARD_PAD_Y = 0.5 // above and below the card text; Slice 17 (plan 17): 0.7 → 0.5
+const CARD_GAP = 0.6 // above the first card; Slice 17 (plan 17): 1.0 → 0.6
 const CARD_GAP_NEXT = 0.6 // between the cards
 const CARD_TEXT_LEFT = 1.8 // text inset from the card's left edge, clear of the bar
 const CARD_TEXT_RIGHT = 1.0
@@ -306,6 +319,10 @@ export class ResultPanel extends BaseScriptComponent {
   private fitBelow = 0 // the fitted `below` applyPlacement last used
   private config: DrillConfig | null = null
   private headPose: HeadPose | null = null
+  private flex: FlexLayout // Slice 17 (plan 17): its width follows the mode
+  private items: FlexItem[] = [] // every top-level item, as wide as the content
+  private buttonItems: FlexItem[] = [] // the two button rows
+  private innerW = COMPACT_W // the content width now laid out
 
   onAwake(): void {
     this.sceneObject.createComponent("Component.Canvas")
@@ -321,16 +338,12 @@ export class ResultPanel extends BaseScriptComponent {
     content.getTransform().setLocalPosition(new vec3(0, 0, CONTENT_Z))
 
     const flex = content.createComponent(FlexLayout.getTypeName()) as FlexLayout
-    flex.width = INNER_W + PAD * 2
+    this.flex = flex
     flex.height = -1
     flex.direction = FlexDirection.Column
     flex.alignItems = FlexAlign.Center
     flex.justifyContent = FlexJustify.Center
     flex.rowGap = 0 // gaps are margins, so collapsed rows leave none
-    flex.paddingTop = PAD
-    flex.paddingBottom = PAD
-    flex.paddingLeft = PAD
-    flex.paddingRight = PAD
     flex.onLayoutComplete.add((r) => {
       backing.setSize(r.containerWidth, r.containerHeight)
       this.panelH = r.containerHeight
@@ -352,9 +365,10 @@ export class ResultPanel extends BaseScriptComponent {
     this.addList(content) // Slice 15A: before the buttons too
     this.addReplayRow(content) // 13B: above the Restart row, so the Restart label stays last in texts
     this.addButtonRow(content)
-    this.setRow(this.title, null, BIG_EM_CM)
+    this.setWidth(false)
+    this.setRow(this.title, null, TITLE_EM_CM)
     for (const row of this.details) {
-      this.setRow(row, null, SMALL_EM_CM)
+      this.setRow(row, null, ROW_EM_CM)
     }
     this.setScore(null)
     this.setCards([])
@@ -443,62 +457,76 @@ export class ResultPanel extends BaseScriptComponent {
   /**
    * Drill complete: time to take cover, health left and score (TDD §7).
    * Never took cover (tSafe null): result.never and score 0 (Q6).
+   * Slice 17 (plan 17): the first result is compact: the score, ROW_COUNT
+   * rows (speed or never, health, grip) and CARD_SHOWN card; `extra` is not
+   * shown (DrillController still stores the best).
    */
   showResult(b: ScoreBreakdown, extra: ResultLine[] = [], cards: StringKey[] = []): void {
     this._mode = "result"
     this.sceneObject.enabled = true // measure the rows in the real font
-    this.setRow(this.title, lines("result.title"), BIG_EM_CM)
     const second = this.second !== null
+    this.setWidth(second)
+    this.setRow(this.title, lines("result.title"), second ? BIG_EM_CM : TITLE_EM_CM)
     this.setScore(second ? null : b.score) // Slice 15A: the second result's score is in the compare table
-    // Slice 8B (5k item 10): the grip share and the evacuation, after speed and health.
-    const evac: ResultLine = b.evacReached
-      ? {text: fill("result.evac", "{s}", (b.evacTime as number).toFixed(1)), split: true}
-      : {text: lines("result.evacFail"), split: true}
     if (second) {
-      this.setDetails([], []) // Slice 15A: the headline, table and checklist take the rows' place
-    } else if (b.tSafe === null) {
-      this.setDetails([{text: lines("result.never"), split: true}, evac], extra)
+      this.setDetails([]) // Slice 15A: the headline, table and checklist take the rows' place
     } else {
-      this.setDetails(
-        [
-          {text: fill("result.speed", "{s}", b.tSafe.toFixed(1)), split: true},
-          {text: fill("result.health", "{h}", "" + Math.round(b.healthLeft)), split: true},
-          {text: fill("result.grip", "{p}", "" + Math.round(b.holdShare * 100)), split: true},
-          evac
-        ],
-        extra
-      )
+      this.setDetails([
+        {text: b.tSafe === null ? lines("result.never") : fill("result.speed", "{s}", b.tSafe.toFixed(1)), split: true},
+        {text: fill("result.health", "{h}", "" + Math.round(b.healthLeft)), split: true},
+        {text: fill("result.grip", "{p}", "" + Math.round(b.holdShare * 100)), split: true}
+      ])
     }
     this.setCards(second ? [] : cards)
     this.layoutSecond()
     this.showPanel()
   }
 
-  /** Out of health: what went wrong (hit.fell, over.why.grip, over.why.stood or over.why.danger, 5j-19b, 5l-4f), no score (TDD §7). */
+  /** Out of health: what went wrong (hit.fell, over.why.grip, over.why.stood or over.why.danger, 5j-19b, 5l-4f), no score (TDD §7). Slice 17 (plan 17): the reason row and CARD_SHOWN card only. */
   showGameOver(reason: StringKey, extra: ResultLine[] = [], cards: StringKey[] = []): void {
     this._mode = "gameOver"
     this.sceneObject.enabled = true
-    this.setRow(this.title, lines("over.title"), BIG_EM_CM)
-    this.setScore(null)
     const second = this.second !== null // Slice 15A: as showResult
-    this.setDetails(second ? [] : [{text: lines(reason), split: true}], second ? [] : extra)
+    this.setWidth(second)
+    this.setRow(this.title, lines("over.title"), second ? BIG_EM_CM : TITLE_EM_CM)
+    this.setScore(null)
+    this.setDetails(second ? [] : [{text: lines(reason), split: true}])
     this.setCards(second ? [] : cards)
     this.layoutSecond()
     this.showPanel()
   }
 
+  /** Slice 17 (plan 17): the first result at COMPACT_W, the second at INNER_W (as before). */
+  private setWidth(wide: boolean): void {
+    const pad = wide ? PAD : COMPACT_PAD
+    this.innerW = wide ? INNER_W : COMPACT_W
+    this.flex.width = this.innerW + pad * 2
+    this.flex.paddingTop = pad
+    this.flex.paddingBottom = pad
+    this.flex.paddingLeft = pad
+    this.flex.paddingRight = pad
+    for (const item of this.items) {
+      item.overrideWidth = this.innerW
+    }
+    for (const item of this.buttonItems) {
+      item.marginTop = wide ? BUTTON_GAP : COMPACT_BUTTON_GAP
+    }
+  }
+
   /**
    * Slice 9B education cards (F4): one soft card per key (EducationCards.pickCards,
    * at most CARD_SLOTS) under the rows, in the selected language, wrapped to
-   * the card and shrunk past CARD_MAX_LINES; the rest collapse.
+   * the card and shrunk past CARD_MAX_LINES; the rest collapse. Slice 17
+   * (plan 17): only the first CARD_SHOWN keys; the cards show only on a
+   * first result, so they are COMPACT_W wide.
    */
   private setCards(keys: StringKey[]): void {
     const lineH = CARD_EM_CM * LINE_H_PER_EM
-    const left = -INNER_W / 2 + CARD_TEXT_LEFT
-    const right = INNER_W / 2 - CARD_TEXT_RIGHT
+    const left = -COMPACT_W / 2 + CARD_TEXT_LEFT
+    const right = COMPACT_W / 2 - CARD_TEXT_RIGHT
     for (let i = 0; i < this.cards.length; i++) {
       const card = this.cards[i]
-      const key = i < keys.length ? keys[i] : null
+      const key = i < keys.length && i < CARD_SHOWN ? keys[i] : null
       card.key = key
       card.frame.face.enabled = key !== null
       setLineText(card.text, key !== null ? lines(key).primary : "", getLanguage())
@@ -522,7 +550,7 @@ export class ResultPanel extends BaseScriptComponent {
       const h = n * lineH
       card.text.layoutRect = Rect.create(left, right, -h / 2, h / 2)
       const cardH = h + CARD_PAD_Y * 2
-      card.frame.setSize(INNER_W, cardH)
+      card.frame.setSize(COMPACT_W, cardH)
       const barH = Math.max(CARD_BAR_W, cardH - CARD_BAR_PAD_Y * 2)
       card.bar.size = new vec2(CARD_BAR_W, barH)
       card.bar.cornerRadius = CARD_BAR_W / 2
@@ -531,12 +559,11 @@ export class ResultPanel extends BaseScriptComponent {
     }
   }
 
-  /** Fills the detail rows with `base` then `extra` and collapses the rest. */
-  private setDetails(base: ResultLine[], extra: ResultLine[]): void {
-    const all = base.concat(extra) // Slice 15A: the compare rows and repair lines have their own items now
+  /** Fills the detail rows with `rows` and collapses the rest. */
+  private setDetails(rows: ResultLine[]): void {
     for (let i = 0; i < this.details.length; i++) {
-      const l = i < all.length ? all[i] : null
-      this.setRow(this.details[i], l ? l.text : null, SMALL_EM_CM, l ? l.split : true)
+      const l = i < rows.length ? rows[i] : null
+      this.setRow(this.details[i], l ? l.text : null, ROW_EM_CM, l ? l.split : true)
     }
   }
 
@@ -736,11 +763,13 @@ export class ResultPanel extends BaseScriptComponent {
     row.id.size = emCm * SIZE_PER_CM
     row.id.textFill.color = m ? SOFT_DIM : WHITE
     row.id.horizontalAlignment = m ? HorizontalAlignment.Left : HorizontalAlignment.Center
-    const left = -INNER_W / 2
-    const right = m ? INNER_W / 2 - VALUE_W : INNER_W / 2
+    const left = -this.innerW / 2 // Slice 17 (plan 17): the mode's width
+    const right = m ? this.innerW / 2 - VALUE_W : this.innerW / 2
     row.id.layoutRect = Rect.create(left, right, -lineH / 2, lineH / 2)
     if (row.value) {
       setLineText(row.value, m ? m[2] : "", getLanguage())
+      row.value.size = emCm * SIZE_PER_CM
+      row.value.layoutRect = Rect.create(right, this.innerW / 2, -lineH / 2, lineH / 2)
     }
     // Grow the slot to the number of lines the text wraps to. getBoundingBox
     // is limited to 5 calls per Text per frame (measured); this makes one.
@@ -768,20 +797,21 @@ export class ResultPanel extends BaseScriptComponent {
     item.overrideWidth = INNER_W
     item.overrideHeight = HIDDEN_H
     item.alignSelf = FlexAlignSelf.Center
+    this.items.push(item) // Slice 17 (plan 17)
     const id = this.addText(so, name + ".id", SMALL_EM_CM, true)
     const en = this.addText(so, name + ".en", SMALL_EM_CM, true)
     let value: Text | null = null
     let rule: SceneObject | null = null
     if (name !== "Title") {
-      value = this.addText(so, name + ".value", SMALL_EM_CM, false)
+      value = this.addText(so, name + ".value", ROW_EM_CM, false)
       value.horizontalAlignment = HorizontalAlignment.Right
-      const h = SMALL_EM_CM * LINE_H_PER_EM
-      value.layoutRect = Rect.create(INNER_W / 2 - VALUE_W, INNER_W / 2, -h / 2, h / 2)
+      const h = ROW_EM_CM * LINE_H_PER_EM
+      value.layoutRect = Rect.create(COMPACT_W / 2 - VALUE_W, COMPACT_W / 2, -h / 2, h / 2)
     }
     if (ruleAbove) {
       rule = global.scene.createSceneObject(name + ".rule")
       rule.setParent(so)
-      createRoundRect(rule, RULE_COLOR, INNER_W, RULE_H, 0)
+      createRoundRect(rule, RULE_COLOR, COMPACT_W, RULE_H, 0) // Slice 17 (plan 17): detail rows show only on a first result
     }
     return {id, en, value, rule, item}
   }
@@ -806,11 +836,12 @@ export class ResultPanel extends BaseScriptComponent {
     item.overrideWidth = INNER_W
     item.overrideHeight = HIDDEN_H
     item.alignSelf = FlexAlignSelf.Center
+    this.items.push(item) // Slice 17 (plan 17)
     const frame = new SoftFrame(so, tinted(GLASS_GREEN, CARD_FILL), SOFT_INNER_RADIUS_CM, null, name + ".backing")
-    frame.setSize(INNER_W, 1)
+    frame.setSize(COMPACT_W, 1)
     const barSo = global.scene.createSceneObject(name + ".bar")
     barSo.setParent(frame.face)
-    barSo.getTransform().setLocalPosition(new vec3(-INNER_W / 2 + CARD_BAR_INSET + CARD_BAR_W / 2, 0, CARD_BAR_Z))
+    barSo.getTransform().setLocalPosition(new vec3(-COMPACT_W / 2 + CARD_BAR_INSET + CARD_BAR_W / 2, 0, CARD_BAR_Z)) // Slice 17 (plan 17): cards show only on a first result
     const bar = createRoundRect(barSo, SOFT_GREEN, CARD_BAR_W, 1, CARD_BAR_W / 2)
     const text = this.addText(so, name + ".text", CARD_EM_CM, true)
     text.horizontalAlignment = HorizontalAlignment.Left
@@ -912,6 +943,7 @@ export class ResultPanel extends BaseScriptComponent {
     item.overrideWidth = INNER_W
     item.overrideHeight = HIDDEN_H
     item.alignSelf = FlexAlignSelf.Center
+    this.items.push(item) // Slice 17 (plan 17)
     return item
   }
 
@@ -1129,6 +1161,8 @@ export class ResultPanel extends BaseScriptComponent {
     item.marginTop = BUTTON_GAP
     item.overrideWidth = INNER_W
     item.overrideHeight = BUTTON_H
+    this.items.push(item) // Slice 17 (plan 17)
+    this.buttonItems.push(item)
     this.replay = this.addButton(row, "Replay", 0, false, "btn.replay", () => {
       if (this.pinchGuard.open) this.replayEvent.invoke()
     })
@@ -1157,6 +1191,8 @@ export class ResultPanel extends BaseScriptComponent {
     item.marginTop = BUTTON_GAP
     item.overrideWidth = INNER_W // a naked item: the row declares its size (scale stays 1)
     item.overrideHeight = BUTTON_H
+    this.items.push(item) // Slice 17 (plan 17)
+    this.buttonItems.push(item)
 
     this.changeLang = this.addButton(row, "ChangeLang", -BUTTON_X, false, "btn.changeLang", () => {
       if (this.pinchGuard.open) this.changeLanguageEvent.invoke()
@@ -1218,9 +1254,10 @@ export class ResultPanel extends BaseScriptComponent {
     this.scoreItem.overrideWidth = INNER_W
     this.scoreItem.overrideHeight = SCORE_ROW_H
     this.scoreItem.alignSelf = FlexAlignSelf.Center
+    this.items.push(this.scoreItem) // Slice 17 (plan 17)
     const row = new SoftFrame(so, GLASS_INSET, SOFT_INNER_RADIUS_CM, null, "Score.backing") // glass tier 0 (15B)
-    row.setSize(INNER_W, SCORE_ROW_H)
-    const x = INNER_W / 2 - SCORE_INSET
+    row.setSize(COMPACT_W, SCORE_ROW_H) // Slice 17 (plan 17): the score row shows only on a first result
+    const x = COMPACT_W / 2 - SCORE_INSET
     this.scoreId = this.scoreText(so, "Score.id", SCORE_LABEL_EM_CM, -x, x, HorizontalAlignment.Left)
     this.scoreId.textFill.color = SOFT_DIM
     this.scoreEn = this.scoreText(so, "Score.en", SMALL_EM_CM, -x, x, HorizontalAlignment.Left)
