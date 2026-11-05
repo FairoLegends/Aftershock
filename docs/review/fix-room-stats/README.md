@@ -70,7 +70,7 @@ For comparison, on **Hard** (aftershock every time) over the same seeds: 109 fal
 
 ## Status
 
-The numbers above are computed by the orchestrator from the Lens's own modules. The LEAF scenario that reproduces and checks them inside Lens Studio (`DC30_FixRoomStats`) is still to be written through a CLAD session.
+The numbers above are computed by the orchestrator from the Lens's own modules, and locked inside Lens Studio by the LEAF scenario `DC30_FixRoomStats` (`Assets/Scripts/Aftershock/Tests/DC30_FixRoomStats.ts`, written in a CLAD session). DC30 recounts seeds 1..30 with the same pure modules and asserts these exact totals, checks the demo take (5 -> 1), and runs one live drill on the demo take's seeds to check that the controller schedules the same quake falls as the pure count (3 falls, same index, source and time within 1 ms) and none from the shelf once it is fastened. Full suite: 30 of 30 scenarios pass (5 Nov 2026).
 
 ## Reproduce
 

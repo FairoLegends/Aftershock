@@ -7,7 +7,7 @@
 Built for the [Learn AR with SPECS](https://learn-specs.devpost.com) hackathon. It runs in the **Lens Studio preview**; no Spectacles device is needed.
 
 [![Lens Studio 5.23.2](https://img.shields.io/badge/Lens%20Studio-5.23.2-black)](https://ar.snap.com/lens-studio)
-[![LEAF 29/29](https://img.shields.io/badge/LEAF%20scenarios-29%2F29-3DDC84)](#tests)
+[![LEAF 30/30](https://img.shields.io/badge/LEAF%20scenarios-30%2F30-3DDC84)](#tests)
 [![Languages 5](https://img.shields.io/badge/languages-5-blue)](#languages)
 
 [What it does](#what-it-does) · [A drill, step by step](#a-drill-step-by-step) · [Gallery](#gallery) · [How it was built](#how-it-was-built) · [Tests](#tests) · [Run it yourself](#run-it-yourself) · [What's next](#whats-next) · [Credits](#credits)
@@ -101,7 +101,7 @@ Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEER
 
 ## Tests
 
-29 LEAF scenarios (`Assets/Scripts/Aftershock/Tests/`), **all passing**. They drive the drill through a head-pose override and SIK hand interactors, so they test the real code paths, not stubs.
+30 LEAF scenarios (`Assets/Scripts/Aftershock/Tests/`), **all passing**. They drive the drill through a head-pose override and SIK hand interactors, so they test the real code paths, not stubs.
 
 ```
 dc1-safety-then-room        dc11-aftershock          dc21-change-language
@@ -113,12 +113,12 @@ dc6-danger-zone-drains      dc16-hold-on             dc26-panel-follow
 dc7-languages-and-restart   dc17-calibrate-and-best  dc27-repeat-quake
 dc8-bed-trap                dc18-tv-topple           dc28-fix-room
 dc9-two-tables              dc19-education-cards     dc29-stops-and-glass-trip
-dc10-scan-path-edge         dc20-voice-guide
+dc10-scan-path-edge         dc20-voice-guide         dc30-fix-room-stats
 ```
 
-They check more than state: the exact score against the calculator, that the room generator obeys every rule over fixed seed lists, that a repeat quake is identical, that every text on the result panel and on the hazard labels is at least 90% opaque, that the HUD never draws a dark plate on an additive display, that the window label stays within 1 cm of its intended height while the room tilts, and that the TV's stand does not move when the TV topples.
+They check more than state: the exact score against the calculator, that the room generator obeys every rule over fixed seed lists, that a repeat quake is identical, that every text on the result panel and on the hazard labels is at least 90% opaque, that the HUD never draws a dark plate on an additive display, that the window label stays within 1 cm of its intended height while the room tilts, that the TV's stand does not move when the TV topples, and that the fix-room counts over 30 seeded rooms are exactly the published ones.
 
-To run them: enable the `LeafAutoRun` object in the scene, save, refresh the preview, and watch the log (about 35 minutes for all 29).
+To run them: enable the `LeafAutoRun` object in the scene, save, refresh the preview, and watch the log (about 17 minutes for all 30).
 
 ## Run it yourself
 
