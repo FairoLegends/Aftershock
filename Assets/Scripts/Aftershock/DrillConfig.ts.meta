@@ -62,6 +62,10 @@
     fixMarkerHeightCm: false
     fixMarkerRefCm: false
     fixPanelButtonCm: false
+    fixPillEmCm: false
+    fixPillFocusDeg: false
+    fixPillHoldSeconds: false
+    fixPillWidthCm: false
     fixTagEmRatio: false
     fontBody: false
     fontHazard: false
@@ -314,6 +318,10 @@
       fixInstrEmCm: 1.800000
       fixPanelButtonCm: 5.500000
       repairEmCm: 1.700000
+      fixPillFocusDeg: !<float> 12.000000
+      fixPillEmCm: 1.600000
+      fixPillWidthCm: !<float> 22.000000
+      fixPillHoldSeconds: 0.400000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000
@@ -506,6 +514,10 @@
     - '// @input float fixInstrEmCm = 1.8 {"hint":"Fix instruction line em size (cm), on the small light panel that follows the head like the replay caption"}'
     - '// @input float fixPanelButtonCm = 5.5 {"hint":"Kembali and Ulangi gempa button height (cm, width 3.4x); label em 0.36x this"}'
     - '// @input float repairEmCm = 1.7 {"hint":"Second result: the repair list (Untuk kamarmu:) line em size (cm)"}'
+    - '// @input float fixPillFocusDeg = 12 {"hint":"Slice 18 (plan 19b): while the head looks within this angle of any shown fix marker, in degrees, the fix panel shrinks to a pill (Ulangi gempa once an item is picked, else the instruction)"}'
+    - "// @input float fixPillEmCm = 1.6 {\"hint\":\"Slice 18: the pill's instruction line em size (cm)\"}"
+    - "// @input float fixPillWidthCm = 22 {\"hint\":\"Slice 18: the pill's widest (cm); its instruction wraps inside\"}"
+    - '// @input float fixPillHoldSeconds = 0.4 {"hint":"Slice 18: the pill grows back to the full panel once the gaze has left every marker for this long (s)"}'
     - '// @ui {"widget":"group_end"}'
     - '// @ui {"widget":"group_start", "label":"Test hooks"}'
     - '// @input bool testMode {"hint":"Short wait and short quake for LEAF scenarios. Off in the real drill."}'

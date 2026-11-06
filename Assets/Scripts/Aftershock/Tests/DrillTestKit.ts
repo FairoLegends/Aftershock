@@ -3,6 +3,7 @@ import {findSceneObjectByName, sleep} from "Leaf.lspkg/Utils/common/Utils"
 import {findInteractableByName} from "Leaf.lspkg/Interactors/InteractableUtils"
 import {DefaultLeafInteractor} from "Leaf.lspkg/Interactors/interactor/DefaultLeafInteractor"
 import {DrillController} from "../DrillController"
+import {FixRoomView} from "../FixRoomView"
 import {Layout, LayoutForce} from "../LayoutGenerator"
 import {LEVELS} from "../Levels"
 
@@ -15,6 +16,10 @@ export const CLASSIC: LayoutForce = {tables: 1, hazards: ["cabinet", "shelf", "g
 const PINCH_GUARD_WAIT_MS = 800 // every panel ignores presses for 0.5 s after it shows (5h item 1)
 const POLL_MS = 100
 const EXIT_HOVER_WAIT_MS = 500 // HoldInteractor.release: the most it waits for the hover exit
+/** Slice 18 (plan 19b): a look away from the fix markers is at least this far from each (degrees). */
+export const LOOK_AWAY_DEG = 60
+const LOOK_STEP_DEG = 10 // lookAwayFromMarkers tries every yaw in these steps
+const PILL_WAIT_EXTRA_S = 2 // past fixPillHoldSeconds, the most the full fix panel may take to come back
 
 /** Head height (cm above floorY) for a ducked head: under the duck line at floorY + 70. */
 export const DUCKED_HEAD_CM = 60
@@ -52,11 +57,25 @@ export function restoreBests(c: DrillController): void {
   LEVELS.forEach((level, i) => c.setBestForTest(level, bests[i]))
 }
 
-/** Waits out the panel's pinch guard, then pinches the named interactable. */
+/**
+ * Waits out the panel's pinch guard, then pinches the named interactable.
+ * Slice 18b (plan 19 d): a target that is not shown fails at once; LEAF's
+ * enterHover would wait, with no timeout, for a hover enter it never fires.
+ */
 export async function press(name: string): Promise<void> {
   await sleep(PINCH_GUARD_WAIT_MS)
-  await new DefaultLeafInteractor().trigger(findInteractableByName(name))
+  const target = findInteractableByName(name)
+  if (target !== undefined && !target.getSceneObject().isEnabledInHierarchy) {
+    throw new Error(`press: ${name} is not shown`)
+  }
+  await new DefaultLeafInteractor().trigger(target)
   await sleep(POLL_MS * 2)
+}
+
+/** Slice 18b (plan 19 d): whether the named interactable's SceneObject is enabled in the hierarchy. */
+export function isShown(name: string): boolean {
+  const target = findInteractableByName(name)
+  return target !== undefined && target.getSceneObject().isEnabledInHierarchy
 }
 
 /** 5l-4a: a LEAF interactor that keeps its pinch on an interactable until release(). */
@@ -105,11 +124,14 @@ export async function expectState(c: DrillController, state: string, timeoutMs: 
  * BRIEFING, QUAKE, POST_QUAKE and AFTERSHOCK have
  * timers from an earlier config, so they use resetForTest(true); it clears
  * every test hook (5j-19f), so this scenario's hooks are put back before the
- * pickers.
+ * pickers. Slice 18b (plan 19 d): so does a RESULT or GAME_OVER whose Restart
+ * button is not shown (DC31 shows and hides the panel with no drill).
  */
 export async function toFreshBriefing(c: DrillController, force: LayoutForce | null = CLASSIC): Promise<void> {
   c.forceLayoutForTest(force)
-  if (c.state !== "LANGUAGE" && c.state !== "SAFETY" && c.state !== "LEVEL" && c.state !== "CALIBRATE" && c.state !== "RESULT" && c.state !== "GAME_OVER") {
+  const pickers = c.state === "LANGUAGE" || c.state === "SAFETY" || c.state === "LEVEL" || c.state === "CALIBRATE"
+  const restart = (c.state === "RESULT" || c.state === "GAME_OVER") && isShown("RestartButton") // Slice 18b (plan 19 d)
+  if (!pickers && !restart) {
     const aftershock = c.aftershockForcedForTest
     const fallsOff = c.fallsDisabledForTest
     const lang = c.language
@@ -215,6 +237,41 @@ export function doorPoint(c: DrillController): vec3 {
   const n = c.doorNormal
   if (!d || !n) return startSpot(c)
   return new vec3(d.x + n.x * 30, c.floorY + c.config.eyeHeight, d.z + n.z * 30)
+}
+
+/** Slice 18 (plan 19b): the least angle (degrees) from `forward` at the head to any shown fix marker (180 with none). */
+export function markerAngleDeg(c: DrillController, v: FixRoomView, forward: vec3): number {
+  const head = c.headPose.position
+  let least = 180
+  for (const item of v.markersShown) {
+    const p = v.markerPosition(item)
+    if (p) least = Math.min(least, (p.sub(head).angleTo(forward) * 180) / Math.PI)
+  }
+  return least
+}
+
+/**
+ * Slice 18 (plan 19b): turns the head where it stands, level, to the yaw (in
+ * LOOK_STEP_DEG steps) farthest from every shown fix marker, at least
+ * LOOK_AWAY_DEG, as a wearer turns from the room to the panel; then waits for
+ * the full panel. Returns whether the pill went.
+ */
+export async function lookAwayFromMarkers(c: DrillController, v: FixRoomView): Promise<boolean> {
+  const head = c.headPose.position
+  let best = c.headPose.forward
+  let bestDeg = -1
+  for (let yaw = 0; yaw < 360; yaw += LOOK_STEP_DEG) {
+    const a = (yaw * Math.PI) / 180
+    const f = new vec3(Math.sin(a), 0, -Math.cos(a))
+    const deg = markerAngleDeg(c, v, f)
+    if (deg > bestDeg) {
+      bestDeg = deg
+      best = f
+    }
+  }
+  expect(bestDeg >= LOOK_AWAY_DEG).toBe(true)
+  c.headPose.setOverride(head, best)
+  return waitFor(() => !v.pillShown, (c.config.fixPillHoldSeconds + PILL_WAIT_EXTRA_S) * 1000)
 }
 
 /** Slice 8B (5k item 8): after leaving cover, expect EVACUATE, walk the head to the door and expect RESULT. */

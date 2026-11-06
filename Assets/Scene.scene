@@ -1771,6 +1771,10 @@
     fixInstrEmCm: true
     fixPanelButtonCm: true
     repairEmCm: true
+    fixPillFocusDeg: true
+    fixPillEmCm: true
+    fixPillWidthCm: true
+    fixPillHoldSeconds: true
     testMode: true
     testWaitSeconds: true
     testDurationSeconds: true
@@ -1918,6 +1922,10 @@
       fixInstrEmCm: 1.800000
       fixPanelButtonCm: 5.500000
       repairEmCm: 1.700000
+      fixPillFocusDeg: !<float> 12.000000
+      fixPillEmCm: 1.600000
+      fixPillWidthCm: !<float> 22.000000
+      fixPillHoldSeconds: 0.400000
       testMode: false
       testWaitSeconds: !<float> 1.000000
       testDurationSeconds: !<float> 8.000000

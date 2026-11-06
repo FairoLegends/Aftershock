@@ -28,7 +28,6 @@ import {
 // Panel text at the HUD scale (ENGINEERING_PLAN 5i item 4): em heights in cm,
 // Text.size = em (cm) x SIZE_PER_CM, as in Hud.ts.
 const SIZE_PER_CM = 43.886
-const BIG_EM_CM = 3.5 // title
 const SMALL_EM_CM = 2 // detail rows
 const LINE_H_PER_EM = 1.25 // one line's slot; measured wrap advance of the panel font is 1.25 em
 
@@ -41,14 +40,14 @@ const PAD = 2.5
 const HIDDEN_H = 0.001 // an unused line collapses to this
 const DETAIL_LINES = 17 // Slice 8B: four base rows (speed, health, grip, evac) plus aftershock, level and reveal; Slice 8D: new best and best; Slice 14B: three compare rows and up to five repair lines
 // Slice 17 (plan 17): the first result and the first game over are compact:
-// COMPACT_W of content and COMPACT_PAD around it (backing 33 cm wide, was 45);
-// the second result keeps INNER_W and PAD. The detail rows, the score row and
-// the cards show only on a first result, so they are built at COMPACT_W.
-const COMPACT_W = 29 // Slice 17 (plan 17): content width of the first result (40 → 29)
+// COMPACT_W of content and COMPACT_PAD around it (backing 33 cm wide, was 45).
+// Slice 18 (plan 19a): the second result is as wide (it was INNER_W and PAD).
+// The detail rows, the score row and the cards show only on a first result.
+const COMPACT_W = 29 // Slice 17 (plan 17): content width of the first result (40 → 29); Slice 18 (plan 19): and of the second
 const COMPACT_PAD = 2 // Slice 17 (plan 17): its padding (2.5 → 2)
-const TITLE_EM_CM = 3 // Slice 17 (plan 17): the first result's title (3.5 → 3; the second keeps BIG_EM_CM)
+const TITLE_EM_CM = 3 // Slice 17 (plan 17): the first result's title (3.5 → 3); Slice 18 (plan 19): the second's too (was 3.5)
 const ROW_EM_CM = 1.8 // Slice 17 (plan 17): the detail rows (SMALL_EM_CM 2 → 1.8; the compare rows keep SMALL_EM_CM)
-const COMPACT_BUTTON_GAP = 1 // Slice 17 (plan 17): above each button row on the first result (BUTTON_GAP 1.6 → 1; the second keeps BUTTON_GAP)
+const COMPACT_BUTTON_GAP = 1 // Slice 17 (plan 17): above each button row on the first result (BUTTON_GAP 1.6 → 1); Slice 18 (plan 19): on the second too
 const DETAIL_PAD = 0.25 // above and below a detail row's text (Slice 9B: 0.5 → 0.35, room for the cards); Slice 17 (plan 17): 0.35 → 0.25
 const DETAIL_GAP = 0.6 // above the first detail row; Slice 17 (plan 17): 1.0 → 0.6
 const VALUE_W = 7 // detail value column, right; Slice 17 (plan 17): 12 → 7 ("12.3 s" at 1.8 cm em is about 6.3 cm)
@@ -95,11 +94,14 @@ const FIT_HALF_ANGLE_DEG = 18
 // result after a repeat. Under the title, in place of the score row, the
 // detail rows and the cards: a headline with a bar (n of m falls prevented),
 // a small compare table and one checklist card. The first result is unchanged.
+// Slice 18 (plan 19a): all of it at COMPACT_W, the headline and the checklist
+// one step smaller and the bar column and compare columns narrower.
+// Slice 18b (plan 19 a2): the because line and the checklist title one step smaller too.
 const HERO_GAP = 1.2 // above the headline (as SCORE_ROW_GAP)
-const HERO_EM_CM = 2.8 // "2 dari 3 benda jatuh tercegah": between the title (3.5) and the rows (2)
-const BECAUSE_EM_CM = 1.8 // "karena rak sudah kamu ikat", dimmed, under it
+const HERO_EM_CM = 2.4 // "2 dari 3 benda jatuh tercegah": between the title (3) and the rows (2); Slice 18 (plan 19): 2.8 → 2.4
+const BECAUSE_EM_CM = 1.6 // "karena rak sudah kamu ikat", dimmed, under it; Slice 18b (plan 19 a2): 1.8 → 1.6 (second result only)
 const BECAUSE_GAP = 0.4 // between the two
-const BAR_COL_W = 8 // the bar and its "n/m", right of the headline (the mockup's ring is 7.6 cm)
+const BAR_COL_W = 6.5 // the bar and its "n/m", right of the headline (the mockup's ring is 7.6 cm); Slice 18 (plan 19): 8 → 6.5
 const BAR_COL_GAP = 1.5 // headline text to the bar column
 const BAR_H = 1.2
 const BAR_TRACK = new vec4(1, 1, 1, 0.22) // the unfilled part: light, never dark
@@ -109,20 +111,20 @@ const LAYER_Z = 0.02 // a bar fill or a check above the shape under it
 const CMP_ROWS = 3 // fell, hit, score
 const CMP_GAP = 1.2 // above the compare table
 const CMP_PAD = 0.35 // above and below a row's text (as DETAIL_PAD)
-const CMP_BEFORE_W = 6 // "before", right-aligned against the arrow ("1000" at 2 cm em is about 5.2 cm)
+const CMP_BEFORE_W = 5 // "before", right-aligned against the arrow ("1000" at 2 cm em is about 4.7 cm in Manrope's advances); Slice 18 (plan 19): 6 → 5
 const CMP_ARROW_W = 3 // "→"
-const CMP_AFTER_W = 6 // "after", left-aligned, green when better
+const CMP_AFTER_W = 5 // "after", left-aligned, green when better; Slice 18 (plan 19): 6 → 5
 const LIST_ROWS = 4 // up to the three FIXABLE items, then "Simpan benda berat di bawah"
 const LIST_GAP = 1.2 // above the checklist card
 const LIST_PAD_X = 1.5 // inside the card (mockup .repair padding 1.2 / 1.5)
 const LIST_PAD_Y = 1.2
-const LIST_TITLE_EM_CM = 2 // "Untuk kamarmu malam ini", left
+const LIST_TITLE_EM_CM = 1.8 // "Untuk kamarmu malam ini", left; Slice 18b (plan 19 a2): 2 → 1.8 (second result only)
 const LIST_SOURCE_EM_CM = 1.5 // "Sumber: BMKG", right, dimmed
 const LIST_HEAD_COL_GAP = 1 // between the title and the source
 const LIST_HEAD_GAP = 0.8 // header to the first row
 const LIST_ROW_GAP = 0.55 // between rows
-const LIST_EM_CM = 1.8 // a row's text
-const LIST_REASON_EM_CM = 1.5 // its reason, dimmed, under it
+const LIST_EM_CM = 1.6 // a row's text; Slice 18 (plan 19): 1.8 → 1.6
+const LIST_REASON_EM_CM = 1.35 // its reason, dimmed, under it; Slice 18 (plan 19): 1.5 → 1.35 (no panel text below it)
 const BOX_CM = 2 // the check box (mockup 2.1 cm, radius 0.6)
 const BOX_RADIUS = 0.5
 const BOX_BORDER_CM = 0.22 // an open box: a green outline only
@@ -465,8 +467,8 @@ export class ResultPanel extends BaseScriptComponent {
     this._mode = "result"
     this.sceneObject.enabled = true // measure the rows in the real font
     const second = this.second !== null
-    this.setWidth(second)
-    this.setRow(this.title, lines("result.title"), second ? BIG_EM_CM : TITLE_EM_CM)
+    this.setWidth(false) // Slice 18 (plan 19a): both results at COMPACT_W
+    this.setRow(this.title, lines("result.title"), TITLE_EM_CM)
     this.setScore(second ? null : b.score) // Slice 15A: the second result's score is in the compare table
     if (second) {
       this.setDetails([]) // Slice 15A: the headline, table and checklist take the rows' place
@@ -487,8 +489,8 @@ export class ResultPanel extends BaseScriptComponent {
     this._mode = "gameOver"
     this.sceneObject.enabled = true
     const second = this.second !== null // Slice 15A: as showResult
-    this.setWidth(second)
-    this.setRow(this.title, lines("over.title"), second ? BIG_EM_CM : TITLE_EM_CM)
+    this.setWidth(false) // Slice 18 (plan 19a): as showResult
+    this.setRow(this.title, lines("over.title"), TITLE_EM_CM)
     this.setScore(null)
     this.setDetails(second ? [] : [{text: lines(reason), split: true}])
     this.setCards(second ? [] : cards)
@@ -496,7 +498,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.showPanel()
   }
 
-  /** Slice 17 (plan 17): the first result at COMPACT_W, the second at INNER_W (as before). */
+  /** Slice 17 (plan 17): the first result at COMPACT_W, the second at INNER_W. Slice 18 (plan 19a): both pass false. */
   private setWidth(wide: boolean): void {
     const pad = wide ? PAD : COMPACT_PAD
     this.innerW = wide ? INNER_W : COMPACT_W
@@ -884,7 +886,7 @@ export class ResultPanel extends BaseScriptComponent {
     if (ruleAbove) {
       rule = global.scene.createSceneObject(name + ".rule")
       rule.setParent(so)
-      createRoundRect(rule, RULE_COLOR, INNER_W, RULE_H, 0)
+      createRoundRect(rule, RULE_COLOR, COMPACT_W, RULE_H, 0) // Slice 18 (plan 19a): the compare rows show only on a second result, at COMPACT_W
     }
     return {so, item, label, before, arrow, after, rule}
   }
@@ -896,7 +898,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.list = so
     this.listItem = this.addItem(so)
     this.listFrame = new SoftFrame(so, tinted(GLASS_GREEN, CARD_FILL), SOFT_INNER_RADIUS_CM, null, "Checklist.backing")
-    this.listFrame.setSize(INNER_W, 1)
+    this.listFrame.setSize(COMPACT_W, 1) // Slice 18 (plan 19a)
     this.listTitle = this.addText(so, "Checklist.title", LIST_TITLE_EM_CM, true)
     this.listTitle.horizontalAlignment = HorizontalAlignment.Left
     this.listSource = this.addText(so, "Checklist.source", LIST_SOURCE_EM_CM, false)
@@ -970,8 +972,8 @@ export class ResultPanel extends BaseScriptComponent {
       this.heroItem.marginTop = 0
       return
     }
-    const left = -INNER_W / 2
-    const right = bar ? INNER_W / 2 - BAR_COL_W - BAR_COL_GAP : INNER_W / 2
+    const left = -this.innerW / 2 // Slice 18 (plan 19a): the mode's width
+    const right = bar ? this.innerW / 2 - BAR_COL_W - BAR_COL_GAP : this.innerW / 2
     const align = bar ? HorizontalAlignment.Left : HorizontalAlignment.Center
     this.headlineText.horizontalAlignment = align
     this.becauseText.horizontalAlignment = align
@@ -985,7 +987,7 @@ export class ResultPanel extends BaseScriptComponent {
     const countH = BAR_COUNT_EM_CM * LINE_H_PER_EM
     const colH = countH + BAR_COUNT_GAP + BAR_H
     if (bar) {
-      const x = INNER_W / 2 - BAR_COL_W / 2
+      const x = this.innerW / 2 - BAR_COL_W / 2
       this.barCount.layoutRect = Rect.create(x - BAR_COL_W / 2, x + BAR_COL_W / 2, colH / 2 - countH, colH / 2)
       this.bar.getTransform().setLocalPosition(new vec3(x, BAR_H / 2 - colH / 2, 0))
       const w = BAR_COL_W * Math.min(1, s.prevented / s.of)
@@ -1012,15 +1014,15 @@ export class ResultPanel extends BaseScriptComponent {
       return
     }
     v.after.textFill.color = r.better ? SOFT_GREEN : WHITE
-    const xAfter = INNER_W / 2 - CMP_AFTER_W
+    const xAfter = this.innerW / 2 - CMP_AFTER_W // Slice 18 (plan 19a): the mode's width
     const xArrow = xAfter - CMP_ARROW_W
     const xBefore = xArrow - CMP_BEFORE_W
     const lineH = SMALL_EM_CM * LINE_H_PER_EM
-    const h = Math.max(1, this.wrapLines(v.label, -INNER_W / 2, xBefore, SMALL_EM_CM)) * lineH
-    v.label.layoutRect = Rect.create(-INNER_W / 2, xBefore, -h / 2, h / 2)
+    const h = Math.max(1, this.wrapLines(v.label, -this.innerW / 2, xBefore, SMALL_EM_CM)) * lineH
+    v.label.layoutRect = Rect.create(-this.innerW / 2, xBefore, -h / 2, h / 2)
     v.before.layoutRect = Rect.create(xBefore, xArrow, -lineH / 2, lineH / 2)
     v.arrow.layoutRect = Rect.create(xArrow, xAfter, -lineH / 2, lineH / 2)
-    v.after.layoutRect = Rect.create(xAfter, INNER_W / 2, -lineH / 2, lineH / 2)
+    v.after.layoutRect = Rect.create(xAfter, this.innerW / 2, -lineH / 2, lineH / 2)
     v.item.overrideHeight = h + CMP_PAD * 2
     v.item.marginTop = first ? CMP_GAP : 0
     if (v.rule) {
@@ -1051,8 +1053,8 @@ export class ResultPanel extends BaseScriptComponent {
       this.listItem.marginTop = 0
       return
     }
-    const left = -INNER_W / 2 + LIST_PAD_X
-    const right = INNER_W / 2 - LIST_PAD_X
+    const left = -this.innerW / 2 + LIST_PAD_X // Slice 18 (plan 19a): the mode's width
+    const right = this.innerW / 2 - LIST_PAD_X
     const sourceLineH = LIST_SOURCE_EM_CM * LINE_H_PER_EM
     this.listSource.layoutRect = Rect.create(left, right, -sourceLineH / 2, sourceLineH / 2)
     let sourceW = 0
@@ -1092,7 +1094,7 @@ export class ResultPanel extends BaseScriptComponent {
       v.check.enabled = rows[i].checked
       y -= z.h + LIST_ROW_GAP
     }
-    this.listFrame.setSize(INNER_W, cardH)
+    this.listFrame.setSize(this.innerW, cardH)
     this.listItem.overrideHeight = cardH
     this.listItem.marginTop = LIST_GAP
   }

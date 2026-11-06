@@ -6,10 +6,14 @@
 // undoes it. One small light panel follows the head like the replay caption:
 // the instruction, Kembali (back to the result, the picks kept) and, once an
 // item is picked, Ulangi gempa (the same quake with those items fastened).
+// Slice 18 (ENGINEERING_PLAN 19b): while the head looks at a marker the panel
+// shrinks to a pill at its spot (Ulangi gempa once an item is picked, else the
+// instruction) and grows back fixPillHoldSeconds after the gaze leaves them all.
 import {Button} from "SpectaclesUIKit.lspkg/Scripts/Components/Button/Button"
 import {DrillConfig} from "./DrillConfig"
 import {HeadPose} from "./HeadPose"
 import {anchorInFront, faceHead, PanelFollow} from "./PanelFollow"
+import {PlaneBox} from "./ResultPanel"
 import {getLanguage, getString, lines, onLanguageChanged, setLineText, StringKey} from "./Strings"
 import {drawOnTopWhenReady, GLASS_PANEL, PinchGuard, SOFT_GREEN_TEXT, SoftButton, SoftFrame, tinted} from "./UiBacking"
 
@@ -26,6 +30,8 @@ const BUTTON_GAP = 2 // between Kembali and Ulangi gempa
 const CONTENT_Z = 0.6
 const BUTTON_LABEL_Z = 0.08
 const PANEL_FILL = new vec4(1, 1, 1, 0.25) // as the replay caption: light, never dark
+const PILL_PAD = 1.5 // Slice 18 (plan 19): inside the pill, around its line or its button
+const DEG_TO_RAD = Math.PI / 180
 
 /** The items fix mode can fasten, with their marker button names (LEAF presses them). */
 export const FIX_ITEMS: {item: string; button: string}[] = [
@@ -57,6 +63,10 @@ export class FixRoomView {
   private readonly update: SceneEvent
   private readonly panelW: number
   private _open = false
+  private repeat = false // an item is picked: Ulangi gempa shown
+  private pill = false // Slice 18 (plan 19b): the panel is a pill now
+  private offSeconds = 0 // Slice 18: how long the gaze has been off every marker
+  private pending = false // Slice 18: a layout waits until no pinch is held on Kembali or Ulangi gempa
   /** Set by DrillController: a marker pinched, Kembali, Ulangi gempa. */
   onToggle: (item: string) => void = () => {}
   onBack: () => void = () => {}
@@ -111,6 +121,7 @@ export class FixRoomView {
       setLineText(back.text, getString("btn.back"), getLanguage())
       setLineText(repeat.text, getString("btn.repeatQuake"), getLanguage())
       for (const m of this.markers) setLineText(m.text, markerText(m.item), getLanguage())
+      if (this._open) this.layoutPanel(this.repeat) // Slice 18: a pill fits its new line
     }
     refresh()
     onLanguageChanged.add(refresh)
@@ -164,10 +175,26 @@ export class FixRoomView {
     return this.backObject.isEnabledInHierarchy
   }
   get instrText(): string {
-    return this.panelShown ? this.instr.text : ""
+    return this.instr.getSceneObject().isEnabledInHierarchy ? this.instr.text : "" // Slice 18: "" in the Ulangi gempa pill
   }
   get panelPosition(): vec3 {
     return this.panel.getTransform().getWorldPosition()
+  }
+  /** Slice 18 (plan 19b): the panel is a pill (the head looks at a marker, or did within fixPillHoldSeconds). */
+  get pillShown(): boolean {
+    return this.pill && this.panelShown
+  }
+  /** Slice 18: the panel's backing in the head's view plane (see viewBox). */
+  get panelBox(): PlaneBox {
+    const w = this.panelFrame.width / 2
+    const h = this.panelFrame.height / 2
+    return this.viewBox("FixPanel", this.panelFrame.face, -w, w, -h, h)
+  }
+  /** Slice 18: each shown marker's button in the head's view plane (named by its item). */
+  get markerBoxes(): PlaneBox[] {
+    const h = this.config.fixMarkerCm / 2
+    const w = h * this.config.fixMarkerAspect
+    return this.markers.filter((m) => m.shown && m.root.isEnabledInHierarchy).map((m) => this.viewBox(m.item, m.soft.face, -w, w, -h, h))
   }
 
   /** Shows a marker per item in `items` (green when in `selected`) and the instruction panel in front of the head. */
@@ -181,13 +208,15 @@ export class FixRoomView {
       m.soft.setSelected(m.selected)
       if (m.shown) drawOnTopWhenReady(this.owner, m.root)
     }
+    this.backButton.reset()
+    this.repeatButton.reset()
+    this.pill = false // Slice 18: opens full; the first update looks at the gaze
+    this.offSeconds = 0
     this.layoutPanel(selected.length > 0)
     this.follow.reset()
     this.placePanel()
     this.panel.enabled = true
     drawOnTopWhenReady(this.owner, this.panel)
-    this.backButton.reset()
-    this.repeatButton.reset()
     this.guard.seconds = this.config.pinchGuardSeconds
     this.guard.arm()
     this.update.enabled = true
@@ -229,7 +258,9 @@ export class FixRoomView {
   private onUpdate(): void {
     if (!this._open) return
     const head = this.headPose.position
+    const forward = this.headPose.forward
     const c = this.config
+    let focused = false
     for (const m of this.markers) {
       if (!m.shown) continue
       const t = m.root.getTransform()
@@ -241,8 +272,31 @@ export class FixRoomView {
       t.setLocalScale(new vec3(s, s, s))
       t.setWorldPosition(p)
       t.setWorldRotation(faceHead(p, head))
+      if (!focused && p.sub(head).angleTo(forward) <= c.fixPillFocusDeg * DEG_TO_RAD) focused = true
     }
+    this.pillStep(focused)
     this.followPanel()
+  }
+
+  /**
+   * Slice 18 (plan 19b): a pill at once while the gaze is on a marker, the
+   * full panel once it has been off every marker for fixPillHoldSeconds.
+   * Neither switch happens while a pinch is held on Kembali or Ulangi gempa
+   * (it waits for the release), so no button moves or hides under a pinch.
+   */
+  private pillStep(focused: boolean): void {
+    this.offSeconds = focused ? 0 : this.offSeconds + getDeltaTime()
+    const want = focused || (this.pill && this.offSeconds < this.config.fixPillHoldSeconds)
+    if (want !== this.pill && !this.held) {
+      this.pill = want
+      this.pending = true
+    }
+    if (this.pending) this.applyLayout()
+  }
+
+  /** Slice 13C: a pinch is down on Kembali or Ulangi gempa. */
+  private get held(): boolean {
+    return this.backButton.isPressed || this.repeatButton.isPressed
   }
 
   private placePanel(): void {
@@ -268,8 +322,26 @@ export class FixRoomView {
     t.setWorldRotation(faceHead(at, head))
   }
 
-  /** The instruction on top, then Kembali alone (centered) or Kembali | Ulangi gempa. */
+  /** Ulangi gempa shown or not (an item picked); the layout follows unless a pinch is held on a panel button. */
   private layoutPanel(repeat: boolean): void {
+    this.repeat = repeat
+    this.pending = true
+    this.applyLayout()
+  }
+
+  /** Slice 18: the pill or the full panel, now, or on the first frame no pinch is held on Kembali or Ulangi gempa. */
+  private applyLayout(): void {
+    if (this.held) return
+    this.pending = false
+    if (this.pill) {
+      this.layoutPill()
+    } else {
+      this.layoutFull()
+    }
+  }
+
+  /** The instruction on top, then Kembali alone (centered) or Kembali | Ulangi gempa. */
+  private layoutFull(): void {
     const c = this.config
     const lineH = c.fixInstrEmCm * LINE_H_PER_EM
     const bh = c.fixPanelButtonCm
@@ -277,12 +349,93 @@ export class FixRoomView {
     const h = PAD + lineH + GAP + bh + PAD
     this.panelFrame.setSize(this.panelW, h)
     const top = h / 2 - PAD
+    this.styleInstr(c.fixInstrEmCm, HorizontalOverflow.Shrink, this.panelW - PAD * 2, lineH) // as addText built it
     this.instr.getSceneObject().getTransform().setLocalPosition(new vec3(0, top - lineH / 2, 0))
+    this.instr.getSceneObject().enabled = true
     const y = -h / 2 + PAD + bh / 2
-    const x = repeat ? bw / 2 + BUTTON_GAP / 2 : 0
+    const x = this.repeat ? bw / 2 + BUTTON_GAP / 2 : 0
     this.backObject.getTransform().setLocalPosition(new vec3(-x, y, 0))
+    this.backObject.enabled = true
     this.repeatObject.getTransform().setLocalPosition(new vec3(x, y, 0))
-    this.repeatObject.enabled = repeat
+    this.repeatObject.enabled = this.repeat
+  }
+
+  /**
+   * Slice 18 (plan 19b): the pill, centered where the full panel is. Ulangi
+   * gempa (the same button, the same size) when an item is picked, else the
+   * instruction at fixPillEmCm wrapped to at most fixPillWidthCm; no Kembali.
+   */
+  private layoutPill(): void {
+    const c = this.config
+    let w: number
+    let h: number
+    if (this.repeat) {
+      const bh = c.fixPanelButtonCm
+      w = bh * BUTTON_ASPECT + PILL_PAD * 2
+      h = bh + PILL_PAD * 2
+      this.instr.getSceneObject().enabled = false
+      this.repeatObject.getTransform().setLocalPosition(vec3.zero())
+      this.repeatObject.enabled = true
+    } else {
+      const lineH = c.fixPillEmCm * LINE_H_PER_EM
+      const textW = Math.max(1, c.fixPillWidthCm - PILL_PAD * 2)
+      const so = this.instr.getSceneObject()
+      so.enabled = true
+      so.getTransform().setLocalPosition(vec3.zero())
+      this.styleInstr(c.fixPillEmCm, HorizontalOverflow.Wrap, textW, lineH)
+      let n = 1
+      let lineW = textW
+      if (so.isEnabledInHierarchy && this.instr.text.length > 0) {
+        const box = this.instr.getBoundingBox() // one call, as ResultPanel.wrapLines
+        n = Math.max(1, Math.round((box.top - box.bottom) / lineH))
+        lineW = Math.min(textW, box.right - box.left)
+      }
+      this.instr.layoutRect = Rect.create(-textW / 2, textW / 2, (-n * lineH) / 2, (n * lineH) / 2)
+      w = Math.min(c.fixPillWidthCm, lineW + PILL_PAD * 2)
+      h = n * lineH + PILL_PAD * 2
+      this.repeatObject.enabled = false
+    }
+    this.backObject.enabled = false
+    this.panelFrame.setSize(w, h)
+  }
+
+  private styleInstr(emCm: number, overflow: HorizontalOverflow, w: number, h: number): void {
+    this.instr.size = emCm * SIZE_PER_CM
+    this.instr.horizontalOverflow = overflow
+    this.instr.layoutRect = Rect.create(-w / 2, w / 2, -h / 2, h / 2)
+  }
+
+  /**
+   * Slice 18 (DC32): a local rect of `so` seen from the head, as
+   * ResultPanel.planeBox: each corner projected from the head onto the plane
+   * through the panel's center square to headPose.forward, in world cm from
+   * that center along the view's right and up. Two boxes that overlap here
+   * overlap in view.
+   */
+  private viewBox(name: string, so: SceneObject, l: number, r: number, b: number, t: number): PlaneBox {
+    const head = this.headPose.position
+    const f = this.headPose.forward.normalize()
+    const side = f.cross(vec3.up())
+    const ax = side.length > 1e-4 ? side.normalize() : vec3.right()
+    const ay = ax.cross(f).normalize()
+    const o = this.panel.getTransform().getWorldPosition()
+    const depth = Math.max(1, o.sub(head).dot(f))
+    const m = so.getTransform().getWorldTransform()
+    const box: PlaneBox = {name, minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity}
+    for (const [x, y] of [
+      [l, b],
+      [r, b],
+      [l, t],
+      [r, t]
+    ]) {
+      const d = m.multiplyPoint(new vec3(x, y, 0)).sub(head)
+      const p = head.add(d.uniformScale(depth / Math.max(1, d.dot(f)))).sub(o)
+      box.minX = Math.min(box.minX, p.dot(ax))
+      box.maxX = Math.max(box.maxX, p.dot(ax))
+      box.minY = Math.min(box.minY, p.dot(ay))
+      box.maxY = Math.max(box.maxY, p.dot(ay))
+    }
+    return box
   }
 
   private addButton(

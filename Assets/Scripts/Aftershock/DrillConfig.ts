@@ -594,6 +594,22 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("Second result: the repair list (Untuk kamarmu:) line em size (cm)")
   repairEmCm: number = 1.7
+
+  @input
+  @hint("Slice 18 (plan 19b): while the head looks within this angle of any shown fix marker, in degrees, the fix panel shrinks to a pill (Ulangi gempa once an item is picked, else the instruction)")
+  fixPillFocusDeg: number = 12
+
+  @input
+  @hint("Slice 18: the pill's instruction line em size (cm)")
+  fixPillEmCm: number = 1.6
+
+  @input
+  @hint("Slice 18: the pill's widest (cm); its instruction wraps inside")
+  fixPillWidthCm: number = 22
+
+  @input
+  @hint("Slice 18: the pill grows back to the full panel once the gaze has left every marker for this long (s)")
+  fixPillHoldSeconds: number = 0.4
   @ui.group_end
 
   @ui.group_start("Test hooks")

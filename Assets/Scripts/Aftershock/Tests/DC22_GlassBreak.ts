@@ -32,6 +32,7 @@ export class DC22_GlassBreak extends Scenario {
       const inGlass = glassZonePoint(c)
       expect(c.glassDanger.contains(inGlass)).toBe(true)
       c.headPose.setOverride(inGlass, levelLook(startSpot(c), inGlass))
+      await waitFor(() => c.aftershockWaiting || c.state === "AFTERSHOCK", 3000) // Slice 18b (plan 19 d): the quiet wait has started up to 1.44 s after POST_QUAKE, so wait for it (as part b) before the AFTERSHOCK wait
       await expectState(c, "AFTERSHOCK", (c.config.testAftershockDelaySeconds + 1) * 1000)
       expect(c.glassBroken).toBe(false)
       const h0 = c.health

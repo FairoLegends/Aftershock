@@ -4,7 +4,7 @@ import {DrillController} from "../DrillController"
 import {FixRoomView, markerText} from "../FixRoomView"
 import {FOOTPRINTS, LayoutForce} from "../LayoutGenerator"
 import {getString, joinList, lines, StringKey} from "../Strings"
-import {expectState, getController, itemWorld, levelLook, press, restore, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
+import {expectState, getController, itemWorld, levelLook, lookAwayFromMarkers, press, restore, toFreshBriefing, waitFor, walkOut} from "./DrillTestKit"
 
 /** Slice 14B: the three fixable items and one table. */
 const FIX_SET: LayoutForce = {tables: 1, hazards: ["shelf", "cabinet", "tv"]}
@@ -42,7 +42,9 @@ interface DrillRun {
 // prevented" (or "no fewer") with its bar and the line naming the fastened
 // items, the table's green "after" values, the checklist rows and boxes, no
 // detail rows, every box inside the backing and the checklist rows apart.
-// (e) Restart: new seeds, no fixes, no tag.
+// (e) Restart: new seeds, no fixes, no tag. Slice 18 (plan 19b): the head turns
+// away from the markers (the fix panel full, not the pill) before the full
+// panel's checks and before Kembali, as a wearer does.
 @component
 export class DC28_FixRoom extends Scenario {
   async run(): Promise<void> {
@@ -114,6 +116,7 @@ export class DC28_FixRoom extends Scenario {
       expect(v.isOpen).toBe(true)
       expect(v.panelShown).toBe(true)
       expect(v.markersShown.join(",")).toBe(problems.join(","))
+      expect(await lookAwayFromMarkers(c, v)).toBe(true) // Slice 18 (plan 19b): the full panel, not the pill
       expect(v.repeatShown).toBe(false)
       expect(v.backShown).toBe(true)
       expect(v.instrText).toBe(getString("fix.instr"))
@@ -142,6 +145,7 @@ export class DC28_FixRoom extends Scenario {
       await press("FixShelfButton")
       expect(c.fixSelection.join(",")).toBe("shelf")
       expect(v.repeatShown).toBe(true)
+      expect(await lookAwayFromMarkers(c, v)).toBe(true) // Slice 18 (plan 19b): turn to the panel, Kembali shown again
       await press("FixBackButton")
       expect(c.fixMode).toBe(false)
       expect(v.isOpen).toBe(false)

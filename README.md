@@ -7,7 +7,7 @@
 Built for the [Learn AR with SPECS](https://learn-specs.devpost.com) hackathon. It runs in the **Lens Studio preview**; no Spectacles device is needed.
 
 [![Lens Studio 5.23.2](https://img.shields.io/badge/Lens%20Studio-5.23.2-black)](https://ar.snap.com/lens-studio)
-[![LEAF 31/31](https://img.shields.io/badge/LEAF%20scenarios-31%2F31-3DDC84)](#tests)
+[![LEAF 32/32](https://img.shields.io/badge/LEAF%20scenarios-32%2F32-3DDC84)](#tests)
 [![Languages 5](https://img.shields.io/badge/languages-5-blue)](#languages)
 
 [What it does](#what-it-does) · [A drill, step by step](#a-drill-step-by-step) · [Gallery](#gallery) · [How it was built](#how-it-was-built) · [Tests](#tests) · [Run it yourself](#run-it-yourself) · [What's next](#whats-next) · [Credits](#credits)
@@ -52,8 +52,8 @@ Screenshots from the Lens Studio preview, with the Lens set to English.
 |---|---|
 | <img src="docs/readme/01-quake-start.jpg" width="440"><br>The quake starts: the EARTHQUAKE! banner | <img src="docs/readme/02-hud.jpg" width="440"><br>Under the table: the HUD ticks off the four steps |
 | <img src="docs/readme/03-levels.jpg" width="440"><br>Three levels, Normal recommended | <img src="docs/readme/04-tv-topple.jpg" width="440"><br>The TV topples off its stand (the stand stays) |
-| <img src="docs/readme/08-result.jpg" width="440"><br>The result: score, the four parts, BMKG cards | <img src="docs/readme/05-fix-room.jpg" width="440"><br>Fix the room: pinch the shelf to fasten it |
-| <img src="docs/readme/07-hazard-label.jpg" width="440"><br>The same quake again, the shelf marked Fastened | <img src="docs/readme/06-second-result.jpg" width="440"><br>3 of 4 falling items prevented, and a checklist for your real room |
+| <img src="docs/readme/08-result.jpg" width="440"><br>The result: score, three rows, one BMKG card | <img src="docs/readme/05-fix-room.jpg" width="440"><br>Fix the room: look at the shelf, the panel shrinks to a pill |
+| <img src="docs/readme/07-hazard-label.jpg" width="440"><br>The same quake again, the shelf marked Fastened | <img src="docs/readme/06-second-result.jpg" width="440"><br>5 of 6 falling items prevented, and a checklist for your real room |
 
 ## How it was built
 
@@ -61,7 +61,7 @@ The Lens was built by an **AI coding agent** (Claude Code) running the **CLAD pl
 
 One honest exception: in the first days (up to 31 Oct) the orchestrator agent also made a few small fixes directly — mostly in test files and one-line corrections — when a build session had run out of budget. After that, every change to Lens code, tests included, went through a CLAD session.
 
-The build ran as **17 slices**, one narrow task per capped headless agent session (the 17th, after the 6 Nov SPECS Live Review, made the first result panel smaller). An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
+The build ran as **18 slices**, one narrow task per capped headless agent session (the last two, after the 6 Nov SPECS Live Review, made both result panels smaller and turned the Fix the room panel into a small pill while you look at an item). An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
 
 Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEERING_PLAN.md); the git history names the CLAD session behind each slice.
 
@@ -92,7 +92,7 @@ Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEER
 | `HazardLabel.ts`, `DangerZone.ts`, `SafeZone.ts` | World labels that follow your distance, red floor zones, the marker under each table |
 | `Hud.ts`, `ResultPanel.ts`, `UiBacking.ts` | The HUD, the result panel, and the glass material system (three tiers, no blur, no dark plate) |
 | `ReplayTrack.ts`, `ReplayView.ts` | Records your path 10×/s and draws it back |
-| `FixRoomView.ts` | Fix mode: pinch markers, the instruction panel |
+| `FixRoomView.ts` | Fix mode: pinch markers, the instruction panel (a small pill while you look at a marker) |
 | `PanelFollow.ts` | Panels lazily follow your head with a 25° / 50 cm dead zone |
 | `QuakeShaker.ts`, `ShakeFx.ts`, `FallingObjects.ts` | The shake, the cracks and shards, the falling items |
 | `VoiceGuide.ts`, `Strings.ts` | The voice clips and all five languages |
@@ -101,7 +101,7 @@ Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEER
 
 ## Tests
 
-31 LEAF scenarios (`Assets/Scripts/Aftershock/Tests/`), **all passing**. They drive the drill through a head-pose override and SIK hand interactors, so they test the real code paths, not stubs.
+32 LEAF scenarios (`Assets/Scripts/Aftershock/Tests/`), **all passing**. They drive the drill through a head-pose override and SIK hand interactors, so they test the real code paths, not stubs.
 
 ```
 dc1-safety-then-room        dc11-aftershock          dc21-change-language
@@ -115,11 +115,12 @@ dc8-bed-trap                dc18-tv-topple           dc28-fix-room
 dc9-two-tables              dc19-education-cards     dc29-stops-and-glass-trip
 dc10-scan-path-edge         dc20-voice-guide         dc30-fix-room-stats
                                                      dc31-compact-result
+                                                     dc32-fix-pill
 ```
 
 They check more than state: the exact score against the calculator, that the room generator obeys every rule over fixed seed lists, that a repeat quake is identical, that every text on the result panel and on the hazard labels is at least 90% opaque, that the HUD never draws a dark plate on an additive display, that the window label stays within 1 cm of its intended height while the room tilts, that the TV's stand does not move when the TV topples, that the fix-room counts over 30 seeded rooms are exactly the published ones, and that the first result panel stays within 34 × 46 cm in English, Indonesian and German.
 
-To run them: enable the `LeafAutoRun` object in the scene, save, refresh the preview, and watch the log (about 23 minutes for all 31).
+To run them: enable the `LeafAutoRun` object in the scene, save, refresh the preview, and watch the log (about 20 minutes for all 32).
 
 ## Run it yourself
 

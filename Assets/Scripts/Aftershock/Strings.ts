@@ -272,7 +272,7 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
   "btn.restart": {id: "Ulangi", en: "Restart", de: "Neu starten", ja: "もう一度", zh: "重新开始"},
   "btn.changeLang": {id: "Ganti bahasa", en: "Change language", de: "Sprache ändern", ja: "言語を変更", zh: "更改语言"},
   // Slice 13B ghost replay: de, ja, zh are the builder's own (default) translations.
-  "btn.replay": {id: "Lihat ulang", en: "Watch again", de: "Noch einmal ansehen", ja: "もう一度見る", zh: "再看一遍"},
+  "btn.replay": {id: "Lihat ulang", en: "Watch again", de: "Ansehen", ja: "もう一度見る", zh: "再看一遍"},
   "replay.hit": {
     id: "Di sini kamu terkena barang jatuh.",
     en: "Here you were hit by a falling item.",

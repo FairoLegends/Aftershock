@@ -31,6 +31,7 @@ import {DC28_FixRoom} from "./DC28_FixRoom"
 import {DC29_StopsAndGlassTrip} from "./DC29_StopsAndGlassTrip"
 import {DC30_FixRoomStats} from "./DC30_FixRoomStats"
 import {DC31_CompactResult} from "./DC31_CompactResult"
+import {DC32_FixPill} from "./DC32_FixPill"
 
 @component
 export class LeafIndex extends BaseScriptComponent {
@@ -66,6 +67,7 @@ export class LeafIndex extends BaseScriptComponent {
     {id: "dc28-fix-room", typename: DC28_FixRoom.getTypeName()},
     {id: "dc29-stops-and-glass-trip", typename: DC29_StopsAndGlassTrip.getTypeName()},
     {id: "dc30-fix-room-stats", typename: DC30_FixRoomStats.getTypeName()},
-    {id: "dc31-compact-result", typename: DC31_CompactResult.getTypeName()}
+    {id: "dc31-compact-result", typename: DC31_CompactResult.getTypeName()},
+    {id: "dc32-fix-pill", typename: DC32_FixPill.getTypeName()}
   ]
 }
