@@ -70,9 +70,8 @@ export class DC31_CompactResult extends Scenario {
           of: 2,
           compare: [
             {text: lines("compare.fell", {"{a}": "2", "{b}": "1"}), before: "2", after: "1", better: true},
-            {text: lines("compare.hit", {"{a}": "0", "{b}": "0"}), before: "0", after: "0", better: false},
-            {text: lines("compare.score", {"{a}": "500", "{b}": "600"}), before: "500", after: "600", better: true}
-          ],
+            {text: lines("compare.hit", {"{a}": "0", "{b}": "0"}), before: "0", after: "0", better: false}
+          ], // Slice 19 (plan 20 G2): as the controller builds it, no compare.score
           title: lines("repair.title"),
           rows: [
             {text: lines("repair.shelf"), reason: lines("repair.tried"), checked: true},

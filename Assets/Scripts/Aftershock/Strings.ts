@@ -419,9 +419,10 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     ja: "レベルを選択",
     zh: "选择难度"
   },
-  "level.easy": {id: "Mudah", en: "Easy", de: "Leicht", ja: "かんたん", zh: "简单"},
+  // Slice 19 (plan 20 G5): Easy → Guided, Hard → On your own; id and en from the learner (6 Nov), de, ja, zh the orchestrator's (default).
+  "level.easy": {id: "Dipandu", en: "Guided", de: "Geführt", ja: "ガイドあり", zh: "有引导"},
   "level.normal": {id: "Normal", en: "Normal", de: "Normal", ja: "ふつう", zh: "普通"},
-  "level.hard": {id: "Sulit", en: "Hard", de: "Schwer", ja: "むずかしい", zh: "困难"},
+  "level.hard": {id: "Mandiri", en: "On your own", de: "Auf dich gestellt", ja: "ガイドなし", zh: "无引导"},
   "level.recommended": {id: "DISARANKAN", en: "RECOMMENDED", de: "EMPFOHLEN", ja: "おすすめ", zh: "推荐"},
   "level.easy.1": {
     id: "Label tetap terlihat",

@@ -2566,7 +2566,7 @@ export class DrillController extends BaseScriptComponent {
    * Slice 15A (S1 R1): after a repeat, a headline "n dari m benda jatuh
    * tercegah" (n = the baseline's landed minus this drill's, m = the
    * baseline's) with its bar and "karena ... sudah kamu ikat", the compare
-   * table (ReplayTrack counts and the breakdown score, the baseline first)
+   * table (ReplayTrack counts, the baseline first; Slice 19: no score row)
    * and the checklist: each fastened item checked ("dicoba di latihan"),
    * each item that made a problem in either drill and is not fastened open
    * ("bermasalah tadi"), then "Simpan benda berat di bawah". True after a repeat.
@@ -2587,10 +2587,10 @@ export class DrillController extends BaseScriptComponent {
       after: n(b),
       better
     })
+    // Slice 19 (plan 20 G2): no score row; a fastened shelf can lower the score, which read as "fastening did nothing".
     const compare = [
       row("compare.fell", base.landed, cur.landed, cur.landed < base.landed),
-      row("compare.hit", base.hit, cur.hit, cur.hit < base.hit),
-      row("compare.score", base.score, cur.score, base.score !== null && cur.score !== null && cur.score > base.score)
+      row("compare.hit", base.hit, cur.hit, cur.hit < base.hit)
     ]
     const prevented = Math.max(0, base.landed - cur.landed)
     const fastened = FIXABLE.filter((h) => this._fastened.indexOf(h) >= 0)

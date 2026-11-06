@@ -184,9 +184,8 @@ export class DC28_FixRoom extends Scenario {
       const score2 = c.lastScore ? c.lastScore.score : null
       const want = [
         lines("compare.fell", {"{a}": str(d1.landed), "{b}": str(d2.landed)}).primary,
-        lines("compare.hit", {"{a}": str(d1.hit), "{b}": str(d2.hit)}).primary,
-        lines("compare.score", {"{a}": str(score1), "{b}": str(score2)}).primary
-      ]
+        lines("compare.hit", {"{a}": str(d1.hit), "{b}": str(d2.hit)}).primary
+      ] // Slice 19 (plan 20 G2): two rows, no compare.score
       expect(c.resultPanel.compareLines.join(" | ")).toBe(want.join(" | "))
       // Slice 15A (b): the checklist: the fastened shelf checked, then each other
       // problem item not fastened (either drill, FIXABLE order) open, then "heavy low".
@@ -217,18 +216,19 @@ export class DC28_FixRoom extends Scenario {
         expect(c.resultPanel.becauseLine).toBe("")
         expect(c.resultPanel.barShown).toBe(false)
       }
-      // The table: the after values, green when better.
-      expect(c.resultPanel.compareAfter.join(",")).toBe([str(d2.landed), str(d2.hit), str(score2)].join(","))
-      const green = [d2.landed < d1.landed, d2.hit < d1.hit, score1 !== null && score2 !== null && score2 > score1]
+      // The table: the after values, green when better. Slice 19 (plan 20 G2): fell and hit only.
+      expect(c.resultPanel.compareAfter.join(",")).toBe([str(d2.landed), str(d2.hit)].join(","))
+      const green = [d2.landed < d1.landed, d2.hit < d1.hit]
       expect(c.resultPanel.compareGreen.join(",")).toBe(green.join(","))
       const shownGreen = c.resultPanel.compareGreen.join(",")
-      // (e) The table's score is the ScoreBreakdown's total.
+      // (e) The stored score is the ScoreBreakdown's total. Slice 19 (plan 20 G2):
+      // the table no longer shows it, so the stored score is checked in its place.
       const sb = c.lastScore
       expect(sb !== null).toBe(true)
       if (sb) {
         const total = Math.max(0, Math.min(1000, sb.speedPoints + sb.healthPoints + sb.holdPoints + sb.evacPoints - sb.penalty))
         expect(sb.score).toBe(total)
-        expect(c.resultPanel.compareAfter[2]).toBe(str(total))
+        expect(score2).toBe(total)
       }
       // (c) No detail rows, no cards.
       expect(c.resultPanel.shownDetailRows).toBe(0)

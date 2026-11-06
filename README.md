@@ -19,7 +19,7 @@ Reading a leaflet about earthquakes is easy to forget. Aftershock makes you *do*
 - **A new room every drill.** 1–2 tables and 3–5 hazards (wardrobe, shelf, window, floor lamp, TV) are placed against the walls by a seeded generator, with a bed, a chair and a door. Nothing is hand-placed, so you cannot memorise one layout.
 - **The quake comes without warning,** 8–15 s after the briefing, and lasts 45–60 s. On Normal there is a 50% chance of an aftershock.
 - **Mistakes cost health.** Standing up after you have taken cover, staying in a red danger zone, letting go of the table leg, an item from the shelf landing on your head (−15), the window shattering next to you (−15), tripping over debris on the way out (−10).
-- **A score out of 1000** in four parts: how fast you took cover (450, measured from when the quake starts, minus the walk to the nearest table), the health you kept (300), how long you held the table leg (100), and the evacuation (150). Never taking cover scores 0.
+- **A score out of 1000** in four parts: how fast you took cover (450, measured from when the quake starts, minus the walk to the nearest table), the health you kept (300), how long you held the table leg (100), and the evacuation (150). Never taking cover scores 0. The score is feedback on your reflex, not the goal: the line that matters is how many falling items you would have prevented at home.
 - **Then it teaches.** One education card, picked from what actually happened in your drill, each sourced from [BMKG](https://bmkg.go.id) — Indonesia's meteorology, climatology and geophysics agency.
 - **Watch yourself again.** "Watch again" replays your own path on the floor: red where you were in a danger zone, green where you took cover, with markers where things landed.
 - **Then fix the room.** "Fix the room" marks every object that caused a problem; pinch one to fasten it to the wall, then replay *the same quake* — same seed, same falls, same timing — and see the difference, for example "3 of 4 falling items prevented". In 30 seeded rooms, 54 of the 82 falling items came off the shelf, and the other 28 were TV topples. In the drill, a fastened object drops nothing, so fastening the shelf removes those 54. The point is which objects matter most in your room, not a real-world safety figure ([counts per seed](docs/review/fix-room-stats/README.md)).
@@ -32,7 +32,7 @@ Reading a leaflet about earthquakes is easy to forget. Aftershock makes you *do*
 |---|---|---|
 | 1 | Pick a language | Five buttons: Bahasa Indonesia, English, Deutsch, 日本語, 简体中文 |
 | 2 | Read the safety notice, pinch Continue | "This is a drill, not a real earthquake alert" |
-| 3 | Pick a level | Easy, Normal (recommended), Hard |
+| 3 | Pick a level | Guided, Normal (recommended), On your own |
 | 4 | Duck once to calibrate (or Skip) | Learns your duck line from your own head height |
 | 5 | Look around the room | A scan sweep labels each hazard and marks the safe zone under each table |
 | 6 | **The quake starts** | Banner, rumble, room shakes, HUD with 4 steps, health and timer |
@@ -42,7 +42,7 @@ Reading a leaflet about earthquakes is easy to forget. Aftershock makes you *do*
 | 10 | Read your score | A compact panel: the score, three rows (time to cover, health left, held the table) and one BMKG card |
 | 11 | "Watch again" / "Fix the room" | Replay your path, or fasten objects and repeat the same quake |
 
-**Levels.** Easy: labels stay visible through the quake, a table within 150 cm, no aftershock. Normal: tables up to 250 cm, 50% aftershock, items fall. Hard: find it yourself — no labels, no red zones, no arrow, no floor path — health drains 1.5× faster and there is always an aftershock. Hard reveals what was dangerous on the result screen.
+**Levels.** Guided: labels stay visible through the quake, a table within 150 cm, no aftershock. Normal: tables up to 250 cm, 50% aftershock, items fall. On your own: find it yourself — no labels, no red zones, no arrow, no floor path — health drains 1.5× faster and there is always an aftershock. On your own reveals what was dangerous on the result screen.
 
 ## Gallery
 
@@ -51,7 +51,7 @@ Screenshots from the Lens Studio preview, with the Lens set to English.
 | | |
 |---|---|
 | <img src="docs/readme/01-quake-start.jpg" width="440"><br>The quake starts: the EARTHQUAKE! banner | <img src="docs/readme/02-hud.jpg" width="440"><br>Under the table: the HUD ticks off the four steps |
-| <img src="docs/readme/03-levels.jpg" width="440"><br>Three levels, Normal recommended | <img src="docs/readme/04-tv-topple.jpg" width="440"><br>The TV topples off its stand (the stand stays) |
+| <img src="docs/readme/03-levels.jpg" width="440"><br>Three levels: Guided, Normal (recommended), On your own | <img src="docs/readme/04-tv-topple.jpg" width="440"><br>The TV topples off its stand (the stand stays) |
 | <img src="docs/readme/08-result.jpg" width="440"><br>The result: score, three rows, one BMKG card | <img src="docs/readme/05-fix-room.jpg" width="440"><br>Fix the room: look at the shelf, the panel shrinks to a pill |
 | <img src="docs/readme/07-hazard-label.jpg" width="440"><br>The same quake again, the shelf marked Fastened | <img src="docs/readme/06-second-result.jpg" width="440"><br>5 of 6 falling items prevented, and a checklist for your real room |
 
@@ -61,7 +61,7 @@ The Lens was built by an **AI coding agent** (Claude Code) running the **CLAD pl
 
 One honest exception: in the first days (up to 31 Oct) the orchestrator agent also made a few small fixes directly — mostly in test files and one-line corrections — when a build session had run out of budget. After that, every change to Lens code, tests included, went through a CLAD session.
 
-The build ran as **18 slices**, one narrow task per capped headless agent session (the last two, after the 6 Nov SPECS Live Review, made both result panels smaller and turned the Fix the room panel into a small pill while you look at an item). An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
+The build ran as **19 slices**, one narrow task per capped headless agent session (the last three, after the 6 Nov SPECS Live Review, made both result panels smaller, turned the Fix the room panel into a small pill while you look at an item, dropped the score row from the second result and renamed the levels Guided, Normal and On your own). An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
 
 Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEERING_PLAN.md); the git history names the CLAD session behind each slice.
 
@@ -139,7 +139,8 @@ Every screen is in the one language you pick: **Bahasa Indonesia, English, Deuts
 
 Not built, and not claimed to be built:
 
-- **Your real room.** World Query hit testing and Spatial Anchors would let the Lens find your real furniture and remember a real safe spot — but neither works in the Lens Studio preview, so it could not be demonstrated for this hackathon. A spike (see the plan) showed hit testing only returns surfaces near the centre of view and never the floor or low furniture.
+- **Your real room, step by step.** On Spectacles: (1) you mark your own table and shelf by pinching at them, so the drill runs around your real furniture; (2) World Query hit testing and Spatial Anchors then find surfaces and remember your safe spot, room by room; (3) the danger zones and the falls are placed on what you marked. None of it runs in the Lens Studio preview, so none of it could be demonstrated for this hackathon: a spike (see the plan) got hits only near the centre of view, and never the floor or low furniture. The drill's own room is a stand-in for exactly this reason, and the end-of-drill checklist is the bridge to it today.
+- **After the shaking.** A short "after the quake" mode from BMKG's guidance: check for injuries, gas and fire, then leave by the door.
 - **Marking objects yourself** by pinching at them (brief stretch goal S2).
 - **On-device verification.** Everything here was built and checked in the preview; it has never run on Spectacles hardware.
 - Decimated meshes for the device, and the "feel" of the drill checked by people other than the author.

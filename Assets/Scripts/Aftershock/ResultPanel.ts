@@ -108,7 +108,7 @@ const BAR_TRACK = new vec4(1, 1, 1, 0.22) // the unfilled part: light, never dar
 const BAR_COUNT_EM_CM = 2.4 // "2/3", above the bar
 const BAR_COUNT_GAP = 0.5 // between "n/m" and the bar
 const LAYER_Z = 0.02 // a bar fill or a check above the shape under it
-const CMP_ROWS = 3 // fell, hit, score
+const CMP_ROWS = 2 // fell, hit; Slice 19 (plan 20 G2): 3 → 2, the score row dropped
 const CMP_GAP = 1.2 // above the compare table
 const CMP_PAD = 0.35 // above and below a row's text (as DETAIL_PAD)
 const CMP_BEFORE_W = 5 // "before", right-aligned against the arrow ("1000" at 2 cm em is about 4.7 cm in Manrope's advances); Slice 18 (plan 19): 6 → 5
@@ -999,7 +999,7 @@ export class ResultPanel extends BaseScriptComponent {
     this.heroItem.marginTop = HERO_GAP
   }
 
-  /** Slice 15A: label | before → after; after green when better (fewer falls or hits, a higher score). */
+  /** Slice 15A: label | before → after; after green when better (fewer falls or hits). */
   private layoutCompareRow(v: CompareView, r: CompareRow | null, first: boolean): void {
     const lang = getLanguage()
     if (v.rule) v.rule.enabled = r !== null
