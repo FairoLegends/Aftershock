@@ -9,6 +9,9 @@ Built for the [Learn AR with SPECS](https://learn-specs.devpost.com) hackathon. 
 [![Lens Studio 5.23.2](https://img.shields.io/badge/Lens%20Studio-5.23.2-black)](https://ar.snap.com/lens-studio)
 [![LEAF 32/32](https://img.shields.io/badge/LEAF%20scenarios-32%2F32-3DDC84)](#tests)
 [![Languages 5](https://img.shields.io/badge/languages-5-blue)](#languages)
+[![Demo video](https://img.shields.io/badge/demo%20video-YouTube-red)](https://youtu.be/RkdiPkI82Ek)
+
+**Demo video:** https://youtu.be/RkdiPkI82Ek
 
 [What it does](#what-it-does) · [A drill, step by step](#a-drill-step-by-step) · [Gallery](#gallery) · [How it was built](#how-it-was-built) · [Tests](#tests) · [Run it yourself](#run-it-yourself) · [What's next](#whats-next) · [Credits](#credits)
 
