@@ -64,9 +64,9 @@ Picker title, all five on one panel (default): Pilih bahasa · Choose language �
 | `hit.glass` | Kamu terkena pecahan kaca | You were hit by broken glass | Dich haben Glasscherben getroffen | ガラスの破片が当たりました | 你被碎玻璃划到了 |
 | `hit.fell` | Kamu kejatuhan barang | Something fell on you | Etwas ist auf dich gefallen | 物が落ちてきました | 有东西砸到了你 |
 | `level.title` | Pilih tingkat | Choose level | Schwierigkeit wählen | レベルを選択 | 选择难度 |
-| `level.easy` | Mudah | Easy | Leicht | かんたん | 简单 |
+| `level.easy` | Dipandu | Guided | Geführt | ガイドあり | 有引导 |
 | `level.normal` | Normal | Normal | Normal | ふつう | 普通 |
-| `level.hard` | Sulit | Hard | Schwer | むずかしい | 困难 |
+| `level.hard` | Mandiri | On your own | Auf dich gestellt | ガイドなし | 无引导 |
 | `level.recommended` | DISARANKAN | RECOMMENDED | EMPFOHLEN | おすすめ | 推荐 |
 | `level.easy.1` | Label tetap terlihat | Labels stay visible | Hinweise bleiben sichtbar | ラベルが表示されたまま | 标签一直显示 |
 | `level.easy.2` | Meja dekat, maks 150 cm | Table close, max 150 cm | Tisch nah, max. 150 cm | 机は近く、最大150 cm | 桌子很近，最远150 cm |
