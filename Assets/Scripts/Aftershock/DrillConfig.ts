@@ -150,7 +150,7 @@ export class DrillConfig extends BaseScriptComponent {
   hudStepNumberColor: vec4 = new vec4(1, 1, 1, 1)
 
   @input
-  @hint("Upcoming step name text (Merunduk, Tahan, Keluar)")
+  @hint("Upcoming step name text (e.g. Take shelter, Grab the leg, Come back out)")
   @widget(new ColorWidget())
   hudStepNameColor: vec4 = new vec4(1, 1, 1, 1)
 
@@ -317,6 +317,10 @@ export class DrillConfig extends BaseScriptComponent {
   @input
   @hint("0 = new random layout every start and Restart; any other number = the same layout every time (for filming)")
   layoutSeed: number = 0
+
+  @input
+  @hint("Evening Room preview only (Slice 20, for filming): furniture on the Evening Room's furniture, its walls; off = the normal room")
+  previewRoom: boolean = false // Slice 20 (plan 21)
 
   @input
   @hint("0 = a new plan seed each drill, like layoutSeed")

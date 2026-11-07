@@ -42,6 +42,8 @@ export class FloorPath extends BaseScriptComponent {
   private shown = 0
   private marchStart = 0
   private armColor = SOFT_GREEN
+  private vias: vec3[] = [] // Slice 20 (plan 21), 20d (plan 21j): the corners a table path turns at (world), in order
+  private viaAxes: vec3[] = []
 
   onAwake(): void {
     this.update = this.createEvent("UpdateEvent")
@@ -74,6 +76,28 @@ export class FloorPath extends BaseScriptComponent {
     if (p) this.target = null
   }
 
+  /**
+   * Slice 20 (plan 21): the path to a table runs head → the corners → the table
+   * (straight legs) while the head and the table are on opposite sides of a
+   * corner `points[k]` along its floor direction `axes[k]` (world).
+   * Slice 20d (plan 21j): a list; the path runs from the first such corner
+   * through the rest. Empty = the straight path.
+   */
+  setVias(points: vec3[], axes: vec3[]): void {
+    this.vias = points.length === axes.length ? points : []
+    this.viaAxes = axes
+  }
+
+  /** Slice 20d (plan 21j): the table path from `head`: head, its corners, the table's nearest point; [] for none or a point target. */
+  tablePath(head: vec3): vec3[] {
+    if (this.point || !this.target) return []
+    let k = 0
+    while (k < this.vias.length && !this.opposite(k, head)) k++
+    const pts = [head].concat(this.vias.slice(k))
+    pts.push(this.target.nearestPoint(pts[pts.length - 1]))
+    return pts
+  }
+
   setMode(mode: PathMode): void {
     if (mode === this.mode) return
     if (mode === "bright") this.marchStart = getTime()
@@ -93,6 +117,11 @@ export class FloorPath extends BaseScriptComponent {
       return
     }
     const y = this.floorY + this.config.pathLift
+    const legs = this.tablePath(head)
+    if (legs.length > 2) {
+      this.showCount(this.placeLegs(legs, y)) // Slice 20 (plan 21), 20d (plan 21j): round the corners
+      return
+    }
     const end = this.point ? this.point : this.target.nearestPoint(head)
     const dx = end.x - head.x
     const dz = end.z - head.z
@@ -124,6 +153,34 @@ export class FloorPath extends BaseScriptComponent {
     const t = this.chevrons[i].getTransform()
     t.setWorldPosition(new vec3(head.x + ux * s, y, head.z + uz * s))
     t.setWorldRotation(rot)
+  }
+
+  /** Slice 20 (plan 21): true when the head and the table are on opposite sides of corner `k`. */
+  private opposite(k: number, head: vec3): boolean {
+    const v = this.vias[k]
+    const a = this.viaAxes[k]
+    const side = (q: vec3): number => (q.x - v.x) * a.x + (q.z - v.z) * a.z
+    return side(head) * side(this.target.nearestPoint(v)) < 0
+  }
+
+  /** Slice 20 (plan 21): chevrons every pathSpacing along the legs through `pts` (the same march), each turned along its leg. Returns the count. */
+  private placeLegs(pts: vec3[], y: number): number {
+    const spacing = Math.max(5, this.config.pathSpacing)
+    let s = spacing * 0.5 + (this.mode === "bright" ? ((getTime() - this.marchStart) * this.config.pathMarchSpeed) % spacing : 0)
+    let n = 0
+    let start = 0 // the leg's start, cm along the path
+    for (let k = 0; k + 1 < pts.length; k++) {
+      const dx = pts[k + 1].x - pts[k].x
+      const dz = pts[k + 1].z - pts[k].z
+      const len = Math.hypot(dx, dz)
+      if (len < 1) continue
+      const rot = quat.angleAxis(Math.atan2(dx, dz), vec3.up())
+      for (; s <= start + len && n < POOL; s += spacing) {
+        this.placeChevron(n++, pts[k], dx / len, dz / len, s - start, y, rot)
+      }
+      start += len
+    }
+    return n
   }
 
   private showCount(n: number): void {

@@ -121,6 +121,7 @@
     pathSpacing: false
     pinchGuardSeconds: false
     planSeed: false
+    previewRoom: false
     quakeDurationMax: false
     quakeDurationMin: false
     quakeWaitMax: false
@@ -254,6 +255,7 @@
       tvDangerFront: !<float> 140.000000
       startClearRadius: !<float> 50.000000
       layoutSeed: !<float> 0.000000
+      previewRoom: false
       planSeed: !<float> 0.000000
       tableSwitchHysteresis: !<float> 30.000000
       bedWarnMargin: !<float> 30.000000
@@ -428,6 +430,7 @@
     - '// @input float tvDangerFront = 140 {"hint":"TV danger zone reach in front of the TV (cm): it topples forward and its top lands about 110 · sin 85° ≈ 110 cm past its front edge"}'
     - '// @input float startClearRadius = 50 {"hint":"No furniture or danger zone within this radius of the start spot (cm)"}'
     - '// @input float layoutSeed {"hint":"0 = new random layout every start and Restart; any other number = the same layout every time (for filming)"}'
+    - "// @input bool previewRoom {\"hint\":\"Evening Room preview only (Slice 20, for filming): furniture on the Evening Room's furniture, its walls; off = the normal room\"}"
     - '// @input float planSeed {"hint":"0 = a new plan seed each drill, like layoutSeed"}'
     - '// @input float tableSwitchHysteresis = 30 {"hint":"The arrow switches to another table only when it is this much nearer (cm)"}'
     - '// @ui {"widget":"group_end"}'

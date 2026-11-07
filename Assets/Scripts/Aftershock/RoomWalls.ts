@@ -150,6 +150,17 @@ export class RoomWalls extends BaseScriptComponent {
     )
   }
 
+  /** Slice 20 (plan 21): shows or hides the four wall panels and their lines; the door frame and label stay. Call after apply(). */
+  setWallsVisible(on: boolean): void {
+    if (!this._rect) {
+      return
+    }
+    for (const so of this.wallObjects) {
+      so.enabled = on
+    }
+    if (!on) console.log(`${LOG} BRIEFING: walls hidden (Evening Room), the door stays`)
+  }
+
   /** Stores the door's world pose at rest. Call while the Room is at rest, after apply(). */
   captureRest(): void {
     if (!this._door) {
@@ -185,6 +196,10 @@ export class RoomWalls extends BaseScriptComponent {
   /** The four wall objects (+x, −x, +z, −z). */
   get walls(): SceneObject[] {
     return this.wallObjects
+  }
+  /** Slice 20 (plan 21): the Door object (leaf, frame and label), for DC33. */
+  get doorObject(): SceneObject {
+    return this.doorRoot
   }
   /** True when the XZ of `pos` (world) is inside the walls at rest. */
   insideWalls(pos: vec3): boolean {

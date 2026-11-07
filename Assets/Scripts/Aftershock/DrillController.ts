@@ -10,7 +10,7 @@ import {HazardLabel, setLabelContext, setLabelRoom} from "./HazardLabel"
 import {HeadPose} from "./HeadPose"
 import {Hud} from "./Hud"
 import {LanguagePanel} from "./LanguagePanel"
-import {ALL_ITEMS, FOOTPRINTS, generateLayout, HAZARDS, insideRect, Layout, LayoutForce, LayoutItem, Placement, TABLES} from "./LayoutGenerator"
+import {ALL_ITEMS, EVENING_PATH_VIAS, FOOTPRINTS, generateLayout, HAZARDS, insideRect, Layout, LayoutForce, LayoutItem, Placement, TABLES} from "./LayoutGenerator"
 import {LevelPanel} from "./LevelPanel"
 import {
   aftershockChance,
@@ -1672,6 +1672,19 @@ export class DrillController extends BaseScriptComponent {
     const scanSeconds = this.startScan()
     this.floorPath.setFloorY(this._floorY)
     this.floorPath.setTarget(this.targetSafeZone)
+    if (this.config.previewRoom) {
+      // Slice 20 (plan 21): the path goes round the sofa through the left corridor (Room-local corners to world)
+      // Slice 20d (plan 21j): two corners, down the corridor and along below the sofa
+      const c = Math.cos(this.roomYaw)
+      const s = Math.sin(this.roomYaw)
+      const vs = EVENING_PATH_VIAS
+      this.floorPath.setVias(
+        vs.map((v) => new vec3(this.roomX + v.x * c + v.z * s, this._floorY, this.roomZ - v.x * s + v.z * c)),
+        vs.map((v) => new vec3(v.ax * c + v.az * s, 0, -v.ax * s + v.az * c))
+      )
+    } else {
+      this.floorPath.setVias([], [])
+    }
     this.floorPath.setMode(this._guidesVisible ? "faint" : "off")
     this.briefingUpdate.enabled = true // 5j-19e: the path follows the nearest table as the user walks
     this.briefingPanel.placeInFront(
@@ -1882,8 +1895,8 @@ export class DrillController extends BaseScriptComponent {
    */
   private updateBedTrap(): void {
     const at = this._layout ? this._layout.items.bed : undefined
-    if (!at) {
-      return
+    if (!at || this.config.previewRoom) {
+      return // Slice 20b (plan 21h): no bed trap on the Evening Room's sofa
     }
     const local = this.toRoomLocal(this.headPose.position)
     const f = FOOTPRINTS.bed
@@ -2736,8 +2749,8 @@ export class DrillController extends BaseScriptComponent {
 
   private showBedRevealLabel(): void {
     const at = this._layout ? this._layout.items.bed : null
-    if (!at) {
-      return
+    if (!at || this.config.previewRoom) {
+      return // Slice 20b (plan 21h): no bed reveal label on the Evening Room's sofa
     }
     if (!this.bedRevealLabel) {
       const so = global.scene.createSceneObject("BedRevealLabel")
@@ -3030,6 +3043,17 @@ export class DrillController extends BaseScriptComponent {
    * or down keeps the last heading.
    */
   private placeRoom(): void {
+    if (this.config.previewRoom) {
+      // Slice 20 (plan 21): the Evening Room preview mode: the Room on the preview scene's origin, heading 0, every start and Restart
+      this.roomYaw = 0
+      const rt = this.room.getTransform()
+      rt.setWorldPosition(new vec3(0, this._floorY, 0))
+      rt.setWorldRotation(quat.quatIdentity())
+      this.roomX = 0
+      this.roomZ = 0
+      console.log(`${LOG} room placed at (${fmt(0)}, ${fmt(this._floorY)}, ${fmt(0)}) cm, heading ${fmt(0)} deg (Evening Room)`)
+      return
+    }
     const p = this.headPose.position
     const f = this.headPose.forward
     if (Math.sqrt(f.x * f.x + f.z * f.z) > 1e-4) {
@@ -3055,7 +3079,14 @@ export class DrillController extends BaseScriptComponent {
     }
     const layout = generateLayout(params, this.testForce)
     this._layout = layout
-    if (layout.fallback) {
+    if (this.config.previewRoom) {
+      // Slice 20 (plan 21)
+      if (layout.fallback) {
+        console.warn(`${LOG} BRIEFING: Evening Room layout seed ${layout.seed}: no valid draw in ${layout.tries} tries; each hazard on its first slot that still passes (${layout.hazards.join(", ")})`)
+      } else {
+        console.log(`${LOG} BRIEFING: Evening Room layout seed ${layout.seed}, ${layout.tries} tries`)
+      }
+    } else if (layout.fallback) {
       console.warn(`${LOG} BRIEFING: no valid layout in ${layout.tries} tries (seed ${layout.seed}); using the Slice 2 fixed layout`)
     } else {
       console.log(`${LOG} BRIEFING: layout seed ${layout.seed}${repeat ? " (repeat)" : this.config.layoutSeed === 0 ? " (new)" : " (fixed)"}, ${layout.tries} tries`)
@@ -3103,6 +3134,12 @@ export class DrillController extends BaseScriptComponent {
     const furniture: [LayoutItem, SceneObject][] = [["bed", this.bed], ["chair", this.chair]]
     for (const [item, anchor] of furniture) {
       const at = items[item]
+      if (item === "bed" && at && this.config.previewRoom) {
+        // Slice 20b (plan 21h): the Evening Room's sofa stands in for the bed; its spot stays in the layout, no model
+        anchor.enabled = false
+        console.log(`${LOG}   bed: the Evening Room's sofa (no model)`)
+        continue
+      }
       anchor.enabled = !!at
       if (at) {
         placeItem(anchor, at)
@@ -3112,6 +3149,7 @@ export class DrillController extends BaseScriptComponent {
     }
     if (this.roomWalls) {
       this.roomWalls.apply(layout.room, layout.door) // Slice 8A
+      this.roomWalls.setWallsVisible(!this.config.previewRoom) // Slice 20 (plan 21): the Evening Room has its own walls; the door stays
     } else {
       console.warn(`${LOG} DrillController: roomWalls is not assigned; no walls or door`)
     }

@@ -41,7 +41,8 @@ export function layoutParamsFor(level: Level, c: DrillConfig): LayoutParams {
     tvDangerFront: c.tvDangerFront,
     safeZoneMargin: c.safeZoneMargin,
     startClearRadius: c.startClearRadius,
-    layoutSeed: c.layoutSeed
+    layoutSeed: c.layoutSeed,
+    previewRoom: c.previewRoom // Slice 20 (plan 21)
   }
 }
 

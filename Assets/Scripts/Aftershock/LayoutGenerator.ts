@@ -130,6 +130,7 @@ export interface LayoutParams {
   safeZoneMargin: number
   startClearRadius: number
   layoutSeed: number
+  previewRoom?: boolean // Slice 20 (plan 21): true = the Evening Room layout (generateEveningLayout)
 }
 
 /** Test-only override of the item set (DrillController.forceLayoutForTest). Positions stay random. */
@@ -162,7 +163,7 @@ const FIXED_LAYOUT: Partial<Record<LayoutItem, Placement>> = {
 const FIXED_WALLS: Partial<Record<LayoutItem, WallSide>> = {cabinet: "-x", shelf: "+x", glass: "+z", bed: "+x"}
 const FIXED_DOOR: DoorPlacement = {x: -150, z: -300, nx: 0, nz: 1, wall: "-z"} // on the fixed room's −Z wall; used only if placeDoor finds no spot
 
-interface Spot {
+export interface Spot {
   at: Placement
   side: WallSide | null // the wall a wall-backed item stands on
 }
@@ -190,6 +191,9 @@ interface Spot {
  * same layout every time.
  */
 export function generateLayout(p: LayoutParams, force: LayoutForce | null = null): Layout {
+  if (p.previewRoom) {
+    return generateEveningLayout(p, force) // Slice 20 (plan 21): the Evening Room preview mode
+  }
   const seed = p.layoutSeed !== 0 ? Math.floor(p.layoutSeed) : 1 + Math.floor(Math.random() * 2147483646)
   const random = mulberry32(seed)
   const tableCount = force && force.tables ? clampCount(force.tables, 1, TABLES.length) : drawCount(random, p.tableCountMin, p.tableCountMax, 1, TABLES.length)
@@ -292,16 +296,16 @@ export function bedWalkways(bed: Placement, room: RoomRect): Rect[] {
   return out
 }
 
-/** Slice 11 (5l-7e): the rect kept free of footprints at the glass: GLASS_SIDE_CLEAR beside its frame, from its wall to GLASS_FRONT_CLEAR in front. */
-export function glassClearRect(glass: Placement): Rect {
+/** Slice 11 (5l-7e): the rect kept free of footprints at the glass: GLASS_SIDE_CLEAR beside its frame, from its wall to GLASS_FRONT_CLEAR in front (Slice 20: `front` in the Evening Room). */
+export function glassClearRect(glass: Placement, front: number = GLASS_FRONT_CLEAR): Rect {
   const f = FOOTPRINTS.glass // front −Z in its frame (front π)
-  const oz = (WALL_GAP - GLASS_FRONT_CLEAR) / 2 // the center moves toward the room; local Z = (sin, cos)
+  const oz = (WALL_GAP - front) / 2 // the center moves toward the room; local Z = (sin, cos)
   return {
     x: glass.x + oz * Math.sin(glass.yaw),
     z: glass.z + oz * Math.cos(glass.yaw),
     yaw: glass.yaw,
     hx: f.halfX + GLASS_SIDE_CLEAR,
-    hz: f.halfZ + (WALL_GAP + GLASS_FRONT_CLEAR) / 2
+    hz: f.halfZ + (WALL_GAP + front) / 2
   }
 }
 
@@ -911,5 +915,233 @@ export function mulberry32(seed: number): () => number {
     t = Math.imul(t ^ (t >>> 15), t | 1)
     t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Slice 20 (plan 21): the Evening Room preview mode (DrillConfig.previewRoom, for filming). The drill's furniture
+// stands on the Evening Room preview scene's own furniture: fixed spots for the table, bed and chair, wall slots for
+// the TV, shelf, cabinet and glass, a near-wall grid for the lamp. Room-local cm measured in that scene, the start
+// spot at the preview origin facing −Z (DrillController.placeRoom puts the Room there, heading 0). Not drill tunables.
+
+/** Slice 20 (plan 21): the Evening Room's walls. */
+export const EVENING_ROOM: RoomRect = {minX: -305, maxX: 205, minZ: -540, maxZ: 40}
+/** Slice 20 (plan 21): the room's own furniture and the door's clear floor; no footprint on them but its EVENING_ON one. */
+export const EVENING_NO_GO: Record<string, Rect> = {
+  sofa: eveningRect(-170, 130, -230, -110),
+  media: eveningRect(-190, 150, -510, -455),
+  armchair: eveningRect(65, 185, -430, -320),
+  floorLamp: eveningRect(-250, -210, -480, -440),
+  plant: eveningRect(110, 205, -100, 0),
+  desk: eveningRect(-150, 175, -25, 30),
+  coffeeTable: eveningRect(-50, 50, -350, -250),
+  door: eveningRect(-305, -185, -45, 45)
+}
+/** Slice 20 (plan 21): the no-go rect each item stands on: the bed on the sofa, the TV on the media unit, … */
+export const EVENING_ON: Partial<Record<LayoutItem, string>> = {bed: "sofa", tv: "media", lamp: "floorLamp", chair: "armchair", table: "coffeeTable"}
+/** Slice 20 (plan 21): the fixed spots (the bed along X, its head end at −X). */
+export const EVENING_FIXED: Partial<Record<LayoutItem, Placement>> = {
+  table: {x: 0, z: -300, yaw: 0},
+  bed: {x: -20, z: -170, yaw: Math.PI / 2},
+  chair: {x: 125, z: -375, yaw: 0}
+}
+/** Slice 20 (plan 21): the left corridor round the sofa (the floor path's way), free of every footprint but the table's. */
+export const EVENING_CORRIDOR: Rect = eveningRect(-250, -175, -300, 0)
+/** Slice 20 (plan 21): the door, on the left wall at z 0. */
+export const EVENING_DOOR: DoorPlacement = {x: -305, z: 0, nx: 1, nz: 0, wall: "-x"}
+/**
+ * Slice 20 (plan 21): the floor path's corners round the sofa, in order (FloorPath.setVias), each with the
+ * Room-local floor direction (ax, az) its turn rule splits the floor along.
+ * Slice 20d (plan 21j): a second corner below the sofa; the first one up from z −150 to −120 so the start's
+ * leg clears the sofa's corner (−170, −110) by 13 cm; the second one's direction is its turn's bisector.
+ */
+export const EVENING_PATH_VIAS = [
+  {x: -215, z: -120, ax: 0, az: 1},
+  {x: -215, z: -260, ax: Math.SQRT1_2, az: -Math.SQRT1_2}
+]
+export const EVENING_GLASS_FRONT_CLEAR = 60 // cm: the glass clear rect's depth here (GLASS_FRONT_CLEAR elsewhere)
+export const EVENING_NEAR_GAP = 30 // cm: the bed, chair and table (sofa, armchair, coffee table) need only this between footprints
+export const EVENING_NEAR_PAIRS = ["bed+table", "chair+table", "bed+chair"] // sorted names
+const EVENING_WALLS: Partial<Record<LayoutItem, WallSide[]>> = {tv: ["-x", "-z"], shelf: ["-x", "-z"], cabinet: ["-x", "-z"], glass: ["+x"]} // the glass on the window wall only
+const EVENING_WALL_STEP = 20 // cm between wall slots
+const EVENING_WALL_INSET = 40 // cm: the first and last wall slot from each end of the wall
+const EVENING_LAMP_STEP = 20 // cm: the lamp grid
+const EVENING_LAMP_MARGIN = 30 // cm: the lamp grid inside the walls
+
+/** Slice 20 (plan 21): the room-aligned rect x0..x1, z0..z1. */
+function eveningRect(x0: number, x1: number, z0: number, z1: number): Rect {
+  return {x: (x0 + x1) / 2, z: (z0 + z1) / 2, yaw: 0, hx: (x1 - x0) / 2, hz: (z1 - z0) / 2}
+}
+
+/**
+ * Slice 20 (plan 21): the Evening Room layout. The same seed handling and stream
+ * as generateLayout; one table; hazardCountMin..Max hazards drawn without
+ * repeats (or force.hazards); the table, bed and chair on EVENING_FIXED, each
+ * hazard on a random slot of eveningSlots. A draw is valid when eveningDrawOk.
+ * No valid draw in MAX_TRIES: each hazard on its first slot that keeps the pair
+ * rules with the items before it (none: it stays out), fallback true.
+ */
+function generateEveningLayout(p: LayoutParams, force: LayoutForce | null): Layout {
+  const seed = p.layoutSeed !== 0 ? Math.floor(p.layoutSeed) : 1 + Math.floor(Math.random() * 2147483646)
+  const random = mulberry32(seed)
+  const forced = force && force.hazards ? force.hazards : null
+  const drawn = forced ? HAZARDS.filter((h) => forced.indexOf(h) >= 0) : pickHazards(random, drawCount(random, p.hazardCountMin, p.hazardCountMax, 0, HAZARDS.length))
+  const slots: Partial<Record<LayoutItem, Spot[]>> = {}
+  for (const item of drawn.concat(["table", "bed", "chair"])) {
+    slots[item] = eveningSlots(item, p)
+  }
+  const hazards = drawn.filter((h) => slots[h].length > 0) // a hazard with no slot stays out (none with the default config)
+  const present = (["table", "bed"] as LayoutItem[]).concat(hazards, ["chair"]) // the draw order of the orchestrator's checker
+  for (let tries = 1; tries <= MAX_TRIES; tries++) {
+    const picked: Partial<Record<LayoutItem, Spot>> = {}
+    for (const item of present) {
+      const list = slots[item]
+      picked[item] = list[Math.floor(random() * list.length)]
+    }
+    if (eveningDrawOk(spotsAt(picked), present, p)) {
+      return eveningLayout(seed, tries, false, picked, hazards)
+    }
+  }
+  // Slice 20 (plan 21): the fallback: the fixed items, then each hazard on its first slot that still passes
+  const picked: Partial<Record<LayoutItem, Spot>> = {table: slots.table[0], bed: slots.bed[0], chair: slots.chair[0]}
+  const placed: LayoutItem[] = ["table", "bed", "chair"]
+  for (const h of hazards) {
+    for (const s of slots[h]) {
+      picked[h] = s
+      if (eveningDrawOk(spotsAt(picked), placed.concat([h]), p)) break
+      delete picked[h]
+    }
+    if (picked[h]) placed.push(h)
+  }
+  return eveningLayout(seed, MAX_TRIES, true, picked, hazards.filter((h) => !!picked[h]))
+}
+
+/**
+ * Slice 20 (plan 21): the spots `item` may take in the Evening Room. The table,
+ * bed and chair: their fixed spot. The TV, shelf, cabinet and glass: every
+ * EVENING_WALL_STEP along their walls, EVENING_WALL_INSET in from each end, back
+ * WALL_GAP from the wall, facing in. The lamp: an EVENING_LAMP_STEP grid
+ * EVENING_LAMP_MARGIN inside the walls. A hazard slot is kept only when
+ * eveningSlotOk.
+ */
+export function eveningSlots(item: LayoutItem, p: LayoutParams): Spot[] {
+  const fixed = EVENING_FIXED[item]
+  if (fixed) {
+    return [{at: {x: fixed.x, z: fixed.z, yaw: fixed.yaw}, side: null}]
+  }
+  const room = EVENING_ROOM
+  const out: Spot[] = []
+  if (item === "lamp") {
+    for (let x = room.minX + EVENING_LAMP_MARGIN; x <= room.maxX - EVENING_LAMP_MARGIN; x += EVENING_LAMP_STEP) {
+      for (let z = room.minZ + EVENING_LAMP_MARGIN; z <= room.maxZ - EVENING_LAMP_MARGIN; z += EVENING_LAMP_STEP) {
+        out.push({at: {x: x, z: z, yaw: 0}, side: null})
+      }
+    }
+  }
+  const f = FOOTPRINTS[item]
+  for (const side of EVENING_WALLS[item] || []) {
+    const n = wallInward(side)
+    const yaw = wrap(Math.atan2(n.x, n.z) - f.front) // the front faces into the room
+    const c = Math.abs(Math.cos(yaw))
+    const s = Math.abs(Math.sin(yaw))
+    const alongZ = side === "+x" || side === "-x" // the wall runs along Z
+    const reach = alongZ ? f.halfX * c + f.halfZ * s : f.halfX * s + f.halfZ * c // the footprint's half depth off the wall
+    const perp = wallLine(room, side) + (alongZ ? n.x : n.z) * (WALL_GAP + reach)
+    const lo = (alongZ ? room.minZ : room.minX) + EVENING_WALL_INSET
+    const hi = (alongZ ? room.maxZ : room.maxX) - EVENING_WALL_INSET
+    for (let u = lo; u <= hi; u += EVENING_WALL_STEP) {
+      out.push({at: alongZ ? {x: perp, z: u, yaw: yaw} : {x: u, z: perp, yaw: yaw}, side: side})
+    }
+  }
+  return out.filter((spot) => eveningSlotOk(item, spot.at, p))
+}
+
+/**
+ * Slice 20 (plan 21): the one-item rules: the footprint inside the walls; the
+ * danger zone (a hazard) or footprint startClearRadius from the start spot; the
+ * footprint off every EVENING_NO_GO rect but its EVENING_ON one; the glass's
+ * clear rect off them all; the lamp on the floor lamp or LAMP_NEAR_WALL from a
+ * wall; a hazard's zone out of the table's safe zone.
+ */
+function eveningSlotOk(item: LayoutItem, at: Placement, p: LayoutParams): boolean {
+  const foot = footRect(item, at, 0)
+  if (!insideRoom(foot, EVENING_ROOM, 0)) {
+    return false
+  }
+  const own = isHazard(item) ? dangerRect(item, at, p.dangerMargin, p.tvDangerFront) : foot
+  if (distanceFrom(own) < p.startClearRadius) {
+    return false
+  }
+  for (const k of Object.keys(EVENING_NO_GO)) {
+    if (k !== EVENING_ON[item] && overlaps(foot, EVENING_NO_GO[k])) return false
+    if (item === "glass" && overlaps(glassClearRect(at, EVENING_GLASS_FRONT_CLEAR), EVENING_NO_GO[k])) return false
+  }
+  if (item === "lamp") {
+    const r = EVENING_ROOM // the lamp stands square (yaw 0)
+    const wallGap = Math.min(foot.x - foot.hx - r.minX, r.maxX - foot.x - foot.hx, foot.z - foot.hz - r.minZ, r.maxZ - foot.z - foot.hz)
+    if (!overlaps(foot, EVENING_NO_GO.floorLamp) && wallGap > LAMP_NEAR_WALL) return false
+  }
+  return !isHazard(item) || !overlaps(footRect("table", EVENING_FIXED.table as Placement, p.safeZoneMargin), own)
+}
+
+/**
+ * Slice 20 (plan 21): the pair rules for a draw: no two footprints grown by
+ * SPACING overlap (the EVENING_NEAR_PAIRS need EVENING_NEAR_GAP between
+ * footprints only); no danger zone, bed or chair in the safe zone; the TV
+ * TV_BED_GAP from the bed; the glass's clear rect free of footprints; the left
+ * corridor free of every footprint but the table's. Exported for DC33.
+ */
+export function eveningDrawOk(items: Partial<Record<LayoutItem, Placement>>, present: LayoutItem[], p: LayoutParams): boolean {
+  for (let i = 0; i < present.length; i++) {
+    const a = present[i]
+    const fa = rectOf(items, a, 0)
+    if (a !== "table" && overlaps(EVENING_CORRIDOR, fa)) {
+      return false
+    }
+    for (let j = i + 1; j < present.length; j++) {
+      const b = present[j]
+      const fb = rectOf(items, b, 0)
+      const near = EVENING_NEAR_PAIRS.indexOf([a, b].sort().join("+")) >= 0
+      if (overlaps(rectOf(items, a, SPACING), rectOf(items, b, SPACING)) && !(near && rectDistance(fa, fb) >= EVENING_NEAR_GAP)) return false
+      if (isTable(a) !== isTable(b)) {
+        const other = isTable(a) ? b : a
+        if (overlaps(rectOf(items, isTable(a) ? a : b, p.safeZoneMargin), isHazard(other) ? zoneOf(items, other, p) : rectOf(items, other, 0))) return false
+      }
+      if (((a === "bed" && b === "tv") || (a === "tv" && b === "bed")) && rectDistance(fa, fb) < TV_BED_GAP) return false
+      if ((a === "glass" || b === "glass") && overlaps(glassClearRect(items.glass as Placement, EVENING_GLASS_FRONT_CLEAR), a === "glass" ? fb : fa)) return false
+    }
+  }
+  return true
+}
+
+/** Slice 20 (plan 21): the placements of the picked spots. */
+function spotsAt(picked: Partial<Record<LayoutItem, Spot>>): Partial<Record<LayoutItem, Placement>> {
+  const out: Partial<Record<LayoutItem, Placement>> = {}
+  for (const item of ALL_ITEMS) {
+    const spot = picked[item]
+    if (spot) out[item] = spot.at
+  }
+  return out
+}
+
+/** Slice 20 (plan 21): the Layout of the picked spots, in the Evening Room's walls with its door. */
+function eveningLayout(seed: number, tries: number, fallback: boolean, picked: Partial<Record<LayoutItem, Spot>>, hazards: LayoutItem[]): Layout {
+  const walls: Partial<Record<LayoutItem, WallSide>> = {}
+  for (const item of ALL_ITEMS) {
+    const spot = picked[item]
+    if (spot && spot.side) walls[item] = spot.side // the bed stands free here: no wall
+  }
+  const r = EVENING_ROOM
+  const d = EVENING_DOOR
+  return {
+    seed: seed,
+    tries: tries,
+    fallback: fallback,
+    items: copyItems(spotsAt(picked)),
+    tables: ["table"],
+    hazards: hazards,
+    room: {minX: r.minX, maxX: r.maxX, minZ: r.minZ, maxZ: r.maxZ},
+    glassWall: picked.glass ? "+x" : null,
+    walls: walls,
+    door: {x: d.x, z: d.z, nx: d.nx, nz: d.nz, wall: d.wall}
   }
 }

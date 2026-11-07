@@ -347,17 +347,18 @@ export const STRINGS: Record<StringKey, Record<Lang, string>> = {
     zh: "简体中文"
   },
   // Slice 7 (ENGINEERING_PLAN 5j). marquee.* is shown in the selected language only.
+  // Slice 20c (plan 21i): step chips after Dawn H.'s Live Review tip (run, grab, take shelter, come back out); en from the orchestrator, learner-approved 7 Nov; id the orchestrator's (default), de/ja/zh the orchestrator's (default, machine translation).
   "step.goUnder": {
-    id: "Ke bawah meja",
-    en: "Go under the table",
-    de: "Unter den Tisch",
-    ja: "机の下へ",
-    zh: "躲到桌下"
+    id: "Ke meja",
+    en: "Get to the table",
+    de: "Zum Tisch",
+    ja: "机へ",
+    zh: "到桌边"
   },
-  "step.duck": {id: "Merunduk", en: "Duck down", de: "Ducken", ja: "身を低く", zh: "蹲下"},
-  "step.hold": {id: "Tahan", en: "Hold on", de: "Festhalten", ja: "そのまま待つ", zh: "坚持住"},
+  "step.duck": {id: "Berlindung", en: "Take shelter", de: "In Deckung", ja: "身を守る", zh: "躲避"},
+  "step.hold": {id: "Pegang kakinya", en: "Grab the leg", de: "Bein festhalten", ja: "脚をつかむ", zh: "抓住桌腿"},
   // Slice 8B (STRINGS_I18N.md): evacuation and hold on.
-  "step.evac": {id: "Keluar", en: "Get out", de: "Raus", ja: "外へ", zh: "撤离"},
+  "step.evac": {id: "Keluar", en: "Come back out", de: "Wieder raus", ja: "外へ出る", zh: "出来"},
   "instr.evac": {
     id: "Keluar lewat pintu, hindari zona merah",
     en: "Leave through the door, avoid the red zones",
