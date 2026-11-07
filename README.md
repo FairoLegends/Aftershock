@@ -7,7 +7,7 @@
 Built for the [Learn AR with SPECS](https://learn-specs.devpost.com) hackathon. It runs in the **Lens Studio preview**; no Spectacles device is needed.
 
 [![Lens Studio 5.23.2](https://img.shields.io/badge/Lens%20Studio-5.23.2-black)](https://ar.snap.com/lens-studio)
-[![LEAF 32/32](https://img.shields.io/badge/LEAF%20scenarios-32%2F32-3DDC84)](#tests)
+[![LEAF 33/33](https://img.shields.io/badge/LEAF%20scenarios-33%2F33-3DDC84)](#tests)
 [![Languages 5](https://img.shields.io/badge/languages-5-blue)](#languages)
 [![Demo video](https://img.shields.io/badge/demo%20video-YouTube-red)](https://youtu.be/-2C-eO9rSu8)
 
@@ -64,7 +64,7 @@ The Lens was built by an **AI coding agent** (Claude Code) running the **CLAD pl
 
 One honest exception: in the first days (up to 31 Oct) the orchestrator agent also made a few small fixes directly — mostly in test files and one-line corrections — when a build session had run out of budget. After that, every change to Lens code, tests included, went through a CLAD session.
 
-The build ran as **19 slices**, one narrow task per capped headless agent session (the last three, after the 6 Nov SPECS Live Review, made both result panels smaller, turned the Fix the room panel into a small pill while you look at an item, dropped the score row from the second result and renamed the levels Guided, Normal and On your own). An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
+The build ran as **20 slices**, one narrow task per capped headless agent session (three after the 6 Nov SPECS Live Review made both result panels smaller, turned the Fix the room panel into a small pill while you look at an item, dropped the score row from the second result and renamed the levels Guided, Normal and On your own; the last one added the Evening Room filming mode). An orchestrator agent wrote the plan and the prompt for each slice, then verified the result itself over the same MCP — running the LEAF suite, driving the preview, taking screenshots and reading them — before committing. The orchestrator also made the assets the build agent could not: the font subsets, the synthesized sound effects, the 60 TTS voice clips, and the split of the TV mesh in Slice 16. Design decisions were never the agents': each one was put to the learner, and the ones they did not answer are marked **(default)** in the plan, open to veto.
 
 Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEERING_PLAN.md); the git history names the CLAD session behind each slice.
 
@@ -104,7 +104,7 @@ Full disclosure of who did what is in [`docs/ENGINEERING_PLAN.md`](docs/ENGINEER
 
 ## Tests
 
-32 LEAF scenarios (`Assets/Scripts/Aftershock/Tests/`), **all passing**. They drive the drill through a head-pose override and SIK hand interactors, so they test the real code paths, not stubs.
+33 LEAF scenarios (`Assets/Scripts/Aftershock/Tests/`), **all passing**. They drive the drill through a head-pose override and SIK hand interactors, so they test the real code paths, not stubs.
 
 ```
 dc1-safety-then-room        dc11-aftershock          dc21-change-language
@@ -119,11 +119,12 @@ dc9-two-tables              dc19-education-cards     dc29-stops-and-glass-trip
 dc10-scan-path-edge         dc20-voice-guide         dc30-fix-room-stats
                                                      dc31-compact-result
                                                      dc32-fix-pill
+                                                     dc33-evening-room
 ```
 
 They check more than state: the exact score against the calculator, that the room generator obeys every rule over fixed seed lists, that a repeat quake is identical, that every text on the result panel and on the hazard labels is at least 90% opaque, that the HUD never draws a dark plate on an additive display, that the window label stays within 1 cm of its intended height while the room tilts, that the TV's stand does not move when the TV topples, that the fix-room counts over 30 seeded rooms are exactly the published ones, and that the first result panel stays within 34 × 46 cm in English, Indonesian and German.
 
-To run them: enable the `LeafAutoRun` object in the scene, save, refresh the preview, and watch the log (about 20 minutes for all 32).
+To run them: enable the `LeafAutoRun` object in the scene, save, refresh the preview, and watch the log (about 20 minutes for all 33).
 
 ## Run it yourself
 
@@ -133,6 +134,8 @@ To run them: enable the `LeafAutoRun` object in the scene, save, refresh the pre
 4. Pick a language, read the notice, pick **Normal**, and wait — the quake starts on its own.
 
 For a repeatable take, set `layoutSeed` and `planSeed` on the `DrillConfig` component to any non-zero number (set them back to 0 before running the tests).
+
+**Evening Room (the demo video's room).** Set the Preview panel's scene to Lens Studio's **Evening Room** and tick `previewRoom` on `DrillConfig`. The drill then hides its own walls and places the table, TV, shelf, wardrobe, lamp and glass onto the Evening Room's furniture (positions measured by hand for that one preview scene, not a real home). The demo used `layoutSeed 2106` and `planSeed 16335`. Untick it (and set both seeds back to 0) before running the tests.
 
 ## Languages
 
@@ -153,6 +156,7 @@ Not built, and not claimed to be built:
 - **Fonts:** [Manrope](https://github.com/sharanda/manrope) and [Noto Sans JP / SC](https://github.com/notofonts) — SIL Open Font License 1.1, licences in `Assets/Aftershock/Fonts/`. Subset to the strings in use.
 - **Sound effects** (rumble, thud, glass crack, shatter, chime, heartbeat): synthesized from code for this project with numpy; nothing sampled.
 - **Voice:** 60 clips from open text-to-speech models (Pocket TTS Indonesian, Piper, Kokoro-82M), every model, licence and voice dataset listed in [`docs/VOICE_CREDITS.md`](docs/VOICE_CREDITS.md). No person was recorded.
+- **Demo video:** Lens Studio preview footage of one drill in the Evening Room, edited with Remotion. 0:37–1:51 is one take with no edits; the camera is scripted, so some turns snap. The other shots are cut from the same take. Sound rebuilt from the Lens's audio files and log; narration Kokoro-82M.
 - **3D models:** generated with CLAD `build-mesh` in Lens Studio.
 - **Safety content:** [BMKG](https://bmkg.go.id) — "Antisipasi Gempa Bumi" and the BMKG/JICA "Siaga Gempabumi dan Tsunami" booklet, cited per card in [`docs/EDUCATION_CARDS.md`](docs/EDUCATION_CARDS.md).
 - **Logo:** the diorama mark was generated with xai/grok-imagine-image; the wordmark is set in Manrope (OFL) by code.
